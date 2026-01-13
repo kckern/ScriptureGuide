@@ -66,6 +66,8 @@ const setLanguage = function(language) {
     setStoredLanguage(language);
 };
 
+const getLanguage = () => getStoredLanguage() || defaultLanguage || 'en';
+
 const getEffectiveLanguage = function(explicitLanguage) {
     // Priority: explicit parameter > stored language > default language > 'en'
     return explicitLanguage || getStoredLanguage() || defaultLanguage || 'en';
@@ -1226,15 +1228,22 @@ const getLanguageConfig = function(language, canon = null) {
 
 
 export {
+    // Core functions
     lookupReference,
     generateReference,
-    setLanguage,
     detectReferences,
-    convertCanon,
+    detectReferencesWithContext,
+
+    // Language functions
+    setLanguage,
+    getLanguage,
+
+    // Canon functions
     setCanon,
     getCanon,
+    convertCanon,
 
-    //Aliases for convenience
+    // Aliases for convenience
     setLanguage as lang,
     setLanguage as language,
     setLanguage as setLang,
