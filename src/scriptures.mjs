@@ -225,6 +225,21 @@ const lookupReference = function(query, language = null, lookupConfig = {}) {
         return result;
     }
 
+    // Auto-detect canon fallback: if lookup failed in default canon (LDS) and no explicit canon,
+    // try other canons to find a match (e.g., COC has different versification)
+    if (!canon) {
+        // Try COC canon as fallback (has different verse counts for Book of Mormon)
+        const cocVerseIds = lookupInLanguageCoc(query, effectiveLanguage);
+        if (cocVerseIds?.length > 0) {
+            return {
+                "query": query,
+                "ref": generateReferenceCoc(cocVerseIds, effectiveLanguage),
+                "verse_ids": cocVerseIds,
+                "canon": CANON_COC  // Include canon field when different from expected
+            };
+        }
+    }
+
     // If no results and multi-language lookup is allowed, try fallback languages
     if (!lookupConfig.noMulti) {
         const fallbackResult = lookupWithLanguageFallback(query, effectiveLanguage);
