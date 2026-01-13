@@ -1,7 +1,7 @@
 import { getCanonStructure, getLanguageData } from './lib/data-loader.mjs';
 import { processReferenceDetection } from './scriptdetect.mjs';
 import {  detectReferencesWithContext } from './scriptdetectcontext.mjs';
-import { detectCanon, formatCocId, parseCocId, convertToLds, convertToCoc, convertCanon } from './canon-converter.mjs';
+import { detectCanon, formatCocId, parseCocId, convertToLds, convertToCoc, convertCanon, convertToLdsSync, convertToCocSync } from './canon-converter.mjs';
 import {
   MAX_RANGE_SIZE,
   MAX_CHAPTER,
@@ -200,7 +200,7 @@ const lookupReference = function(query, language = null, lookupConfig = {}) {
         // Handle convertTo option
         if (convertTo && convertTo !== canon) {
             result.sourceCanon = useCoc ? CANON_COC : CANON_LDS;
-            const converted = useCoc ? convertToLds(verse_ids) : convertToCoc(verse_ids);
+            const converted = useCoc ? convertToLdsSync(verse_ids) : convertToCocSync(verse_ids);
             result.verse_ids = converted.verse_ids;
             result.partial = converted.partial;
             result.ref = convertTo === CANON_COC
@@ -211,7 +211,7 @@ const lookupReference = function(query, language = null, lookupConfig = {}) {
         // Handle includeParallel option
         if (includeParallel) {
             const parallelCanon = useCoc ? CANON_LDS : CANON_COC;
-            const parallelConverted = useCoc ? convertToLds(verse_ids) : convertToCoc(verse_ids);
+            const parallelConverted = useCoc ? convertToLdsSync(verse_ids) : convertToCocSync(verse_ids);
             result.parallel = {
                 canon: parallelCanon,
                 verse_ids: parallelConverted.verse_ids,

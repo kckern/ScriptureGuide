@@ -21,6 +21,9 @@ import bibleEn from '../data/canons/bible/en.mjs';
 import ldsEn from '../data/canons/lds/en.mjs';
 import cocEn from '../data/canons/coc/en.mjs';
 
+// Static import for COC mapping (needed for synchronous conversion)
+import cocMappingData from '../data/canons/coc/mapping.mjs';
+
 // Maps for lookups
 const structureMap = {
   bible: bibleStructure,
@@ -173,6 +176,15 @@ export async function getCocMapping() {
   const module = await import('../data/canons/coc/mapping.mjs');
   cocMappingCache = module.default;
   return cocMappingCache;
+}
+
+/**
+ * Get COC mapping data synchronously (uses static import)
+ * Use this for synchronous conversion in lookupReference
+ * @returns {Object} COC mapping data
+ */
+export function getCocMappingSync() {
+  return cocMappingData;
 }
 
 /**

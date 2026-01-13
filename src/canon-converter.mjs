@@ -1,5 +1,5 @@
 // src/canon-converter.mjs
-import { getCocMapping } from './lib/data-loader.mjs';
+import { getCocMapping, getCocMappingSync } from './lib/data-loader.mjs';
 
 /**
  * Detect canon from verse_id format
@@ -88,3 +88,50 @@ export const convertToLds = async (cocIds) => convertCanon(cocIds, { from: 'coc'
  * @returns {Promise<{ verse_ids: string[], partial: boolean }>}
  */
 export const convertToCoc = async (ldsIds) => convertCanon(ldsIds, { from: 'lds', to: 'coc' });
+
+/**
+ * Convert COC verse_ids to LDS verse_ids (synchronous version)
+ * @param {string[]} cocIds - Array of COC ids like ['C00001', 'C00002']
+ * @returns {{ verse_ids: number[], partial: boolean }}
+ */
+export function convertToLdsSync(cocIds) {
+  const mapping = getCocMappingSync();
+  const result = { verse_ids: [], partial: false };
+
+  for (const id of cocIds) {
+    const num = typeof id === 'string' ? parseCocId(id) : id;
+    const mapped = mapping.cocToLds[num];
+    if (mapped) {
+      result.verse_ids.push(...mapped.lds);
+      if (mapped.partial) result.partial = true;
+    }
+  }
+
+  return result;
+}
+
+/**
+ * Convert LDS verse_ids to COC verse_ids (synchronous version)
+ * @param {number[]} ldsIds - Array of LDS verse_ids
+ * @returns {{ verse_ids: string[], partial: boolean }}
+ */
+export function convertToCocSync(ldsIds) {
+  const mapping = getCocMappingSync();
+  const result = { verse_ids: [], partial: false };
+  const seen = new Set();
+
+  for (const id of ldsIds) {
+    const mapped = mapping.ldsToCoc[id];
+    if (mapped) {
+      for (const cocNum of mapped.coc) {
+        if (!seen.has(cocNum)) {
+          seen.add(cocNum);
+          result.verse_ids.push(formatCocId(cocNum));
+        }
+      }
+      if (mapped.partial) result.partial = true;
+    }
+  }
+
+  return result;
+}
