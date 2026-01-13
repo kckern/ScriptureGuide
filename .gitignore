@@ -7,3 +7,4 @@ test_results/test_results.html
 /dist/*.cjs
 /dist/*.mjs
 /dist/*.map
+src/data/
