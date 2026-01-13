@@ -133,20 +133,30 @@ const buildBooksRegex = (langData) => {
 };
 
 // Helper to get COC structure data (for dual-canon lookup)
+// Returns only COC-specific books (not inherited Bible books) with start ID
 const getCocData = () => {
+    // Get raw COC structure (not merged with parent)
     const cocStructure = getCanonStructure('coc');
     if (!cocStructure || !cocStructure.books) {
-        return { books: {} };
+        return { books: {}, start: 31105 };
     }
 
-    // Convert to legacy cocData format: { books: { bookName: [verseCount1, ...] } }
+    // Filter to only COC-specific books (order >= 67, which is 1 Nephi)
+    // Bible books have order 1-66
+    const cocSpecificBooks = cocStructure.books.filter(b => b.order >= 67);
+
+    // Convert to legacy cocData format: { books: { bookName: [verseCount1, ...] }, start: id }
     const cocLangData = getLanguageData('coc', 'en');
     const books = {};
-    for (const book of cocStructure.books) {
+    for (const book of cocSpecificBooks) {
         const displayName = cocLangData?.books?.[book.key]?.name || book.key;
         books[displayName] = book.verses;
     }
-    return { books };
+
+    // Get start ID from first COC book or use default
+    const startId = cocSpecificBooks[0]?.first_verse_id || cocStructure.id_start || 31105;
+
+    return { books, start: startId };
 };
 
 const lookupReference = function(query, language = null, lookupConfig = {}) {
@@ -175,10 +185,13 @@ const lookupReference = function(query, language = null, lookupConfig = {}) {
     const effectiveLanguage = getEffectiveLanguage(language);
 
     // Extract canon options
-    const { canon, convertTo, includeParallel } = lookupConfig;
+    const { canon: explicitCanon, convertTo, includeParallel } = lookupConfig;
+
+    // Get effective canon (explicit > default > 'lds')
+    const effectiveCanon = getEffectiveCanon(explicitCanon);
 
     // Determine if using COC canon
-    const useCoc = canon === CANON_COC;
+    const useCoc = effectiveCanon === CANON_COC;
 
     // Try lookup in the requested language first
     let lookupResult;
@@ -200,7 +213,7 @@ const lookupReference = function(query, language = null, lookupConfig = {}) {
         };
 
         // Handle convertTo option
-        if (convertTo && convertTo !== canon) {
+        if (convertTo && convertTo !== effectiveCanon) {
             result.sourceCanon = useCoc ? CANON_COC : CANON_LDS;
             const converted = useCoc ? convertToLdsSync(verse_ids) : convertToCocSync(verse_ids);
             result.verse_ids = converted.verse_ids;
@@ -227,9 +240,9 @@ const lookupReference = function(query, language = null, lookupConfig = {}) {
         return result;
     }
 
-    // Auto-detect canon fallback: if lookup failed in default canon (LDS) and no explicit canon,
+    // Auto-detect canon fallback: if lookup failed in default canon and no explicit canon,
     // try other canons to find a match (e.g., COC has different versification)
-    if (!canon) {
+    if (!explicitCanon) {
         // Try COC canon as fallback (has different verse counts for Book of Mormon)
         const cocVerseIds = lookupInLanguageCoc(query, effectiveLanguage);
         if (cocVerseIds?.length > 0) {
@@ -360,7 +373,7 @@ const loadCocRefIndex = function() {
 
     const cocData = getCocData();
     let refIndex = {};
-    let verse_num_global = 1;
+    let verse_num_global = cocData.start || 31105; // Start from COC's first verse ID
     const book_list = Object.keys(cocData.books);
     for (let book of book_list) {
         refIndex[book] = {};
@@ -390,7 +403,7 @@ const loadCocVerseIdIndex = function() {
 
     const cocData = getCocData();
     let verseIdIndex = {};
-    let verse_num_global = 1;
+    let verse_num_global = cocData.start || 31105; // Start from COC's first verse ID
     const book_list = Object.keys(cocData.books);
     for (let book of book_list) {
         const chapters = cocData.books[book];
