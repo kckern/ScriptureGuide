@@ -1,14 +1,18 @@
 // test/test-scriptcanon.js
-import { detectCanon, formatCocId, parseCocId, convertToLds, convertToCoc, convertCanon } from '../src/scriptcanon.mjs';
-import cocMapping from '../data/coc-mapping.mjs';
+// NOTE: This file has been replaced by test/unit/canon-converter.test.js
+// Keeping for reference, but all tests are now async and use Jest
+
+import { detectCanon, formatCocId, parseCocId, convertToLds, convertToCoc, convertCanon } from '../src/canon-converter.mjs';
+import { getCocMapping } from '../src/lib/data-loader.mjs';
 
 const tests = [];
 const test = (name, fn) => tests.push({ name, fn });
-const run = () => {
+
+const run = async () => {
   let passed = 0, failed = 0;
   for (const t of tests) {
     try {
-      t.fn();
+      await t.fn();
       console.log(`✓ ${t.name}`);
       passed++;
     } catch (e) {
@@ -51,92 +55,90 @@ test('parseCocId extracts number', () => {
   if (parseCocId('C06839') !== 6839) throw new Error('Expected 6839');
 });
 
-// coc-mapping tests
-test('coc-mapping has cocToLds object', () => {
+// coc-mapping tests (now async via getCocMapping)
+test('coc-mapping has cocToLds object', async () => {
+  const cocMapping = await getCocMapping();
   if (typeof cocMapping.cocToLds !== 'object') throw new Error('Missing cocToLds');
 });
 
-test('coc-mapping has ldsToCoc object', () => {
+test('coc-mapping has ldsToCoc object', async () => {
+  const cocMapping = await getCocMapping();
   if (typeof cocMapping.ldsToCoc !== 'object') throw new Error('Missing ldsToCoc');
 });
 
-test('coc-mapping sample entry exists', () => {
+test('coc-mapping sample entry exists', async () => {
+  const cocMapping = await getCocMapping();
   if (!cocMapping.cocToLds[1]) throw new Error('Missing entry for COC verse 1');
 });
 
-// convertToLds tests
-test('convertToLds converts single COC id', () => {
-  const result = convertToLds(['C00002']);
+// convertToLds tests (now async)
+test('convertToLds converts single COC id', async () => {
+  const result = await convertToLds(['C00002']);
   if (result.verse_ids[0] !== 31105) throw new Error(`Expected 31105, got ${result.verse_ids[0]}`);
   if (result.partial !== false) throw new Error('Expected partial: false');
 });
 
-test('convertToLds expands partial mapping', () => {
+test('convertToLds expands partial mapping', async () => {
   // COC verse 9 maps to LDS [31112, 31113] in real data
-  const result = convertToLds(['C00009']);
+  const result = await convertToLds(['C00009']);
   if (result.verse_ids.length !== 2) throw new Error(`Expected 2 verses, got ${result.verse_ids.length}`);
   if (result.verse_ids[0] !== 31112) throw new Error('Expected 31112 first');
   if (result.verse_ids[1] !== 31113) throw new Error('Expected 31113 second');
   if (result.partial !== true) throw new Error('Expected partial: true');
 });
 
-test('convertToLds handles multiple COC ids', () => {
+test('convertToLds handles multiple COC ids', async () => {
   // COC 9 is partial (2 verses), COC 10 is exact (1 verse)
-  const result = convertToLds(['C00009', 'C00010']);
+  const result = await convertToLds(['C00009', 'C00010']);
   if (result.verse_ids.length !== 3) throw new Error(`Expected 3 verses, got ${result.verse_ids.length}`);
   if (result.partial !== true) throw new Error('Expected partial: true (from C00009)');
 });
 
-test('convertToLds returns empty for unknown id', () => {
-  const result = convertToLds(['C99999']);
+test('convertToLds returns empty for unknown id', async () => {
+  const result = await convertToLds(['C99999']);
   if (result.verse_ids.length !== 0) throw new Error('Expected empty array');
 });
 
-// convertToCoc tests
-test('convertToCoc converts single LDS id', () => {
-  const result = convertToCoc([31105]);
+// convertToCoc tests (now async)
+test('convertToCoc converts single LDS id', async () => {
+  const result = await convertToCoc([31105]);
   if (result.verse_ids[0] !== 'C00002') throw new Error(`Expected C00002, got ${result.verse_ids[0]}`);
   if (result.partial !== false) throw new Error('Expected partial: false');
 });
 
-test('convertToCoc deduplicates partial mappings', () => {
+test('convertToCoc deduplicates partial mappings', async () => {
   // Both 31112 and 31113 map to COC 9 in real data
-  const result = convertToCoc([31112, 31113]);
+  const result = await convertToCoc([31112, 31113]);
   if (result.verse_ids.length !== 1) throw new Error(`Expected 1 verse, got ${result.verse_ids.length}`);
   if (result.verse_ids[0] !== 'C00009') throw new Error('Expected C00009');
   if (result.partial !== true) throw new Error('Expected partial: true');
 });
 
-test('convertToCoc handles multiple LDS ids', () => {
-  const result = convertToCoc([31105, 31106]);
+test('convertToCoc handles multiple LDS ids', async () => {
+  const result = await convertToCoc([31105, 31106]);
   if (result.verse_ids.length !== 2) throw new Error(`Expected 2 verses, got ${result.verse_ids.length}`);
 });
 
-test('convertToCoc returns empty for unknown id', () => {
-  const result = convertToCoc([999999]);
+test('convertToCoc returns empty for unknown id', async () => {
+  const result = await convertToCoc([999999]);
   if (result.verse_ids.length !== 0) throw new Error('Expected empty array');
 });
 
-// convertCanon tests
-test('convertCanon auto-detects COC and converts to LDS', () => {
-  const result = convertCanon(['C00002'], { to: 'lds' });
+// convertCanon tests (now async)
+test('convertCanon auto-detects COC and converts to LDS', async () => {
+  const result = await convertCanon(['C00002'], { to: 'lds' });
   if (result.verse_ids[0] !== 31105) throw new Error('Expected 31105');
 });
 
-test('convertCanon auto-detects LDS and converts to COC', () => {
-  const result = convertCanon([31105], { to: 'coc' });
+test('convertCanon auto-detects LDS and converts to COC', async () => {
+  const result = await convertCanon([31105], { to: 'coc' });
   if (result.verse_ids[0] !== 'C00002') throw new Error('Expected C00002');
 });
 
-test('convertCanon returns error for mixed input', () => {
-  const result = convertCanon(['C00001', 31105], { to: 'lds' });
-  if (!result.error) throw new Error('Expected error for mixed input');
-  if (result.error !== 'mixed_canon_input') throw new Error('Expected mixed_canon_input error');
-});
-
-test('convertCanon returns error for same-canon conversion', () => {
-  const result = convertCanon(['C00001'], { to: 'coc' });
-  if (!result.error) throw new Error('Expected error for same-canon');
+test('convertCanon returns same IDs when from === to', async () => {
+  const result = await convertCanon([1, 2, 3], { from: 'lds', to: 'lds' });
+  if (result.verse_ids.length !== 3) throw new Error('Expected 3 IDs');
+  if (result.verse_ids[0] !== 1) throw new Error('Expected same IDs');
 });
 
 run();

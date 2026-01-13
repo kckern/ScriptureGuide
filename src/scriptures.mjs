@@ -3,7 +3,7 @@ import raw_regex_orig from '../data/scriptregex.mjs';
 import raw_lang from '../data/scriptlang.mjs';
 import { processReferenceDetection } from './scriptdetect.mjs';
 import {  detectReferencesWithContext } from './scriptdetectcontext.mjs';
-import { detectCanon, formatCocId, parseCocId, convertToLds, convertToCoc, convertCanon } from './scriptcanon.mjs';
+import { detectCanon, formatCocId, parseCocId, convertToLds, convertToCoc, convertCanon } from './canon-converter.mjs';
 import cocData from '../data/coc.mjs';
 import {
   MAX_RANGE_SIZE,
