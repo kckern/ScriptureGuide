@@ -1,5 +1,8 @@
 #!/usr/bin/env node
 
+// Run YAML compilation first
+import './compile-yaml.mjs';
+
 import * as esbuild from 'esbuild';
 import { readFileSync } from 'fs';
 

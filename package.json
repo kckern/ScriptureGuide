@@ -16,6 +16,7 @@
   "scripts": {
     "start": "node test/test.mjs",
     "test": "node test/test.mjs",
+    "compile": "node build/compile-yaml.mjs",
     "build": "node build/build.mjs",
     "embed": "node build/build.mjs",
     "generate-coc-mapping": "node build/generate-coc-mapping.cjs",
