@@ -1,10 +1,7 @@
-import raw_index_orig from '../data/scriptdata.mjs';
-import raw_regex_orig from '../data/scriptregex.mjs';
-import raw_lang from '../data/scriptlang.mjs';
+import { getCanonStructure, getLanguageData } from './lib/data-loader.mjs';
 import { processReferenceDetection } from './scriptdetect.mjs';
 import {  detectReferencesWithContext } from './scriptdetectcontext.mjs';
 import { detectCanon, formatCocId, parseCocId, convertToLds, convertToCoc, convertCanon } from './canon-converter.mjs';
-import cocData from '../data/coc.mjs';
 import {
   MAX_RANGE_SIZE,
   MAX_CHAPTER,
@@ -72,6 +69,82 @@ const setLanguage = function(language) {
 const getEffectiveLanguage = function(explicitLanguage) {
     // Priority: explicit parameter > stored language > default language > 'en'
     return explicitLanguage || getStoredLanguage() || defaultLanguage || 'en';
+};
+
+// Canon state management
+let defaultCanon = 'lds';
+
+const setCanon = (canon) => {
+    defaultCanon = canon;
+};
+
+const getCanon = () => defaultCanon;
+
+const getEffectiveCanon = (explicitCanon) => {
+    return explicitCanon || defaultCanon || 'lds';
+};
+
+// Helper function to convert new structure format to legacy format
+// New format: { books: [{ key, verses: [...] }] }
+// Legacy format: { bookName: [verseCount1, verseCount2, ...] }
+const buildLegacyIndex = (canon, langData) => {
+    const structure = getCanonStructure(canon);
+    if (!structure || !structure.books) return {};
+
+    const index = {};
+    for (const book of structure.books) {
+        // Use the display name from langData, or fall back to the key
+        const displayName = langData?.books?.[book.key]?.name || book.key;
+        index[displayName] = book.verses;
+    }
+    return index;
+};
+
+// Helper function to build books regex array from language data
+// New format: { books: { key: { name, pattern, alt } } }
+// Legacy format: [ [pattern, name], [alt1, name], ... ]
+const buildBooksRegex = (langData) => {
+    if (!langData || !langData.books) return [];
+
+    const booksRegex = [];
+    for (const [key, bookData] of Object.entries(langData.books)) {
+        const name = bookData.name || key;
+
+        // Check if this is a numbered book (key starts with digit_)
+        const numberedMatch = key.match(/^(\d+)_/);
+        const bookNumber = numberedMatch ? numberedMatch[1] : null;
+
+        // Add the pattern match
+        if (bookData.pattern) {
+            // For numbered books, prepend the number to the pattern
+            const pattern = bookNumber ? `${bookNumber}\\s*${bookData.pattern}` : bookData.pattern;
+            booksRegex.push([pattern, name]);
+        }
+        // Add alternative names
+        if (bookData.alt && Array.isArray(bookData.alt)) {
+            for (const alt of bookData.alt) {
+                booksRegex.push([alt, name]);
+            }
+        }
+    }
+    return booksRegex;
+};
+
+// Helper to get COC structure data (for dual-canon lookup)
+const getCocData = () => {
+    const cocStructure = getCanonStructure('coc');
+    if (!cocStructure || !cocStructure.books) {
+        return { books: {} };
+    }
+
+    // Convert to legacy cocData format: { books: { bookName: [verseCount1, ...] } }
+    const cocLangData = getLanguageData('coc', 'en');
+    const books = {};
+    for (const book of cocStructure.books) {
+        const displayName = cocLangData?.books?.[book.key]?.name || book.key;
+        books[displayName] = book.verses;
+    }
+    return { books };
 };
 
 const lookupReference = function(query, language = null, lookupConfig = {}) {
@@ -218,6 +291,7 @@ const lookupSingleRefCoc = function(ref, config) {
     if (!booksWithDashRegex.test(ref) && ref.match(/[—-](\d\s)*[\D]/ig)) return []; // Multi-book ranges not supported for COC yet
     let book = getBook(ref, config);
     if (!book) return [];
+    const cocData = getCocData();
     if (!cocData.books[book]) return []; // Book not in COC
     let ranges = getRanges(ref, book);
     let verse_ids = loadVerseIdsCoc(book, ranges);
@@ -267,6 +341,7 @@ const loadCocRefIndex = function() {
         return cocIndexCache.refIndex;
     }
 
+    const cocData = getCocData();
     let refIndex = {};
     let verse_num_global = 1;
     const book_list = Object.keys(cocData.books);
@@ -296,6 +371,7 @@ const loadCocVerseIdIndex = function() {
         return cocIndexCache.verseIdIndex;
     }
 
+    const cocData = getCocData();
     let verseIdIndex = {};
     let verse_num_global = 1;
     const book_list = Object.keys(cocData.books);
@@ -319,11 +395,13 @@ const loadCocVerseIdIndex = function() {
 }
 
 const loadMaxChapterCoc = function(book) {
+    const cocData = getCocData();
     if (!cocData.books[book]) return 0;
     return cocData.books[book].length;
 }
 
 const loadMaxVerseCoc = function(book, chapter) {
+    const cocData = getCocData();
     if (!cocData.books[book]) return 0;
     return cocData.books[book][parseInt(chapter) - 1] || 0;
 }
@@ -489,11 +567,14 @@ const loadRefsFromRangesCoc = function(ranges, config) {
     return refs;
 }
 
+// List of supported languages (could be extended in data-loader later)
+const SUPPORTED_LANGUAGES = ['en', 'ko'];
+
 const lookupWithLanguageFallback = function(query, targetLanguage) {
     // Define fallback order: English first (if not already tried), then all other languages
     const fallbackLanguages = targetLanguage !== 'en'
-        ? ['en', ...Object.keys(raw_lang).filter(lang => lang !== 'en' && lang !== targetLanguage)]
-        : Object.keys(raw_lang).filter(lang => lang !== targetLanguage);
+        ? ['en', ...SUPPORTED_LANGUAGES.filter(lang => lang !== 'en' && lang !== targetLanguage)]
+        : SUPPORTED_LANGUAGES.filter(lang => lang !== targetLanguage);
 
     for (const lang of fallbackLanguages) {
         const lookupResult = lookupInLanguage(query, lang);
@@ -1081,49 +1162,49 @@ const detectReferences = (content, callBack, options = null) => {
     return processReferenceDetection(content, books, config.lang_extra, (query) => lookupReference(query, effectiveLanguage), callBack);
 }
 
-const getLanguageConfig = function(language) {
-    // Default to English if no language specified or not found
-    const effectiveLanguage = language && raw_lang[language] ? language : 'en';
-    
+const getLanguageConfig = function(language, canon = null) {
+    const effectiveCanon = getEffectiveCanon(canon);
+
+    // Get merged language data from data-loader (shared + parent + canon)
+    const langData = getLanguageData(effectiveCanon, language || 'en');
+
+    // If language not found, fall back to English
+    const effectiveLanguage = langData ? (language || 'en') : 'en';
+    const effectiveLangData = langData || getLanguageData(effectiveCanon, 'en');
+
+    if (!effectiveLangData) {
+        // Ultimate fallback - return minimal config
+        return {
+            language: 'en',
+            raw_index: {},
+            raw_regex: { books: [], pre_rules: [], post_rules: [], joiners: [] },
+            lang_extra: { joiners: [] },
+            wordBreak: "\\b"
+        };
+    }
+
+    // Build the legacy index format from structure
+    const raw_index = buildLegacyIndex(effectiveCanon, effectiveLangData);
+
+    // Build books regex from language data
+    const booksRegex = buildBooksRegex(effectiveLangData);
+
     const config = {
         language: effectiveLanguage,
-        raw_index: raw_index_orig,
-        raw_regex: {...raw_regex_orig},
-        lang_extra: {},
-        wordBreak: "\\b"
+        raw_index: raw_index,
+        raw_regex: {
+            books: booksRegex,
+            pre_rules: effectiveLangData.pre_rules || [],
+            post_rules: effectiveLangData.post_rules || [],
+            joiners: effectiveLangData.joiners || [],
+            spacing: effectiveLangData.spacing || ["\\b", ""]
+        },
+        lang_extra: effectiveLangData.matchRules || {},
+        wordBreak: effectiveLangData.wordBreak || "\\b"
     };
 
-    // For English or if language not found, use defaults
-    if (effectiveLanguage === 'en' || !raw_lang[effectiveLanguage]) {
-        config.lang_extra.joiners = config.raw_regex.joiners;
-        return config;
-    }
-
-    // Process language-specific data
-    const langData = raw_lang[effectiveLanguage];
-    
-    if(langData.books) {
-        config.raw_regex.books = [];
-        let new_index = {};
-        const bookList = Object.keys(langData.books);
-        for(let book of bookList) {
-            const book_index = bookList.indexOf(book);
-            const original_bookname = Object.keys(raw_index_orig)?.[book_index];
-            if (original_bookname) {
-                new_index[book] = raw_index_orig[original_bookname];
-            }
-            const matches = [book, ...langData.books[book]];
-            config.raw_regex.books = config.raw_regex.books.concat(matches.map(i => [i, book]));
-        }
-        config.raw_index = new_index;
-    }
-
-    config.raw_regex.pre_rules = langData.pre_rules || config.raw_regex.pre_rules;
-    config.raw_regex.post_rules = langData.post_rules || config.raw_regex.post_rules;
-    config.raw_regex.spacing = langData.spacing || ["\\b", ""];
-    config.lang_extra = langData.matchRules || {};
+    // Ensure joiners are available in lang_extra
     config.lang_extra.joiners = config.lang_extra.joiners || config.raw_regex.joiners;
-    config.wordBreak = langData.wordBreak || "\\b";
 
     return config;
 }
@@ -1135,6 +1216,8 @@ export {
     setLanguage,
     detectReferences,
     convertCanon,
+    setCanon,
+    getCanon,
 
     //Aliases for convenience
     setLanguage as lang,

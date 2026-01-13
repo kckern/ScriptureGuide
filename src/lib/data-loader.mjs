@@ -116,17 +116,26 @@ export function getLanguageData(canon, lang) {
   }
 
   // Get canon-specific language data
-  const canonLang = canonLangs[lang];
+  // If no canon-specific data for this language, fall back to English books
+  let canonLang = canonLangs[lang];
+  let fallbackToEnglish = false;
   if (!canonLang) {
-    return null;
+    // For non-English languages without full translations, use English books
+    // but apply the shared language rules
+    canonLang = canonLangs['en'];
+    fallbackToEnglish = true;
+    if (!canonLang) {
+      return null;
+    }
   }
 
   // Load parent's language if extends
   let parentLang = {};
   if (structure.extends) {
     const parentCanonLangs = canonLanguageMap[structure.extends];
-    if (parentCanonLangs && parentCanonLangs[lang]) {
-      parentLang = parentCanonLangs[lang];
+    if (parentCanonLangs) {
+      // Use the same fallback logic for parent
+      parentLang = parentCanonLangs[lang] || parentCanonLangs['en'] || {};
     }
   }
 
@@ -140,6 +149,11 @@ export function getLanguageData(canon, lang) {
   const sharedPreRules = shared.pre_rules || [];
   const canonPreRules = canonLang.pre_rules || [];
   result.pre_rules = [...sharedPreRules, ...canonPreRules];
+
+  // Mark if we're using English fallback for books
+  if (fallbackToEnglish) {
+    result._fallbackBooks = true;
+  }
 
   // Cache the result
   languageCache.set(cacheKey, result);
