@@ -6,8 +6,10 @@ function buildH3(h, version) {
   const headless = (h.headless || !h.text) ? ' headless="1"' : '';
   const slug = h.slug ? ` slug="${h.slug}"` : '';
   const ref = h.ref ? ` ref="${h.ref}"` : '';
-  const vc = (h.verse_count != null && h.verse_count > 0) ? ` verse_count="${h.verse_count}"` : '';
-  const lv = h.last ? ` last_verse_id="${h.last}"` : '';
+  const dispVc = h._displayVerseCount ?? h.verse_count;
+  const dispLast = h._displayLast ?? h.last;
+  const vc = (dispVc != null && dispVc > 0) ? ` verse_count="${dispVc}"` : '';
+  const lv = dispLast ? ` last_verse_id="${dispLast}"` : '';
   const img = h.img ? ` img="${h.img}"` : '';
   const ver = h.ver ? ` tver="${h.tver || h.ver}" ver="${h.ver}"` : '';
   const audioAttr = h.audio > 0 ? ` audio="1"` : '';

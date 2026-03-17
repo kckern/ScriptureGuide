@@ -46,8 +46,21 @@ function buildSrcSlug(labelRows, chapterSizeMap) {
       if (minV === 1 && maxChSize > 0 && maxV === maxChSize) {
         return `${srcBookSlug}.${minCh}-${maxCh}`;
       }
-      // Partial cross-chapter: fall through to single-chapter handling using first chapter
-      return `${srcBookSlug}.${minCh}.${minV}-${maxCh}.${maxV}`;
+      // Partial cross-chapter (not whole chapters): split into per-chapter sub-slugs joined by ';'.
+      // PHP outputs e.g. "gen.8.47,49-56;9.1-3" not "gen.8.47-9.3".
+      // Strip book prefix from 2nd+ per-chapter sub-slugs (mirrors same-book segment prefix stripping).
+      const perChSlugs = chapters.map(ch => {
+        const chRows = seg.filter(r => r.src_chapter === ch);
+        const chSize = chapterSizeMap[`${seg[0].src_book_id}:${ch}`] ?? 0;
+        const verses = [...new Set(chRows.map(r => r.src_verse))].sort((a, b) => a - b);
+        const isWhole = chSize > 0 && verses[0] === 1 && verses.length === chSize &&
+          verses.every((v, i) => i === 0 || v === verses[i - 1] + 1);
+        if (isWhole) return `${srcBookSlug}.${ch}`;
+        if (verses.length === 1) return `${srcBookSlug}.${ch}.${verses[0]}`;
+        return `${srcBookSlug}.${ch}.${buildVerseRanges(verses)}`;
+      });
+      const prefix = `${srcBookSlug}.`;
+      return perChSlugs.map((s, i) => i === 0 ? s : (s.startsWith(prefix) ? s.slice(prefix.length) : s)).join(';');
     }
     // Single chapter
     const ch = chapters[0];

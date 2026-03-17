@@ -50,11 +50,25 @@ export class HtmlPresenter {
 
     const passageLastVerseNum = result.verses.length ? result.verses[result.verses.length - 1].verseNum : null;
 
-    h3Headings.forEach((h) => {
+    h3Headings.forEach((h, i) => {
       // last_verse_id from DB self-join (global next heading - 1)
       h.last = h.last_verse_id || passageLastVerseId;
       // Synthetic/preSectionSynthetic chapter headings count inclusively (last - first + 1); section headings exclusive
       h.verse_count = (h.synthetic || h.preSectionSynthetic) ? (h.last - h.verse_id + 1) : (h.last - h.verse_id);
+      // Adjacent heading continuation: when this heading starts at (prevHeading.last + 1) AND
+      // prevHeading.last is a MISSING verse (not in verseNumMap, e.g. NRSV James 1:8 absent),
+      // PHP renders this heading with the previous heading's display attrs (verse_id/verse_count/last)
+      // but computes a new ref/slug for this heading's actual verse range.
+      const prev = h3Headings[i - 1];
+      const prevLast = prev && (prev._origLast ?? prev.last);
+      if (prev && !h.synthetic && !h.preSectionSynthetic &&
+          h.verse_id === prevLast + 1 && verseNumMap[prevLast] == null) {
+        h.displayVerseId = prev.displayVerseId ?? prev.verse_id;
+        h._displayVerseCount = prev._displayVerseCount ?? prev.verse_count;
+        h._displayLast = prev._displayLast ?? prev.last;
+      }
+      // Store original last for adjacency detection (may be needed by the next heading)
+      h._origLast = h.last_verse_id || passageLastVerseId;
       h.firstVerseNum = verseNumMap[h.verse_id];
       // If the next verse after h.last starts a new section mid-verse (§¶), include its verse number
       // This mirrors PHP behavior where the current section "owns" the first part of that verse
