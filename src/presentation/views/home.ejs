@@ -1,21 +1,113 @@
-<%- include('layouts/main', { body: `
-  <div class="home">
-    <h1>Scripture Guide</h1>
-    <p class="tagline">Search and explore the scriptures</p>
+<%- include('layouts/main', {
+  title: 'Home',
+  config: config,
+  slugver: '',
+  slugref: '',
+  body: `
+<style>
+  input {
+    height: 50px;
+    width: 100%;
+    padding: 15px;
+    font-family: 'Sorts Mill Goudy', serif;
+    border-radius: 5px;
+    border: 1px solid black;
+    font-size: 1em;
+    font-weight: bold;
+  }
+  input:focus {
+    outline: none !important;
+    border: 1px solid black;
+    box-shadow: 0 0 10px #492517;
+  }
+  div { font-weight: bold; }
+  a.button {
+    position: relative;
+    bottom: -40px;
+    font-size: 24px;
+    font-weight: bold;
+    height: 36px;
+    float: right;
+  }
+</style>
+<script>
+  function shuffle(a) {
+    var j, x, i;
+    for (i = a.length; i; i -= 1) {
+      j = Math.floor(Math.random() * i);
+      x = a[i - 1];
+      a[i - 1] = a[j];
+      a[j] = x;
+    }
+  }
 
-    <form action="/" method="get" class="search-form">
-      <input type="text" name="q" placeholder="Enter a reference (e.g., John 3:16)" autofocus>
-      <button type="submit">Look Up</button>
-    </form>
+  var examples = [];
+  examples.push("John 3:14");
+  examples.push("D&C 5:12");
+  examples.push("Lectures on Faith 3:6-9,12");
+  examples.push("Gen. 15:13; Acts 12:11; 1 Ne. 5:8; 3 Ne. 11:15; D&C 5:12,25; D&C 11:16");
+  examples.push("Qur'an 30:60");
+  examples.push("now behold");
+  examples.push("seraph");
 
-    <div class="quick-links">
-      <h3>Quick Links</h3>
-      <ul>
-        <li><a href="/Genesis1">Genesis 1</a></li>
-        <li><a href="/John1">John 1</a></li>
-        <li><a href="/1Nephi1">1 Nephi 1</a></li>
-        <li><a href="/DC1">D&amp;C 1</a></li>
-      </ul>
+  shuffle(examples);
+  var max = examples.length - 1;
+  var pointer = 0;
+  var timer;
+
+  function cycleExample() {
+    if ($("#searchbox").attr("demo") != "true") return false;
+    $("#searchbox").val("   e.g. '" + examples[pointer] + "'");
+    $("#searchbox").prop({ selectionStart: 0, selectionEnd: 0 });
+    $("#searchbox").animate({ "color": "#AAA" }, 500);
+    pointer++; if (pointer > max) pointer = 0;
+    timer = setTimeout(function () {
+      $("#searchbox").animate({ "color": "#FFF" }, 500, function () { cycleExample(); });
+    }, 3000);
+  }
+
+  $(document).ready(function () {
+    $("#searchbox").focus();
+    $("#searchbox").attr("demo", "true");
+    $("#searchbox").css("color", "#FFF");
+    cycleExample();
+
+    $("#searchbox").bind("keypress mousedown mouseenter paste", function (e) {
+      if ($("#searchbox").attr("demo") == "true") {
+        $("#searchbox").stop();
+        window.clearTimeout(timer);
+        $("#searchbox").attr("demo", "false");
+        $("#searchbox").val("");
+        $("#searchbox").css("color", "#000000");
+      }
+      if (e.which == 13) {
+        var term = $("#searchbox").val();
+        if (term.match(/\\d+/g) == null) {
+          term = term.trim().replace(/\\s+/gi, ".");
+        }
+        window.location.href = term;
+      }
+    });
+  });
+</script>
+
+<div id='container'>
+  <h2>Scripture Guide<br><small style="line-height:.8em; color:#948d88">A consolidated repository and<br/> reference of holy texts</small></h2>
+
+  <div>
+    <h3>Lookup and Search</h3>
+    <p style='color:#d0c4bc; margin:0; text-align:center'><em>Enter a single reference, a sequence of references, or a search term:</em></p>
+    <input type="text" value="" name="searchbox" id="searchbox"/>
+  </div>
+
+  <div>
+    <h3>&nbsp;</h3><a class="button" href="https://chrome.google.com/webstore/detail/scripture-guide/lkagejkikblabiegfnehlknmlgckhgan?hl=en" target="_blank">Install Now</a>
+    <img src='/img/chrome.png' width="128" style="float:left; margin-bottom:100px; margin-top:50px; margin-right:30px;"/>
+    <h3 style="line-height:1em">Chrome Extension</h3>
+    <div>
+      <p>Enjoy effortless passage lookup while you browse with this scripture reference auto-detection tool.</p>
     </div>
   </div>
-`, title: 'Home', config: config, bodyClass: 'home-page' }) %>
+</div>
+`
+}) %>
