@@ -191,20 +191,39 @@ export class ScriptureLookupService {
           }
 
           // Compute parallel for pre-passage section (when chapterHeading.verse_id < firstVerseId
-          // AND the section extends into the passage: chLast >= firstVerseId && chLast < lastVerseId).
-          // e.g. NRSV Gen.2: Gen.1 heading covers Gen 2:1-3; Gen 2:4+ is a separate section.
+          // AND the section overlaps the passage: chLast >= firstVerseId).
+          // Cases:
+          //   chLast < firstVerseId: section ends before passage (e.g. NRSV Ps.22) → full-chapter parallel (fallback below)
+          //   chLast < lastVerseId: partial overlap (e.g. NRSV Gen.2, Isa.10) → verse-range parallel
+          //   chLast >= lastVerseId: section covers full passage (e.g. NRSV Isa.3) → whole-chapter parallel
           if (chapterHeading && chapterHeading.verse_id < firstVerseId) {
             const chLast = chapterHeading.last ?? lastVerseId;
-            if (chLast >= firstVerseId && chLast < lastVerseId) {
+            if (chLast >= firstVerseId) {
               const ppFv = vNumMap[firstVerseId] ?? 1;
-              // Use chLast+1 as exclusive boundary (PHP includes the boundary verse in verselist)
-              const ppRangeEnd = chLast + 1;
-              const ppRangeLastVerse = vNumMap[ppRangeEnd] ?? vNumMap[chLast] ?? passLastNum;
-              const ppLv = ppRangeLastVerse;
-              const ppRange = [{ from: firstVerseId, to: ppRangeEnd, bookSlug: bookPart, chapter: chapterPart, firstVerse: ppFv, lastVerse: ppLv, rangeLastVerse: ppRangeLastVerse, synthetic: false, wholeChapter: false }];
+              const isFullPassage = chLast >= lastVerseId;
+              // For full-passage coverage: use the whole passage verse list (wholeChapter=true → chapter-level slug)
+              // For partial overlap: use actual verse_ids from firstVerseId to chLast (inclusive).
+              // Extend to chLast+1 if it's a mid-section verse (§¶ mid-text) — the section owns its first segment.
+              const ppOverlapEnd = (!isFullPassage && midSectionIds.has(chLast + 1)) ? chLast + 1 : chLast;
+              const ppIds = isFullPassage
+                ? verseRows.map(v => v.verse_id)
+                : verseRows.filter(v => v.verse_id >= firstVerseId && v.verse_id <= ppOverlapEnd).map(v => v.verse_id);
+              const ppVerseNums = ppIds.map(id => vNumMap[id]).filter(v => v != null);
+              const ppRangeEnd = isFullPassage ? lastVerseId : (ppIds[ppIds.length - 1] ?? chLast);
+              const ppLv = vNumMap[ppRangeEnd] ?? passLastNum;
+              const ppRangeLastVerse = ppLv;
+              const ppRange = [{ from: firstVerseId, to: ppRangeEnd, ids: ppIds, verseNums: ppVerseNums, bookSlug: bookPart, chapter: chapterPart, firstVerse: ppFv, lastVerse: ppLv, rangeLastVerse: ppRangeLastVerse, synthetic: false, wholeChapter: isFullPassage }];
               const ppParallelMap = await this.headingRepository.findParallels(ppRange, version);
               if (ppParallelMap[firstVerseId]) {
                 chapterHeading._prePassageParallel = ppParallelMap[firstVerseId];
+              }
+            }
+            // Fallback: section ends before passage (chLast < firstVerseId) → copy parallel from inline/synthetic
+            // h3 at firstVerseId (which covers the full chapter and is removed from display by HtmlPresenter)
+            if (!chapterHeading._prePassageParallel && chapterHeading.heading) {
+              const firstH3 = h3s.find(h => h.verse_id === firstVerseId);
+              if (firstH3 && firstH3.parallel) {
+                chapterHeading._prePassageParallel = firstH3.parallel;
               }
             }
           }

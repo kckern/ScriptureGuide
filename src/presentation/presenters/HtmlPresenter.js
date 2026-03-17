@@ -158,9 +158,10 @@ export class HtmlPresenter {
       let preH3Ref, preH3Slug;
       if (chLast >= firstVId && chLast < passageLastVerseId && bookSlugForH3 && chapter) {
         const firstVNum = verseNumMap[firstVId];
-        // lastVNum: when chLast === firstVId (section ends exactly at first passage verse),
-        // use chLast (single-verse ref); otherwise use chLast+1 (exclusive end convention)
-        const lastVNum = (chLast === firstVId) ? verseNumMap[chLast] : (verseNumMap[chLast + 1] ?? verseNumMap[chLast]);
+        // lastVNum: if chLast+1 is a mid-section verse (§¶ mid-text, part of this section), include it.
+        // Otherwise use chLast (inclusive end). Mirrors the regular h3 nextMid/lastVerseNum logic.
+        const nextMidPre = midSectionVerseIds.has(chLast + 1) ? verseNumMap[chLast + 1] : undefined;
+        const lastVNum = nextMidPre ?? verseNumMap[chLast] ?? verseNumMap[chLast - 1];
         const verseRange = (firstVNum && lastVNum && firstVNum !== lastVNum)
           ? `.${firstVNum}-${lastVNum}` : (firstVNum ? `.${firstVNum}` : '');
         preH3Slug = `${version}/${bookSlugForH3}.${chapter}${verseRange}`;
