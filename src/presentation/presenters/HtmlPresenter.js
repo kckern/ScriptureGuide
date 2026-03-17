@@ -92,7 +92,7 @@ export class HtmlPresenter {
       // Synthetic sub-chapter: display attrs use the chapter-level range (not the requested verse range).
       // E.g. john.3.16 → heading_verse_id=chapter_start, verse_count=36, last_verse_id=chapter_end.
       // ref/slug are still computed from the actual verse range below (not overridden here).
-      if (h.synthetic && !h._wholeChapter && h._chapterVerseId != null && h._chapterVerseId !== h.verse_id) {
+      if (h.synthetic && !h._wholeChapter && h._chapterVerseId != null) {
         const chLast = h._chapterLast ?? h.last;
         h.displayVerseId = h._chapterVerseId;
         h._displayLast = chLast;
@@ -135,6 +135,9 @@ export class HtmlPresenter {
     const bookTitle = result.chapterHeading?.bookTitle || result.chapterHeading?.bookSlug || result.config._bookTitle || '';
     const bookSlugForH3 = bookTitle.toLowerCase().replace(/\s+/g, '.');
     const chapter = result.reference.chapter;
+
+    // Sub-chapter request: reference has explicit verse(s) (e.g. john.3.16, isa.53.1-6)
+    const isSubChapterRequest = result.reference.normalized?.includes(':') ?? false;
 
     // Assign slug/ref/headless to each h3 heading
     h3Headings.forEach(h => {
@@ -218,6 +221,16 @@ export class HtmlPresenter {
         // Otherwise use chLast (inclusive end). Mirrors the regular h3 nextMid/lastVerseNum logic.
         const nextMidPre = midSectionVerseIds.has(chLast + 1) ? verseNumMap[chLast + 1] : undefined;
         const lastVNum = nextMidPre ?? verseNumMap[chLast] ?? verseNumMap[chLast - 1];
+        const verseRange = (firstVNum && lastVNum && firstVNum !== lastVNum)
+          ? `.${firstVNum}-${lastVNum}` : (firstVNum ? `.${firstVNum}` : '');
+        preH3Slug = `${version}/${bookSlugForH3}.${chapter}${verseRange}`;
+        preH3Ref = (firstVNum && lastVNum && firstVNum !== lastVNum)
+          ? `${bookName} ${chapter}:${firstVNum}\u2013${lastVNum}`
+          : `${bookName} ${chapter}:${firstVNum || ''}`;
+      } else if (isSubChapterRequest && bookSlugForH3 && chapter) {
+        // Sub-chapter request: section covers full passage — use passage verse range for ref/slug
+        const firstVNum = verseNumMap[firstVId];
+        const lastVNum = verseNumMap[passageLastVerseId];
         const verseRange = (firstVNum && lastVNum && firstVNum !== lastVNum)
           ? `.${firstVNum}-${lastVNum}` : (firstVNum ? `.${firstVNum}` : '');
         preH3Slug = `${version}/${bookSlugForH3}.${chapter}${verseRange}`;

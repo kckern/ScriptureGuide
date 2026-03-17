@@ -91,6 +91,22 @@ export class ScriptureLookupService {
         const versePart = verseMatch ? '.' + verseMatch[1] : '';
         config._canonicalRefSlug = `${bookPart}.${chapterPart}${versePart}`;
 
+        // Sub-chapter request: has explicit verse(s) in the reference (e.g. john.3.16, gen.1.1-5)
+        const isSubChapterRequest = !!versePart;
+
+        // For sub-chapter requests, look up the chapter's actual first/last verse IDs.
+        // These are used for synthetic heading display attrs (heading_verse_id, verse_count, last_verse_id).
+        // We cannot use chapterHeading.verse_id because it may come from a different chapter (e.g. KJV).
+        let chapterFirstVerseId = chapterHeading?.verse_id ?? firstVerseId;
+        let chapterLastVerseId = chapterHeading?.last ?? lastVerseId;
+        if (isSubChapterRequest) {
+          const bounds = await this.headingRepository.findChapterBounds(bookId, chapterPart);
+          if (bounds) {
+            chapterFirstVerseId = bounds.first;
+            chapterLastVerseId = bounds.last;
+          }
+        }
+
         // If no inline section headings exist, generate a synthetic chapter-level h3
         // PHP renders this when a chapter has no section breaks (e.g. LDS version)
         const hasInlineHeadings = headings.some(h => h.type === 'heading');
@@ -106,8 +122,8 @@ export class ScriptureLookupService {
             book_id: bookId,
             synthetic: true,  // flag: renders with headless="1"
             // Chapter-level display attrs for sub-chapter requests
-            _chapterVerseId: chapterHeading?.verse_id,
-            _chapterLast: chapterHeading?.last
+            _chapterVerseId: chapterFirstVerseId,
+            _chapterLast: chapterLastVerseId
           });
         } else if (firstH3VerseId && firstH3VerseId > firstVerseId && !(chapterHeading && chapterHeading.heading)) {
           // Pre-section synthetic: inline headings exist but first one is AFTER firstVerseId,
@@ -165,7 +181,8 @@ export class ScriptureLookupService {
             const lv = vNumMap[extendedEnd] ?? vNumMap[extendedEnd - 1] ?? passLastNum;
             // A "whole chapter" heading starts at verse 1 and covers to the end of the passage.
             // PHP renders these with chapter-level slug/ref (no verse range), same as synthetic headings.
-            const isWholeChapter = fv === 1 && rangeEnd >= lastVerseId;
+            // Sub-chapter requests (explicit verses in URL) are never whole-chapter.
+            const isWholeChapter = !isSubChapterRequest && fv === 1 && rangeEnd >= lastVerseId;
             if (isWholeChapter) h._wholeChapter = true;
             // rangeLastVerse: verse number at rangeEnd (non-extended) — used for parallel DST slug
             // lastVerse: verse number at extendedEnd — used for H3 ref/slug display in HtmlPresenter
@@ -215,7 +232,8 @@ export class ScriptureLookupService {
               const ppRangeEnd = isFullPassage ? lastVerseId : (ppIds[ppIds.length - 1] ?? chLast);
               const ppLv = vNumMap[ppRangeEnd] ?? passLastNum;
               const ppRangeLastVerse = ppLv;
-              const ppRange = [{ from: firstVerseId, to: ppRangeEnd, ids: ppIds, verseNums: ppVerseNums, bookSlug: bookPart, chapter: chapterPart, firstVerse: ppFv, lastVerse: ppLv, rangeLastVerse: ppRangeLastVerse, synthetic: false, wholeChapter: isFullPassage }];
+              // Sub-chapter requests: never use chapter-level DST slug even if section covers full passage
+              const ppRange = [{ from: firstVerseId, to: ppRangeEnd, ids: ppIds, verseNums: ppVerseNums, bookSlug: bookPart, chapter: chapterPart, firstVerse: ppFv, lastVerse: ppLv, rangeLastVerse: ppRangeLastVerse, synthetic: false, wholeChapter: isFullPassage && !isSubChapterRequest }];
               const ppParallelMap = await this.headingRepository.findParallels(ppRange, version);
               if (ppParallelMap[firstVerseId]) {
                 chapterHeading._prePassageParallel = ppParallelMap[firstVerseId];

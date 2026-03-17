@@ -266,6 +266,15 @@ export class HeadingRepository {
     return result;
   }
 
+  // First and last verse_id for a book+chapter (from canonical verse table)
+  async findChapterBounds(bookId, chapter) {
+    const rows = await db.query(
+      'SELECT MIN(verse_id) AS first, MAX(verse_id) AS last FROM lds_scriptures_verses WHERE book_id = ? AND chapter = ?',
+      [bookId, chapter]
+    );
+    return rows[0]?.first ? { first: rows[0].first, last: rows[0].last } : null;
+  }
+
   // Mirrors PHP scriptutil::hasAudio($verse_list, $version)
   // audio=1 in DB → always has audio; audio=2 → only Isaiah and Book of Mormon; audio=0 → none
   async hasAudio(verseIds, version) {
