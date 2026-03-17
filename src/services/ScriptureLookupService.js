@@ -104,7 +104,10 @@ export class ScriptureLookupService {
             last_verse_id: lastVerseId,
             version,
             book_id: bookId,
-            synthetic: true  // flag: renders with headless="1"
+            synthetic: true,  // flag: renders with headless="1"
+            // Chapter-level display attrs for sub-chapter requests
+            _chapterVerseId: chapterHeading?.verse_id,
+            _chapterLast: chapterHeading?.last
           });
         } else if (firstH3VerseId && firstH3VerseId > firstVerseId && !(chapterHeading && chapterHeading.heading)) {
           // Pre-section synthetic: inline headings exist but first one is AFTER firstVerseId,
@@ -178,7 +181,7 @@ export class ScriptureLookupService {
               .map(v => v.verse_id);
             // verseNums: verse numbers for actualIds, used for DST slug (handles missing verses/gaps)
             const verseNums = actualIds.map(id => vNumMap[id]).filter(v => v != null);
-            return { from: h.verse_id, to: queryTo, ids: actualIds, verseNums, bookSlug: bookPart, chapter: chapterPart, firstVerse: fv, lastVerse: lv, rangeLastVerse, zeroLength: isZeroLength, synthetic: !!h.synthetic, wholeChapter: !!h.synthetic || isWholeChapter };
+            return { from: h.verse_id, to: queryTo, ids: actualIds, verseNums, bookSlug: bookPart, chapter: chapterPart, firstVerse: fv, lastVerse: lv, rangeLastVerse, zeroLength: isZeroLength, synthetic: !!h.synthetic, wholeChapter: isWholeChapter };
           });
 
           const parallelMap = await this.headingRepository.findParallels(ranges, version);

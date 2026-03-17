@@ -249,8 +249,8 @@ export class HeadingRepository {
         byLabel.get(label).push(row);
       }
 
-      // Synthetic or whole-chapter headings use chapter-level slug (no verse range) for DST
-      const useChapterSlug = range.synthetic || range.wholeChapter;
+      // Whole-chapter headings use chapter-level slug (no verse range) for DST
+      const useChapterSlug = range.wholeChapter;
       // DST slug: build from actual verse numbers (handles missing-verse gaps like NRSV Mark 15:28)
       const dstVerseRangeStr = buildVerseRanges(range.verseNums);
       const dstSlug = useChapterSlug

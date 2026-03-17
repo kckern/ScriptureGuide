@@ -14,11 +14,45 @@ function versionIMG(version, volume) {
 export class HtmlPresenter {
   present(result, req, res) {
     const data = this.serialize(result);
+    const title = result.reference.normalized || 'Scripture Guide';
+    const ogMeta = this._buildOgMeta(result, data, title, req);
     res.render('scripture', {
       data,
       config: result.config,
-      title: result.reference.normalized || 'Scripture Guide'
+      title,
+      ogMeta
     });
+  }
+
+  _buildOgMeta(result, data, title, req) {
+    const version = result.config.version || 'LDS';
+    const img = data.img || version.toLowerCase();
+    const ch = result.chapterHeading;
+
+    // Build description: "{title}— {summary/heading}. {first verse text...}"
+    // Build description: "{title}— {summary/heading} {first verse text...}"
+    let description = title;
+    const descriptor = ch?.summary || ch?.heading;
+    if (descriptor) description += '— ' + descriptor;
+    // Append verse text until we reach ~1000 chars
+    const prefix = descriptor ? ' ' : '— ';
+    let addedVerses = false;
+    for (const v of result.verses) {
+      const plain = v.text.replace(/^[§¶]+/, '').replace(/｟([^｠]*)｠/g, '$1').replace(/\s+/g, ' ').trim();
+      description += (addedVerses ? ' ' : prefix) + plain;
+      addedVerses = true;
+      if (description.length >= 1000) break;
+    }
+    description = description.substring(0, 1000);
+
+    const host = (req?.headers?.host || 'scripture.guide').replace(/:\d+$/, '');
+    const path = req?.path || '/';
+    return {
+      title: `${title} | Scripture Guide`,
+      image: `http://cover.scripture.guide/${img}`,
+      description,
+      url: `http://${host}${path}`
+    };
   }
 
   serialize(result) {
@@ -55,6 +89,15 @@ export class HtmlPresenter {
       h.last = h.last_verse_id || passageLastVerseId;
       // Synthetic/preSectionSynthetic chapter headings count inclusively (last - first + 1); section headings exclusive
       h.verse_count = (h.synthetic || h.preSectionSynthetic) ? (h.last - h.verse_id + 1) : (h.last - h.verse_id);
+      // Synthetic sub-chapter: display attrs use the chapter-level range (not the requested verse range).
+      // E.g. john.3.16 → heading_verse_id=chapter_start, verse_count=36, last_verse_id=chapter_end.
+      // ref/slug are still computed from the actual verse range below (not overridden here).
+      if (h.synthetic && !h._wholeChapter && h._chapterVerseId != null && h._chapterVerseId !== h.verse_id) {
+        const chLast = h._chapterLast ?? h.last;
+        h.displayVerseId = h._chapterVerseId;
+        h._displayLast = chLast;
+        h._displayVerseCount = chLast - h._chapterVerseId + 1;
+      }
       // Adjacent heading continuation: when this heading starts at (prevHeading.last + 1) AND
       // prevHeading.last is a MISSING verse (not in verseNumMap, e.g. NRSV James 1:8 absent),
       // PHP renders this heading with the previous heading's display attrs (verse_id/verse_count/last)
@@ -97,13 +140,12 @@ export class HtmlPresenter {
     h3Headings.forEach(h => {
       if (bookSlugForH3 && chapter) {
         const bookName = result.reference.book || '';
-        if (h.synthetic) {
-          // Synthetic chapter heading: no verse range in slug/ref, headless="1"
-          h.slug = `${version}/${bookSlugForH3}.${chapter}`;
-          h.ref = `${bookName} ${chapter}`;
-          h.headless = true;
-        } else if (h._wholeChapter && !h.preSectionSynthetic) {
-          // Single heading spanning the whole chapter: PHP uses chapter-level slug/ref (no verse range)
+        // All synthetic headings are headless
+        if (h.synthetic) h.headless = true;
+        // Whole-chapter heading (synthetic full-chapter OR single real section spanning whole chapter):
+        // use chapter-level slug/ref (no verse range)
+        const isChapterLevel = (h.synthetic && h._wholeChapter) || (h._wholeChapter && !h.synthetic && !h.preSectionSynthetic);
+        if (isChapterLevel) {
           h.slug = `${version}/${bookSlugForH3}.${chapter}`;
           h.ref = `${bookName} ${chapter}`;
         } else {
