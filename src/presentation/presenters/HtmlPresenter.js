@@ -89,25 +89,21 @@ export class HtmlPresenter {
       }
     });
 
-    // For synthetic headings with a chapterVerseId (from prior DB record),
-    // use that as the displayed heading_verse_id attr (matches PHP production)
-    for (const h of h3Headings) {
-      if (h.synthetic && h.chapterVerseId) {
-        h.displayVerseId = h.chapterVerseId;
-      }
-    }
-
     // Index h3 headings by verse_id for EJS lookup
     const h3ByVerse = {};
     for (const h of h3Headings) {
       h3ByVerse[h.verse_id] = h;
     }
 
-    // Pre-passage heading: when chapterHeading.verse_id < firstVerseId, PHP renders that
-    // section heading as the chapter-level h3 (with ellipsis below it) and does NOT
-    // render the inline heading at firstVerseId as a separate h3.
+    // Pre-passage heading: when chapterHeading has actual section heading text AND verse_id < firstVerseId,
+    // PHP renders that section heading as the chapter-level h3 (with ellipsis below it) and does NOT
+    // render any heading at firstVerseId (inline or synthetic) as a separate h3.
+    // Condition: chapterHeading.heading field must exist (not just a 'title' type record like "Psalms").
+    // This handles: NRSV Ps.23 (prior section spans chapters), NRSV Isa.53 (heading a few verses before).
+    // Does NOT apply: KJV Ps.23 (chapterHeading is just a book 'title' with no .heading field).
+    // Does NOT apply: NRSV John.18 (isNewSection=true makes chapterHeading.verse_id === firstVerseId).
     let prePassageH3 = null;
-    if (result.chapterHeading && passageLastVerseId && result.chapterHeading.verse_id < (result.verses[0]?.id ?? Infinity)) {
+    if (result.chapterHeading?.heading && passageLastVerseId && result.chapterHeading.verse_id < (result.verses[0]?.id ?? Infinity)) {
       const ch = result.chapterHeading;
       const firstVId = result.verses[0]?.id;
       // Use the DB heading's own last_verse_id (the range it covers in the DB),

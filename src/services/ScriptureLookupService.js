@@ -72,10 +72,7 @@ export class ScriptureLookupService {
             last_verse_id: lastVerseId,
             version,
             book_id: bookId,
-            synthetic: true,  // flag: renders with headless="1"
-            // When chapterHeading is from a prior DB record (its verse_id != firstVerseId),
-            // use its verse_id as the heading_verse_id attr (matches PHP production)
-            chapterVerseId: (chapterHeading && chapterHeading.verse_id !== firstVerseId) ? chapterHeading.verse_id : null
+            synthetic: true  // flag: renders with headless="1"
           });
         }
 
