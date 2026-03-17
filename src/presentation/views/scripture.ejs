@@ -9,11 +9,11 @@ function buildH3(h, version) {
   const headless = (h.headless || !h.text) ? ' headless="1"' : '';
   const slug = h.slug ? ` slug="${h.slug}"` : '';
   const ref = h.ref ? ` ref="${h.ref}"` : '';
-  const vc = h.verse_count != null ? ` verse_count="${h.verse_count}"` : '';
+  const vc = (h.verse_count != null && h.verse_count > 0) ? ` verse_count="${h.verse_count}"` : '';
   const lv = h.last ? ` last_verse_id="${h.last}"` : '';
   const img = h.img ? ` img="${h.img}"` : '';
   const ver = h.ver ? ` tver="${h.tver || h.ver}" ver="${h.ver}"` : '';
-  const audioAttr = h.audio === 1 ? ` audio="1"` : '';
+  const audioAttr = h.audio > 0 ? ` audio="1"` : '';
   const parallelAttr = h.parallel ? ` parallel="${h.parallel}"` : '';
   let html = `<h3 class="heading" version="${version}" heading_verse_id="${h.displayVerseId || h.verse_id}"${vc}${lv}${headless}${ref}${slug}${ver}${img}${parallelAttr}${audioAttr}>${h.text || ''}</h3>`;
   return html;
@@ -37,7 +37,7 @@ let currentGroup = null;
 data.verses.forEach(verse => {
   // h3 attaches to the segment that triggers the new section (isSection), not segment 0
   // For multi-segment verses (§¶ mid-text), h3 attaches only at the isSection segment (not segIndex===0)
-  const h3 = (verse.isSection || (verse.segIndex === 0 && verse.segCount === 1)) && data.h3ByVerse[verse.id]
+  const h3 = (verse.isSection || (verse.segIndex === 0 && verse.segCount === 1 && verse.lbIndex === 0)) && data.h3ByVerse[verse.id]
     ? data.h3ByVerse[verse.id]
     : null;
   // inlineItems only attach to first segment of each verse

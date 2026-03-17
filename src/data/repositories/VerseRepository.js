@@ -45,6 +45,44 @@ export class VerseRepository {
     return rows.map(r => r.version);
   }
 
+  // Resolve verse_ids from an lds_org slug + chapter (+ optional verse range)
+  // Used as fallback when the scripture-guide package doesn't recognize the book
+  // e.g. "song" (Song of Solomon), "abr" (Abraham), "fac" (Facsimiles)
+  async findBySlug(bookSlug, chapter, verseStart = null, verseEnd = null) {
+    const bookRows = await db.query(
+      'SELECT book_id, book_title, book_title_short FROM lds_scriptures_books WHERE lds_org = ? LIMIT 1',
+      [bookSlug]
+    );
+    if (!bookRows.length) return null;
+    const { book_id, book_title, book_title_short } = bookRows[0];
+
+    let verseRows;
+    if (verseStart && verseEnd) {
+      verseRows = await db.query(
+        'SELECT verse_id FROM lds_scriptures_verses WHERE book_id = ? AND chapter = ? AND verse BETWEEN ? AND ? ORDER BY verse',
+        [book_id, chapter, verseStart, verseEnd]
+      );
+    } else if (verseStart) {
+      verseRows = await db.query(
+        'SELECT verse_id FROM lds_scriptures_verses WHERE book_id = ? AND chapter = ? AND verse = ? LIMIT 1',
+        [book_id, chapter, verseStart]
+      );
+    } else {
+      verseRows = await db.query(
+        'SELECT verse_id FROM lds_scriptures_verses WHERE book_id = ? AND chapter = ? ORDER BY verse',
+        [book_id, chapter]
+      );
+    }
+
+    if (!verseRows.length) return null;
+    return {
+      verseIds: verseRows.map(r => r.verse_id),
+      book: book_title,
+      bookShort: book_title_short,
+      chapter: String(chapter)
+    };
+  }
+
   async findAvailableVersions(verseIds) {
     if (!verseIds || verseIds.length === 0) return [];
 

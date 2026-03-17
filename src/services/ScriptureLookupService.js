@@ -3,6 +3,7 @@ import verseRepository from '../data/repositories/VerseRepository.js';
 import headingRepository from '../data/repositories/HeadingRepository.js';
 import { Verse } from '../domain/entities/Verse.js';
 import { ScriptureResult } from '../domain/entities/ScriptureResult.js';
+import { Reference } from '../domain/entities/Reference.js';
 
 export class ScriptureLookupService {
   constructor(refService, verseRepo, headingRepo) {
@@ -11,8 +12,34 @@ export class ScriptureLookupService {
     this.headingRepository = headingRepo;
   }
 
+  // Parse a bookSlug.chapter[.verse[-verseEnd]] format (e.g. "song.1", "song.1.3-5")
+  // Returns { bookSlug, chapter, verseStart, verseEnd } or null
+  static parseSlug(refStr) {
+    const m = refStr.match(/^([a-z0-9&]+)\.(\d+)(?:\.(\d+)(?:-(\d+))?)?$/i);
+    if (!m) return null;
+    return { bookSlug: m[1].toLowerCase(), chapter: parseInt(m[2]), verseStart: m[3] ? parseInt(m[3]) : null, verseEnd: m[4] ? parseInt(m[4]) : null };
+  }
+
   async lookup(referenceString, config = {}) {
-    const reference = this.referenceService.parse(referenceString);
+    let reference = this.referenceService.parse(referenceString);
+
+    // Fallback: if the package doesn't know the book, try DB slug lookup
+    if (reference.isEmpty) {
+      const slug = ScriptureLookupService.parseSlug(referenceString);
+      if (slug) {
+        const slugResult = await this.verseRepository.findBySlug(slug.bookSlug, slug.chapter, slug.verseStart, slug.verseEnd);
+        if (slugResult) {
+          reference = new Reference({
+            query: referenceString,
+            normalized: `${slugResult.book} ${slug.chapter}${slug.verseStart ? ':' + slug.verseStart + (slug.verseEnd && slug.verseEnd !== slug.verseStart ? '-' + slug.verseEnd : '') : ''}`,
+            verseIds: slugResult.verseIds,
+            _book: slugResult.book,
+            _bookShort: slugResult.bookShort,
+            _chapter: slug.chapter
+          });
+        }
+      }
+    }
 
     if (reference.isEmpty) {
       return new ScriptureResult({ reference, verses: [], headings: [], config });
@@ -46,7 +73,9 @@ export class ScriptureLookupService {
         chapterNav = await this.headingRepository.findChapterNav(firstVerseId, lastVerseId);
 
         // Attach book slug and version audio to chapter heading for h3 attrs
-        const audioFlag = await this.headingRepository.findVersionAudio(version);
+        const audioFlag = await this.headingRepository.hasAudio(verseIds, version);
+        // Always store bookTitle on config so HtmlPresenter can build slugs even when chapterHeading is null
+        config._bookTitle = bookTitle;
         if (chapterHeading) {
           chapterHeading.bookSlug = bookSlug;
           chapterHeading.bookTitle = bookTitle;
@@ -64,6 +93,8 @@ export class ScriptureLookupService {
         // If no inline section headings exist, generate a synthetic chapter-level h3
         // PHP renders this when a chapter has no section breaks (e.g. LDS version)
         const hasInlineHeadings = headings.some(h => h.type === 'heading');
+        const h3sSortedSynth = headings.filter(h => h.type === 'heading').sort((a, b) => a.verse_id - b.verse_id);
+        const firstH3VerseId = h3sSortedSynth[0]?.verse_id;
         if (!hasInlineHeadings) {
           headings.push({
             verse_id: firstVerseId,
@@ -73,6 +104,20 @@ export class ScriptureLookupService {
             version,
             book_id: bookId,
             synthetic: true  // flag: renders with headless="1"
+          });
+        } else if (firstH3VerseId && firstH3VerseId > firstVerseId) {
+          // Pre-section synthetic: inline headings exist but first one is AFTER firstVerseId.
+          // PHP renders a headless h3 at firstVerseId spanning the whole chapter,
+          // with ref/slug scoped to just verse 1 (using _sectionLast = firstH3VerseId - 1).
+          headings.push({
+            verse_id: firstVerseId,
+            type: 'heading',
+            text: '',
+            last_verse_id: lastVerseId,
+            version,
+            book_id: bookId,
+            preSectionSynthetic: true,
+            _sectionLast: firstH3VerseId - 1
           });
         }
 
@@ -97,10 +142,18 @@ export class ScriptureLookupService {
             // Cap range at passage end to avoid cross-chapter parallels
             const rangeEnd = Math.min(last, lastVerseId);
             const fv = vNumMap[h.verse_id] ?? 1;
-            // If next verse after rangeEnd is a mid-section verse, include it in the range
+            // extendedEnd is for lastVerseNum display only (h3 ref/slug attr).
+            // The parallel query uses rangeEnd (non-extended) to match PHP's $verselist behavior.
             const extendedEnd = midSectionIds.has(rangeEnd + 1) && rangeEnd + 1 <= lastVerseId ? rangeEnd + 1 : rangeEnd;
             const lv = vNumMap[extendedEnd] ?? passLastNum;
-            return { from: h.verse_id, to: extendedEnd, bookSlug: bookPart, chapter: chapterPart, firstVerse: fv, lastVerse: lv, synthetic: !!h.synthetic };
+            // A "whole chapter" heading starts at verse 1 and covers to the end of the passage.
+            // PHP renders these with chapter-level slug/ref (no verse range), same as synthetic headings.
+            const isWholeChapter = fv === 1 && rangeEnd >= lastVerseId;
+            if (isWholeChapter) h._wholeChapter = true;
+            // rangeLastVerse: verse number at rangeEnd (non-extended) — used for parallel DST slug
+            // lastVerse: verse number at extendedEnd — used for H3 ref/slug display in HtmlPresenter
+            const rangeLastVerse = vNumMap[rangeEnd] ?? passLastNum;
+            return { from: h.verse_id, to: rangeEnd, bookSlug: bookPart, chapter: chapterPart, firstVerse: fv, lastVerse: lv, rangeLastVerse, synthetic: !!h.synthetic, wholeChapter: !!h.synthetic || isWholeChapter };
           });
 
           const parallelMap = await this.headingRepository.findParallels(ranges, version);
@@ -109,6 +162,25 @@ export class ScriptureLookupService {
           for (const h of h3s) {
             if (parallelMap[h.verse_id]) {
               h.parallel = parallelMap[h.verse_id];
+            }
+          }
+
+          // Compute parallel for pre-passage section (when chapterHeading.verse_id < firstVerseId
+          // AND the section extends into the passage: chLast >= firstVerseId && chLast < lastVerseId).
+          // e.g. NRSV Gen.2: Gen.1 heading covers Gen 2:1-3; Gen 2:4+ is a separate section.
+          if (chapterHeading && chapterHeading.verse_id < firstVerseId) {
+            const chLast = chapterHeading.last ?? lastVerseId;
+            if (chLast >= firstVerseId && chLast < lastVerseId) {
+              const ppFv = vNumMap[firstVerseId] ?? 1;
+              // Use chLast+1 as exclusive boundary (PHP includes the boundary verse in verselist)
+              const ppRangeEnd = chLast + 1;
+              const ppRangeLastVerse = vNumMap[ppRangeEnd] ?? vNumMap[chLast] ?? passLastNum;
+              const ppLv = ppRangeLastVerse;
+              const ppRange = [{ from: firstVerseId, to: ppRangeEnd, bookSlug: bookPart, chapter: chapterPart, firstVerse: ppFv, lastVerse: ppLv, rangeLastVerse: ppRangeLastVerse, synthetic: false, wholeChapter: false }];
+              const ppParallelMap = await this.headingRepository.findParallels(ppRange, version);
+              if (ppParallelMap[firstVerseId]) {
+                chapterHeading._prePassageParallel = ppParallelMap[firstVerseId];
+              }
             }
           }
         }

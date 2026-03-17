@@ -51,13 +51,18 @@ export class HtmlPresenter {
     h3Headings.forEach((h) => {
       // last_verse_id from DB self-join (global next heading - 1)
       h.last = h.last_verse_id || passageLastVerseId;
-      // Synthetic chapter headings count inclusively (last - first + 1); section headings exclusive
-      h.verse_count = h.synthetic ? (h.last - h.verse_id + 1) : (h.last - h.verse_id);
+      // Synthetic/preSectionSynthetic chapter headings count inclusively (last - first + 1); section headings exclusive
+      h.verse_count = (h.synthetic || h.preSectionSynthetic) ? (h.last - h.verse_id + 1) : (h.last - h.verse_id);
       h.firstVerseNum = verseNumMap[h.verse_id];
       // If the next verse after h.last starts a new section mid-verse (§¶), include its verse number
       // This mirrors PHP behavior where the current section "owns" the first part of that verse
       const nextMid = midSectionVerseIds.has(h.last + 1) ? verseNumMap[h.last + 1] : undefined;
       h.lastVerseNum = nextMid ?? verseNumMap[h.last] ?? passageLastVerseNum;
+      // preSectionSynthetic: override lastVerseNum to the verse just before the first real heading
+      // so that ref/slug say "1:1" (verse 1 only), while verse_count/last_verse_id span the full chapter
+      if (h.preSectionSynthetic && h._sectionLast) {
+        h.lastVerseNum = verseNumMap[h._sectionLast] ?? passageLastVerseNum;
+      }
       h.img = img;
       h.ver = version;
       h.tver = version;
@@ -65,25 +70,29 @@ export class HtmlPresenter {
     });
 
     // Build book slug for h3 slug attrs: use book_title (e.g. "doctrine.and.covenants"), not lds_org
-    const bookTitle = result.chapterHeading?.bookTitle || result.chapterHeading?.bookSlug || '';
+    const bookTitle = result.chapterHeading?.bookTitle || result.chapterHeading?.bookSlug || result.config._bookTitle || '';
     const bookSlugForH3 = bookTitle.toLowerCase().replace(/\s+/g, '.');
     const chapter = result.reference.chapter;
 
     // Assign slug/ref/headless to each h3 heading
     h3Headings.forEach(h => {
       if (bookSlugForH3 && chapter) {
+        const bookName = result.reference.book || '';
         if (h.synthetic) {
           // Synthetic chapter heading: no verse range in slug/ref, headless="1"
           h.slug = `${version}/${bookSlugForH3}.${chapter}`;
-          h.ref = `${result.reference.book || ''} ${chapter}`;
+          h.ref = `${bookName} ${chapter}`;
           h.headless = true;
+        } else if (h._wholeChapter && !h.preSectionSynthetic) {
+          // Single heading spanning the whole chapter: PHP uses chapter-level slug/ref (no verse range)
+          h.slug = `${version}/${bookSlugForH3}.${chapter}`;
+          h.ref = `${bookName} ${chapter}`;
         } else {
           const f = h.firstVerseNum;
           const l = h.lastVerseNum;
           const verseRange = (f && l && f !== l) ? `.${f}-${l}` : (f ? `.${f}` : '');
           h.slug = `${version}/${bookSlugForH3}.${chapter}${verseRange}`;
           // ref: "Book Chapter:first–last" with en-dash
-          const bookName = result.reference.book || '';
           h.ref = (f && l && f !== l) ? `${bookName} ${chapter}:${f}\u2013${l}` : `${bookName} ${chapter}:${f || ''}`;
         }
       }
@@ -110,21 +119,42 @@ export class HtmlPresenter {
       // not the passage end — verse_count and last_verse_id attrs reference the DB range
       const chLast = ch.last ?? passageLastVerseId;
       const chVerseCount = chLast - ch.verse_id;
+      const bookName = result.reference.book || '';
+      // Choose ref/slug format based on section coverage:
+      // - chLast < firstVId: section ends before passage → chapter-level (e.g. Ps.23)
+      // - chLast >= firstVId && chLast < passageLastVerseId: partial overlap → verse-level (e.g. Gen.2)
+      // - chLast >= passageLastVerseId: section spans full passage → chapter-level (e.g. Isa.53)
+      let preH3Ref, preH3Slug;
+      if (chLast >= firstVId && chLast < passageLastVerseId && bookSlugForH3 && chapter) {
+        const firstVNum = verseNumMap[firstVId];
+        // lastVNum: verse number at chLast+1 (exclusive end, PHP convention) or fallback to chLast
+        const lastVNum = verseNumMap[chLast + 1] ?? verseNumMap[chLast];
+        const verseRange = (firstVNum && lastVNum && firstVNum !== lastVNum)
+          ? `.${firstVNum}-${lastVNum}` : (firstVNum ? `.${firstVNum}` : '');
+        preH3Slug = `${version}/${bookSlugForH3}.${chapter}${verseRange}`;
+        preH3Ref = (firstVNum && lastVNum && firstVNum !== lastVNum)
+          ? `${bookName} ${chapter}:${firstVNum}\u2013${lastVNum}`
+          : `${bookName} ${chapter}:${firstVNum || ''}`;
+      } else {
+        preH3Ref = `${bookName} ${chapter}`;
+        preH3Slug = bookSlugForH3 && chapter ? `${version}/${bookSlugForH3}.${chapter}` : '';
+      }
       prePassageH3 = {
         verse_id: ch.verse_id,
         text: ch.heading || '',
-        ref: `${result.reference.book || ''} ${chapter}`,
-        slug: bookSlugForH3 && chapter ? `${version}/${bookSlugForH3}.${chapter}` : '',
+        ref: preH3Ref,
+        slug: preH3Slug,
         verse_count: chVerseCount,
         last: chLast,
-        // Ellipsis p attrs mirror the h3 attrs
-        ellipsisVerseCount: chVerseCount + 1,
+        // Ellipsis p attrs: ellipsisVerseCount = omitted verses before firstVId
+        ellipsisVerseCount: firstVId - ch.verse_id,
         ellipsisLast: chLast,
         headless: false,
         img,
         ver: version,
         tver: version,
-        audio: ch.audio === 1 ? 1 : 0
+        audio: ch.audio > 0 ? 1 : 0,
+        parallel: ch._prePassageParallel || null
       };
       // Remove inline heading at firstVerseId — production doesn't render it when pre-passage h3 takes its place
       delete h3ByVerse[firstVId];
@@ -196,7 +226,7 @@ export class HtmlPresenter {
       chapterNav: result.chapterNav,
       img,
       chapterSlug: bookSlugForH3 && chapter ? `${version}/${bookSlugForH3}.${chapter}` : null,
-      audio: result.chapterHeading?.audio === 1 ? 1 : 0,
+      audio: result.chapterHeading?.audio > 0 ? 1 : 0,
       canonicalRefSlug: result.config._canonicalRefSlug || ''
     };
   }

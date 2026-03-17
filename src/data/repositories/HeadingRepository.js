@@ -111,7 +111,7 @@ export class HeadingRepository {
 
     const rows = await db.query(
       `SELECT r.src_verse_id, r.dst_verse_id, r.significant,
-        v.chapter AS src_chapter, v.verse AS src_verse,
+        v.chapter AS src_chapter, v.verse AS src_verse, v.book_id AS src_book_id,
         b.book_title_short AS src_book_slug, b.book_title AS src_book_title,
         vol.lds_org AS vol_org
        FROM scripture_references r
@@ -122,6 +122,29 @@ export class HeadingRepository {
        ORDER BY r.dst_verse_id, r.src_verse_id`,
       [allIds]
     );
+
+    // Batch-fetch chapter sizes for src chapters referenced by synthetic/wholeChapter headings.
+    // Used to determine if a src verse range covers the full chapter (→ chapter-level slug).
+    const chapterSizeMap = {};
+    const chaptersToFetch = [];
+    for (const range of verseIdRanges) {
+      if (!(range.synthetic || range.wholeChapter)) continue;
+      const rangeRows = rows.filter(r => r.dst_verse_id >= range.from && r.dst_verse_id <= range.to);
+      for (const row of rangeRows) {
+        const key = `${row.src_book_id}:${row.src_chapter}`;
+        if (!chapterSizeMap[key]) chaptersToFetch.push({ book_id: row.src_book_id, chapter: row.src_chapter, key });
+      }
+    }
+    if (chaptersToFetch.length) {
+      const uniquePairs = [...new Map(chaptersToFetch.map(p => [p.key, p])).values()];
+      for (const pair of uniquePairs) {
+        const [sizeRow] = await db.query(
+          'SELECT COUNT(*) AS cnt FROM lds_scriptures_verses WHERE book_id = ? AND chapter = ?',
+          [pair.book_id, pair.chapter]
+        );
+        chapterSizeMap[pair.key] = sizeRow?.cnt ?? 0;
+      }
+    }
 
     const result = {};
     for (const range of verseIdRanges) {
@@ -146,10 +169,13 @@ export class HeadingRepository {
         byLabel[label].push(row);
       }
 
-      // Synthetic chapter headings use whole-chapter slug format (no verse range)
-      const dstSlug = range.synthetic
+      // Synthetic or whole-chapter headings use chapter-level slug (no verse range) for DST
+      const useChapterSlug = range.synthetic || range.wholeChapter;
+      // DST slug uses rangeLastVerse (not lastVerse which may include mid-section extension)
+      const dstLastVerse = range.rangeLastVerse ?? range.lastVerse;
+      const dstSlug = useChapterSlug
         ? `${versionPrefix}${range.bookSlug}.${range.chapter}`
-        : `${versionPrefix}${range.bookSlug}.${range.chapter}.${range.firstVerse}-${range.lastVerse}`;
+        : `${versionPrefix}${range.bookSlug}.${range.chapter}.${range.firstVerse}-${dstLastVerse}`;
       const parts = [];
       for (const [label, labelRows] of Object.entries(byLabel)) {
         const first = labelRows[0];
@@ -157,10 +183,11 @@ export class HeadingRepository {
         // Use space→dot for multi-word (JST John → jst.john), strip periods
         const srcBookSlug = first.src_book_slug.toLowerCase().replace(/\./g, '').replace(/\s+/g, '.');
         let srcSlug;
-        if (range.synthetic) {
-          // Whole-chapter parallel: deduplicate, then check if contiguous from 1 (= whole chapter)
+        if (range.synthetic || range.wholeChapter) {
+          // Whole-chapter parallel: deduplicate, sort, then check if contiguous covering full chapter
           const verses = [...new Set(labelRows.map(r => r.src_verse))].sort((a, b) => a - b);
-          const isWholeChapter = verses[0] === 1 && verses.every((v, i) => i === 0 || v === verses[i - 1] + 1);
+          const chapterSize = chapterSizeMap[`${first.src_book_id}:${first.src_chapter}`] ?? 0;
+          const isWholeChapter = chapterSize > 0 && verses[0] === 1 && verses.length === chapterSize && verses.every((v, i) => i === 0 || v === verses[i - 1] + 1);
           if (isWholeChapter) {
             srcSlug = `${srcBookSlug}.${first.src_chapter}`;
           } else {
@@ -175,8 +202,20 @@ export class HeadingRepository {
             srcSlug = `${srcBookSlug}.${first.src_chapter}.${segments.join(',')}`;
           }
         } else {
-          const last = labelRows[labelRows.length - 1];
-          srcSlug = `${srcBookSlug}.${first.src_chapter}.${first.src_verse}-${last.src_verse}`;
+          // Sort src verses and handle non-contiguous ranges with comma-separated segments
+          const srcVerses = [...new Set(labelRows.map(r => r.src_verse))].sort((a, b) => a - b);
+          if (srcVerses.length === 1) {
+            srcSlug = `${srcBookSlug}.${first.src_chapter}.${srcVerses[0]}`;
+          } else {
+            const segs = [];
+            let segStart = srcVerses[0], segEnd = srcVerses[0];
+            for (let i = 1; i < srcVerses.length; i++) {
+              if (srcVerses[i] === segEnd + 1) { segEnd = srcVerses[i]; }
+              else { segs.push(segStart === segEnd ? `${segStart}` : `${segStart}-${segEnd}`); segStart = segEnd = srcVerses[i]; }
+            }
+            segs.push(segStart === segEnd ? `${segStart}` : `${segStart}-${segEnd}`);
+            srcSlug = `${srcBookSlug}.${first.src_chapter}.${segs.join(',')}`;
+          }
         }
         parts.push(`${label}*${dstSlug}~${srcSlug}`);
       }
@@ -185,13 +224,21 @@ export class HeadingRepository {
     return result;
   }
 
-  // Get audio flag for a version
-  async findVersionAudio(version) {
-    const rows = await db.query(
-      'SELECT audio FROM scripture_versions WHERE id = ? LIMIT 1',
-      [version]
-    );
-    return rows[0]?.audio || 0;
+  // Mirrors PHP scriptutil::hasAudio($verse_list, $version)
+  // audio=1 in DB → always has audio; audio=2 → only Isaiah and Book of Mormon; audio=0 → none
+  async hasAudio(verseIds, version) {
+    if (!verseIds || verseIds.length === 0) return 0;
+    const rows = await db.query('SELECT audio FROM scripture_versions WHERE id = ? LIMIT 1', [version]);
+    const audio = rows[0]?.audio;
+    if (!audio) return 0;
+    const min = Math.min(...verseIds);
+    const max = Math.max(...verseIds);
+    // Book of Mormon
+    if (min >= 31103 && max <= 37706) return 1;
+    // Isaiah (audio=2 versions only)
+    if (min >= 17656 && max <= 18947 && audio === 2) return 1;
+    if (audio === 1) return 1;
+    return 0;
   }
 }
 
