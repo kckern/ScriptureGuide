@@ -103,6 +103,37 @@ export class HtmlPresenter {
       h3ByVerse[h.verse_id] = h;
     }
 
+    // Pre-passage heading: when chapterHeading.verse_id < firstVerseId, PHP renders that
+    // section heading as the chapter-level h3 (with ellipsis below it) and does NOT
+    // render the inline heading at firstVerseId as a separate h3.
+    let prePassageH3 = null;
+    if (result.chapterHeading && passageLastVerseId && result.chapterHeading.verse_id < (result.verses[0]?.id ?? Infinity)) {
+      const ch = result.chapterHeading;
+      const firstVId = result.verses[0]?.id;
+      // Use the DB heading's own last_verse_id (the range it covers in the DB),
+      // not the passage end — verse_count and last_verse_id attrs reference the DB range
+      const chLast = ch.last ?? passageLastVerseId;
+      const chVerseCount = chLast - ch.verse_id;
+      prePassageH3 = {
+        verse_id: ch.verse_id,
+        text: ch.heading || '',
+        ref: `${result.reference.book || ''} ${chapter}`,
+        slug: bookSlugForH3 && chapter ? `${version}/${bookSlugForH3}.${chapter}` : '',
+        verse_count: chVerseCount,
+        last: chLast,
+        // Ellipsis p attrs mirror the h3 attrs
+        ellipsisVerseCount: chVerseCount + 1,
+        ellipsisLast: chLast,
+        headless: false,
+        img,
+        ver: version,
+        tver: version,
+        audio: ch.audio === 1 ? 1 : 0
+      };
+      // Remove inline heading at firstVerseId — production doesn't render it when pre-passage h3 takes its place
+      delete h3ByVerse[firstVId];
+    }
+
     // Non-heading inline elements (verse_head, summary, headnote, background)
     // Exclude summary/headnote/background for the chapter heading verse (rendered after chapter h3)
     const chapterTypes = new Set(['summary', 'headnote', 'background']);
@@ -126,11 +157,26 @@ export class HtmlPresenter {
         const segments = VerseSerializer.splitSegments(v.text);
         return segments.flatMap((seg, i) => {
           const lbParts = VerseSerializer.splitLinebreaks(seg.text);
+          // Format override rules:
+          // - If segment text starts with §, it's a subtitle/heading line → always prose
+          // - If segment meta contains ▼ (preceded by ¶▼), next segment is poetry
+          // - If segment meta contains ► (preceded by ¶►), next segment is indent
+          // - Otherwise use DB verse format
+          let segFormat;
+          if (seg.text.startsWith('§')) {
+            segFormat = 'prose';
+          } else if (seg.meta.includes('▼')) {
+            segFormat = 'poetry';
+          } else if (seg.meta.includes('►')) {
+            segFormat = 'indent';
+          } else {
+            segFormat = v.format || 'prose';
+          }
           return lbParts.map((part, lbIdx) => ({
             id: v.id,
             num: v.verseNum,
             text: VerseSerializer.formatHtml(part.text),
-            format: v.format || 'prose',
+            format: segFormat,
             lbClass: part.lbClass,
             version: v.version,
             // Break paragraph if first linebreak part: meta has ¶, or single-segment verse with DB paraBreak
@@ -145,6 +191,7 @@ export class HtmlPresenter {
       }),
       h3ByVerse,       // full h3 headings indexed by verse_id
       inlineByVerse,   // non-heading inline elements indexed by verse_id
+      prePassageH3,    // chapter heading from prior section (renders before verses with ellipsis)
       // Keep headings for backward compat (partials/passage.ejs)
       headings: Object.fromEntries(
         Object.entries(h3ByVerse).map(([k, v]) => [k, [v]])

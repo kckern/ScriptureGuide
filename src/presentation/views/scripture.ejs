@@ -63,6 +63,16 @@ data.verses.forEach(verse => {
   currentGroup.spans.push(span);
 });
 
+// Pre-passage heading: chapter-level heading from a prior section (e.g. NRSV Psalms spanning chapters)
+// Renders before the verse loop with an ellipsis paragraph to indicate omitted verses
+if (data.prePassageH3) {
+  const pph = data.prePassageH3;
+  passageHtml += `\n\t\t${buildH3(pph, version)}`;
+  if (ch?.summary) passageHtml += `\n\t\t<div class="summary" version="${version}">${ch.summary}</div>`;
+  if (ch?.headnote) passageHtml += `\n\t\t<div class="headnote" version="${version}">${ch.headnote}</div>`;
+  passageHtml += `\n\t\t<p class="ellipses" heading_verse_id="${pph.verse_id}" verse_count="${pph.ellipsisVerseCount}" last_verse_id="${pph.ellipsisLast}">...</p>`;
+}
+
 paraGroups.forEach(group => {
   // Full h3 with all attrs (covers chapter heading AND inline section headings)
   if (group.h3) {
