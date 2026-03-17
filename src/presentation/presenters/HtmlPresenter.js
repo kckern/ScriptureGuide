@@ -37,7 +37,9 @@ export class HtmlPresenter {
     // When the next heading starts at such a verse, the current heading's range includes it
     const midSectionVerseIds = new Set();
     for (const v of result.verses) {
-      if (VerseSerializer.splitSegments(v.text).length > 1) midSectionVerseIds.add(v.id);
+      const segs = VerseSerializer.splitSegments(v.text);
+      // Only include verses where §¶ appears MID-TEXT: first segment has no § (previous-section content)
+      if (segs.length > 1 && !segs[0].meta.includes('§')) midSectionVerseIds.add(v.id);
     }
 
     // Collect all 'heading' type records, sorted, with range computation

@@ -4,6 +4,7 @@ import headingRepository from '../data/repositories/HeadingRepository.js';
 import { Verse } from '../domain/entities/Verse.js';
 import { ScriptureResult } from '../domain/entities/ScriptureResult.js';
 import { Reference } from '../domain/entities/Reference.js';
+import VerseSerializer from '../presentation/serializers/VerseSerializer.js';
 
 export class ScriptureLookupService {
   constructor(refService, verseRepo, headingRepo) {
@@ -132,9 +133,14 @@ export class ScriptureLookupService {
           for (const v of verseRows) vNumMap[v.verse_id] = v.verse;
           const passLastNum = verseRows[verseRows.length - 1]?.verse ?? 0;
 
-          // Track mid-section verse_ids (§¶ in text) — same logic as HtmlPresenter
+          // Track mid-section verse_ids: verses where §¶ appears MID-TEXT (not at start).
+          // First segment must have no § in meta (it's previous-section content), and a later
+          // segment starts the new section. Excludes verses where the whole verse starts a new section.
           const midSectionIds = new Set(
-            verseRows.filter(v => v.text && v.text.includes('§')).map(v => v.verse_id)
+            verseRows.filter(v => {
+              const segs = VerseSerializer.splitSegments(v.text);
+              return segs.length > 1 && !segs[0].meta.includes('§');
+            }).map(v => v.verse_id)
           );
 
           const ranges = h3s.map((h) => {

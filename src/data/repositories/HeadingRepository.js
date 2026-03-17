@@ -123,17 +123,13 @@ export class HeadingRepository {
       [allIds]
     );
 
-    // Batch-fetch chapter sizes for src chapters referenced by synthetic/wholeChapter headings.
+    // Batch-fetch chapter sizes for ALL src chapters referenced by any heading.
     // Used to determine if a src verse range covers the full chapter (→ chapter-level slug).
     const chapterSizeMap = {};
     const chaptersToFetch = [];
-    for (const range of verseIdRanges) {
-      if (!(range.synthetic || range.wholeChapter)) continue;
-      const rangeRows = rows.filter(r => r.dst_verse_id >= range.from && r.dst_verse_id <= range.to);
-      for (const row of rangeRows) {
-        const key = `${row.src_book_id}:${row.src_chapter}`;
-        if (!chapterSizeMap[key]) chaptersToFetch.push({ book_id: row.src_book_id, chapter: row.src_chapter, key });
-      }
+    for (const row of rows) {
+      const key = `${row.src_book_id}:${row.src_chapter}`;
+      if (!chapterSizeMap[key]) chaptersToFetch.push({ book_id: row.src_book_id, chapter: row.src_chapter, key });
     }
     if (chaptersToFetch.length) {
       const uniquePairs = [...new Map(chaptersToFetch.map(p => [p.key, p])).values()];
@@ -184,30 +180,17 @@ export class HeadingRepository {
         // Use space→dot for multi-word (JST John → jst.john), strip periods
         const srcBookSlug = first.src_book_slug.toLowerCase().replace(/\./g, '').replace(/\s+/g, '.');
         let srcSlug;
-        if (range.synthetic || range.wholeChapter) {
-          // Whole-chapter parallel: deduplicate, sort, then check if contiguous covering full chapter
-          const verses = [...new Set(labelRows.map(r => r.src_verse))].sort((a, b) => a - b);
+        {
+          // Always check if src verses cover the full chapter (chapter-level slug)
+          const srcVerses = [...new Set(labelRows.map(r => r.src_verse))].sort((a, b) => a - b);
           const chapterSize = chapterSizeMap[`${first.src_book_id}:${first.src_chapter}`] ?? 0;
-          const isWholeChapter = chapterSize > 0 && verses[0] === 1 && verses.length === chapterSize && verses.every((v, i) => i === 0 || v === verses[i - 1] + 1);
+          const isWholeChapter = chapterSize > 0 && srcVerses[0] === 1 && srcVerses.length === chapterSize && srcVerses.every((v, i) => i === 0 || v === srcVerses[i - 1] + 1);
           if (isWholeChapter) {
             srcSlug = `${srcBookSlug}.${first.src_chapter}`;
-          } else {
-            // Build comma-separated contiguous segments for non-contiguous ranges
-            const segments = [];
-            let segStart = verses[0], segEnd = verses[0];
-            for (let i = 1; i < verses.length; i++) {
-              if (verses[i] === segEnd + 1) { segEnd = verses[i]; }
-              else { segments.push(`${segStart}-${segEnd}`); segStart = segEnd = verses[i]; }
-            }
-            segments.push(`${segStart}-${segEnd}`);
-            srcSlug = `${srcBookSlug}.${first.src_chapter}.${segments.join(',')}`;
-          }
-        } else {
-          // Sort src verses and handle non-contiguous ranges with comma-separated segments
-          const srcVerses = [...new Set(labelRows.map(r => r.src_verse))].sort((a, b) => a - b);
-          if (srcVerses.length === 1) {
+          } else if (srcVerses.length === 1) {
             srcSlug = `${srcBookSlug}.${first.src_chapter}.${srcVerses[0]}`;
           } else {
+            // Build comma-separated contiguous segments for non-contiguous ranges
             const segs = [];
             let segStart = srcVerses[0], segEnd = srcVerses[0];
             for (let i = 1; i < srcVerses.length; i++) {
