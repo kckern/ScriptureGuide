@@ -153,7 +153,11 @@ export class ScriptureLookupService {
             // rangeLastVerse: verse number at rangeEnd (non-extended) — used for parallel DST slug
             // lastVerse: verse number at extendedEnd — used for H3 ref/slug display in HtmlPresenter
             const rangeLastVerse = vNumMap[rangeEnd] ?? passLastNum;
-            return { from: h.verse_id, to: rangeEnd, bookSlug: bookPart, chapter: chapterPart, firstVerse: fv, lastVerse: lv, rangeLastVerse, synthetic: !!h.synthetic, wholeChapter: !!h.synthetic || isWholeChapter };
+            // Zero-length sections (rangeEnd === h.verse_id): extend query range and DST to extendedEnd
+            // so that the parallel query includes the next verse (which the section "owns" its first segment).
+            const isZeroLength = rangeEnd === h.verse_id;
+            const queryTo = isZeroLength ? extendedEnd : rangeEnd;
+            return { from: h.verse_id, to: queryTo, bookSlug: bookPart, chapter: chapterPart, firstVerse: fv, lastVerse: lv, rangeLastVerse, zeroLength: isZeroLength, synthetic: !!h.synthetic, wholeChapter: !!h.synthetic || isWholeChapter };
           });
 
           const parallelMap = await this.headingRepository.findParallels(ranges, version);

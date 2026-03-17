@@ -171,8 +171,9 @@ export class HeadingRepository {
 
       // Synthetic or whole-chapter headings use chapter-level slug (no verse range) for DST
       const useChapterSlug = range.synthetic || range.wholeChapter;
-      // DST slug uses rangeLastVerse (not lastVerse which may include mid-section extension)
-      const dstLastVerse = range.rangeLastVerse ?? range.lastVerse;
+      // DST slug: zero-length sections use extended lastVerse (matches h3 display and includes next verse);
+      // normal sections use rangeLastVerse (non-extended, avoids bleeding into next section)
+      const dstLastVerse = range.zeroLength ? (range.lastVerse ?? range.rangeLastVerse) : (range.rangeLastVerse ?? range.lastVerse);
       const dstSlug = useChapterSlug
         ? `${versionPrefix}${range.bookSlug}.${range.chapter}`
         : `${versionPrefix}${range.bookSlug}.${range.chapter}.${range.firstVerse}-${dstLastVerse}`;
