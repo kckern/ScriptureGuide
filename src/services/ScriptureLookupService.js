@@ -83,9 +83,9 @@ export class ScriptureLookupService {
           chapterHeading.audio = audioFlag;
         }
 
-        // Compute canonical ref slug using book_title_short stripped of periods/spaces
-        // "Gen." → "gen", "D&C" → "d&c", "1 Ne." → "1ne"
-        const bookPart = bookTitleShort.toLowerCase().replace(/\./g, '').replace(/\s+/g, '');
+        // Compute canonical ref slug using book_title_short stripped of periods, spaces→dots
+        // "Gen." → "gen", "D&C" → "d&c", "1 Cor." → "1.cor", "1 Ne." → "1.ne"
+        const bookPart = bookTitleShort.toLowerCase().replace(/\./g, '').replace(/\s+/g, '.');
         const chapterPart = reference.chapter;
         const verseMatch = reference.normalized.match(/:(.+)$/);
         const versePart = verseMatch ? '.' + verseMatch[1] : '';
@@ -106,8 +106,9 @@ export class ScriptureLookupService {
             book_id: bookId,
             synthetic: true  // flag: renders with headless="1"
           });
-        } else if (firstH3VerseId && firstH3VerseId > firstVerseId) {
-          // Pre-section synthetic: inline headings exist but first one is AFTER firstVerseId.
+        } else if (firstH3VerseId && firstH3VerseId > firstVerseId && !chapterHeading) {
+          // Pre-section synthetic: inline headings exist but first one is AFTER firstVerseId,
+          // AND there is no chapter heading at or before firstVerseId.
           // PHP renders a headless h3 at firstVerseId spanning the whole chapter,
           // with ref/slug scoped to just verse 1 (using _sectionLast = firstH3VerseId - 1).
           headings.push({
