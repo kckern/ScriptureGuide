@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<title><%= typeof title !== 'undefined' && title ? title + ' | ' : '' %>Scripture Guide</title>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="stylesheet" href="//code.jquery.com/ui/1.11.4/themes/smoothness/jquery-ui.css">
+<link rel="stylesheet" href="/css/style.css">
+<link rel="stylesheet" href="/css/versions.css">
+<link rel="stylesheet" href="/css/ui.css">
+<link rel="stylesheet" href="/css/featherlight.css">
+<link rel="stylesheet" href="/css/parallel.css">
+<link rel="stylesheet" href="/css/fax.css">
+<style>
+  body { opacity: 0; transition: opacity 0.15s ease; }
+  h3.heading a { color: inherit; text-decoration: none; }
+  .containerCopy {
+    display: flex;
+    justify-content: center;
+    font-family: Monospace;
+    -webkit-user-select: none;
+    user-select: none;
+  }
+  .containerCopy > div {
+    opacity: 0.3;
+    background-color: #FFF6;
+    width: 5em;
+    border-bottom-left-radius: 1em;
+    border-bottom-right-radius: 1em;
+    cursor: pointer;
+    margin-top: -0.7ex;
+  }
+  .containerCopy > div:hover { opacity: 1; }
+  .containerCopy > div:active { background-color: #FFF; }
+  .containerCopy img {
+    max-height: 1em;
+    margin-right: 1ex;
+    position: relative;
+    bottom: -.5ex;
+  }
+</style>
+<script src="//code.jquery.com/jquery-1.10.2.js"></script>
+<script src="//code.jquery.com/ui/1.11.4/jquery-ui.js"></script>
+<script src="/js/tipsy.js"></script>
+<script src="/js/featherlight.js"></script>
+<script src="/js/diff_match_patch.js"></script>
+<script src="/js/diff.js"></script>
+<script src="/js/scroll.js"></script>
+<script src="/js/parallel.js"></script>
+<script src="/js/fax.js"></script>
+<script src="/js/audio.js"></script>
+<script src="/js/jplayer.js"></script>
+<script src="/js/cookie.js"></script>
+<script>
+var user_prefs = [];
+var ver_names = <%- JSON.stringify(typeof verNames !== 'undefined' ? verNames : {}) %>;
+var searchterm = '';
+var annotations = [];
+
+function copyContainerToClipbord(e) {
+  e.querySelector("img").src = "/img/check.svg";
+  let verses = Array.prototype.slice.call(document.querySelectorAll(".verse"));
+  let numVerses = new Set(verses.map(v => v.attributes.verse_label?.value)).size;
+  let clipboardtext = verses.map(i => {
+    const prefix = numVerses > 1 ? i.attributes.verse_label?.value.replace(/^\d+:/,"") : null;
+    return (prefix ? "|" + prefix + " " : "") + i.innerText.replace(/^[\d: ]+/,"")
+  }).join("").trim("|\n").split("|").join("\n").trim();
+  let ref = "("+Array.prototype.slice.call(document.querySelectorAll("h3.heading")).map(i => {
+    let version = i.attributes?.version?.value;
+    let suffix = ["LDS","KJV"].includes(version) ? `` : `, ${version}`;
+    return i.querySelector("a")?.innerText + suffix;
+  }).join("; ")+")";
+  if(numVerses > 1) ref = ref.replace(/:[0-9,–-]+/,'');
+  navigator.clipboard.writeText(clipboardtext.trim() + ` ${ref}`);
+}
+
+function copyToClipbord(e) {
+  e.src = "/img/check.svg";
+  let main = e.parentElement.previousElementSibling;
+  const verseContent = main.textContent;
+  const vnumContent = main.querySelector('.vnum')?.textContent || '';
+  const clipboardtext = verseContent.replace(new RegExp('^' + vnumContent), '');
+  let version = main.attributes.version?.value;
+  let ref = main.attributes.ref?.value;
+  let parenth = ` (${ref}, ${version})`;
+  if(["LDS","KJV"].includes(version)) parenth = ` (${ref})`;
+  parenth = parenth.replace("Doctrine and Covenants","D&C");
+  navigator.clipboard.writeText(clipboardtext + parenth);
+}
+
+function activateCopyButtons() {
+  Array.prototype.slice.call(document.querySelectorAll("p.prose > .verse:only-child"))
+    .map(i => i.outerHTML = `<div style="display:flex">${i.outerHTML}<div class="copyprose"><img onClick="copyToClipbord(this)" src="/img/copy.svg"/></div></div>`);
+}
+</script>
+<script src="https://apis.google.com/js/api:client.js"></script>
+<script src="/js/main.js"></script>
+</head>
+<body class="<%- typeof browserClass !== 'undefined' ? browserClass : '' %>">
+
+<textarea id="pastebin"></textarea>
+<div class="versionsbox">Text</div>
+
+<div align="center">
+
+  <%- include('../partials/toolbar', { config: typeof config !== 'undefined' ? config : {} }) %>
+
+  <%- body %>
+
+</div>
+
+<div id="audio_player"></div>
+<div id="audio_preloader"></div>
+
+<script>
+var slugver = "<%- typeof slugver !== 'undefined' && slugver ? '/' + slugver.toLowerCase() : '' %>";
+slugref = "<%- typeof slugref !== 'undefined' ? slugref : '' %>";
+
+// Client-side URL canonicalization — avoids server 301 round-trip
+(function() {
+  var canonical = (slugver || '') + (slugref ? '/' + slugref : '');
+  if (canonical && window.location.pathname !== canonical) {
+    history.replaceState(null, '', canonical);
+  }
+})();
+document.body.onkeyup = function(e){
+  if(e.keyCode == 39){ $("a.next")[0]?.click(); }
+};
+if(typeof activateAnnotations === 'function') activateAnnotations();
+if(typeof activateCopyButtons === 'function') activateCopyButtons();
+
+// Smooth page transitions: fade in on load (opacity:0 set in CSS head)
+requestAnimationFrame(function() {
+  document.body.style.opacity = '1';
+});
+document.querySelectorAll('a.prev, a.next').forEach(function(a) {
+  a.addEventListener('click', function(e) {
+    e.preventDefault();
+    var href = this.href;
+    document.body.style.opacity = '0';
+    setTimeout(function() { window.location = href; }, 150);
+  });
+});
+</script>
+</body>
+</html>

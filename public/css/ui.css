@@ -1,0 +1,580 @@
+body
+{
+	min-width:500px;
+	overflow-x:hidden;
+	margin-top:40px;
+}
+
+#toolbar
+{
+	position:fixed;
+	bottom:0;
+	left:0;
+	right:0;
+	color:white;
+	font-family: 'Yanone Kaffeesatz', sans-serif;
+	border-top:1px solid black;
+	background-color:#333;
+	z-index: 999;
+	-webkit-box-shadow: 0px 0px 40px rgba(0,0,0,1);
+	-moz-box-shadow: 0px 0px 40px rgba(0,0,0,1);
+	box-shadow: 0px 0px 40px rgba(0,0,0,1);
+
+}
+
+#innerToolbar
+{
+	
+	 border-left:2px solid black;
+	 border-right:2px solid black;
+	 border-top:1px solid black;
+	 max-width:900px;
+	 text-align:center; 
+	 overflow:hidden;
+}
+
+
+
+.nav { display: table; width: 100%; 
+	 text-align:center; 
+	
+	 margin:0;
+	 padding:0;
+	
+	background-color:#666;
+	
+	
+}
+h5 a
+{
+	cursor:pointer;
+}
+.nav li {
+	display:table-cell;white-space:nowrap; overflow:hidden; border-left:1px solid #444; padding:0 5px; 
+	
+	color:#FFF;
+	cursor:pointer;
+	
+	line-height:1.5em;
+	width:2em;
+} 
+
+.nav li#status_msg
+{
+	 border-left:0;
+	 width:20em;
+}
+
+
+.nav li:hover
+{
+	
+	background-color:#777;
+}
+
+
+
+.hoverVerse
+{
+	
+}
+
+#status_msg
+{
+	text-align:left;
+}
+
+.nav li img
+{
+	height:1em;
+	margin-right:.5em;
+	margin-left:.5em;
+	position:relative;
+	bottom:-.1em;
+}
+
+sup.vnum
+{
+	 font-family: 'Yanone Kaffeesatz';
+	 color:#a5897b;
+	 line-height:0;
+}
+
+
+/*  FEATHERLIGHT  */
+
+.featherlight-content
+{
+	width:800px;
+	min-height:650px;
+	    background: url('/img/paper.jpg')!important;
+}
+.versebox
+{
+	width:800px;
+	height:650px;
+}
+
+.versebox .panel
+{
+	height:560px;
+	overflow:auto;
+	border:1px solid #666;
+	
+	
+}
+
+
+.versebox span.dim
+{
+	color:#8e8677;
+}
+
+.versebox .versionbar.ref a 
+{
+	color:#EEE;
+	 font-family: 'Yanone Kaffeesatz';
+	 text-decoration:none;
+}
+
+.paneltabs ul
+{
+	margin:0; padding:0;
+	cursor:pointer;
+
+            
+                         
+}
+
+
+.paneltabs ul li.selectedTab
+{
+	background-color:#555;
+	color:#FFF;
+
+	padding-bottom: 10px;
+                         
+}
+
+
+
+
+
+
+.paneltabs ul li
+{
+	display:inline-table;
+	color:green;
+	width:200px; 
+	padding: 0 1em ;
+	 border-collapse: collapse;
+	 border-radius: .5em .5em 0  0  ;
+	 text-align:center;
+	 background-color:#444;
+	 color:#999;
+	 margin-right:1px;
+	 font-weight:bold;
+}
+
+.versebox td
+{
+	padding:0;
+	width:33.33%;
+	border-radius:5px;
+}
+
+.original_version,
+.changed_version
+{
+	text-align:center;
+	font-weight:800;
+	border-bottom:1px dotted #AAA;
+	padding-bottom:10px;
+}
+
+
+.versebox table
+{
+	margin:0;
+}
+
+
+
+.original_version img.cover,
+.changed_version img.cover
+{
+	border:3px solid black;
+}
+
+#diff_fax img
+{
+	width:340px;
+	border:1px solid black;
+	margin:10px;
+}
+
+.original .gridtext,
+.original .versionbar 
+{
+	
+	font-size:1.5em;
+}
+
+.gridtext
+{
+	font-size:.9em;
+	line-height:.94em;
+	letter-spacing:-.7px;
+	padding:10px;
+	text-align:justify;
+	max-height:120px;
+	overflow:auto;
+	
+
+}
+
+.gridtext:hover
+{
+	color:#2A180C;
+}
+
+.diff span
+{
+	background:url('/img/yellow.png');
+}
+
+.gridtext.first_diff
+{
+	color:blue;
+}
+
+.gridtext.second_diff
+{
+	
+}
+
+.gridbox
+{
+	border:1px solid black;
+}
+
+.locked
+{
+	cursor:not-allowed;
+}
+
+.versionbar
+{
+	text-align:center;
+	border-bottom:1px solid black;
+	background-color:#444;
+	background-color: #333;
+    background: url('/img/back.jpg');
+    
+	border-radius:2px;
+	cursor:pointer;
+	position:relative;
+}
+
+.versionbar div.fax
+{
+	position:absolute; top:5; right:5;
+}
+
+.versebox h5
+{
+	margin:0;
+	font-size:1.5em;
+	text-align:center;
+	margin-bottom:10px;
+	font-variant: small-caps;
+}
+
+
+.versebox h5 a
+{
+	text-decoration:none;
+	color:black;
+	padding:0 1em;
+}
+
+
+
+/*  DIFF PANEL */
+
+
+.diffmodel
+{
+	margin-top:10px;
+	border-bottom:1px dashed black;
+	overflow:auto;
+}
+
+.diffmodel .original, .diffmodel .changed
+{
+	font-size:.9em;
+	line-height:1.2em;
+	letter-spacing:-.7px;
+	margin:10px;
+	text-align:justify;
+}
+
+.diffmodel .original_wrap
+{
+	float:left;
+	width:47%;
+}
+
+
+.diffmodel .changed_wrap
+{
+	float:right;
+	width:47%;
+}
+
+.diffmodel .changed del
+{
+	display:none;
+}
+.diffmodel .original ins
+{
+	display:none;
+}
+
+.diff
+{
+	font-size:1.1em;
+	line-height:1.4em;
+	letter-spacing:-.7px;
+	padding:20px;
+	font-weight:bold;
+	text-align:justify;
+}
+
+.changed_meta,
+.original_meta
+{
+	font-weight:bold;
+}
+
+.versionsbox
+{
+	display:none;
+	
+	width:560px;
+	
+	
+	
+	border:1px solid black;
+	background-color:#444;
+	color:#FFF;
+	
+	position:absolute;
+	top:0;
+	right:0;
+	z-index:3;
+}
+
+#pastebin
+{
+	position: fixed;
+	width: 800px;
+	height: 600px;
+	top: 50%;
+	left: 50%;
+	margin-top: -300px; /* Negative half of height. */
+	margin-left: -400px;
+	display:none;
+	padding:30px;
+	z-index:99;
+}
+
+::selection {
+  background: #d1c2b9; /* WebKit/Blink Browsers */
+}
+::-moz-selection {
+  background: #d1c2b9; /* Gecko Browsers */
+}
+
+
+
+ .chapterNav {
+     padding-top: 20px;
+     border-top: 1px dashed #AAA;
+}
+ .chapterNav a {
+     color: #777;
+     font-weight: bold;
+     text-decoration: none;
+     max-width: 350px;
+     line-height: 1em;
+}
+ .chapterNav a.prev {
+     float: left;
+     padding-left: 1em;
+     text-indent: -1em;
+     text-align: left;
+}
+ .chapterNav a.next {
+     float: right;
+     text-align: right;
+}
+
+
+
+ #settings td {
+    font-weight: bold;
+}
+ #settings {
+     padding: 30px;
+     padding-top: 0;
+}
+ #settings #versions_prefs td:first-child {
+    text-align: right;
+}
+ #settings tr:first-child, #settings h3 {
+    text-align: center;
+}
+ #settings h3 {
+     font-size: 30px;
+     padding-bottom: 10px;
+}
+ #settings h5, #settings table {
+    margin: 0;
+}
+ #settings table {
+     margin-left: 50px;
+     margin-bottom: 20px;
+}
+ #settings option, #settings select {
+     width: 250px;
+     line-height: 20px;
+     height: 20px;
+}
+ #logout {
+     position: absolute;
+     top: 50px;
+     right: 20px;
+}
+ #options {
+     width: 700px;
+     margin-top: 15px;
+}
+ #options td {
+    text-align: left
+}
+ 
+ 		ul.tabs + table{
+ 			margin-top:0;
+ 		}
+       ul.tabs {
+          display: block;
+		font-family: 'Yanone Kaffeesatz', sans-serif;
+		font-size:0.6em;
+		line-height:1.4em;
+          list-style-type: none;
+          margin: 0;
+          margin-bottom: -8px;
+          padding: 0;
+          margin-left:130px;
+		   height: 2.6em;
+		   overflow:hidden;
+      }
+      ul.tabs>li {
+          float: left;
+          margin:5px;
+         padding: 0 1em 0 1em;
+          border: 1px solid #361f17;
+          border-bottom: 0;
+          border-radius: 5px 5px 0 0;
+          cursor:pointer;
+          color:#361f17;
+			max-width: 3.3em;
+		    line-height: .8em;
+		    text-align: center;
+		    height: 1.8em;
+		    overflow: hidden;
+		    position:relative;
+      }
+      
+		     ul.tabs>li span
+		    {
+		    	color:#777777;
+		    	position:absolute;
+		    	top:0;
+		    	right:.3em;
+		    	font-size:.8em;
+		    }
+
+      ul.tabs>li:hover {
+          background-color: lightgray;
+      }
+
+      ul.tabs>li.selected {
+          background-color: lightgray;
+      }
+
+
+      ul.tabs { overflow: hidden; }
+
+ 
+ 
+ 
+ #toolbar, h3 span, h3, h4, .chapterNav {
+     -webkit-touch-callout: none;
+    /* iOS Safari */
+     -webkit-user-select: none;
+    /* Safari */
+     -khtml-user-select: none;
+    /* Konqueror HTML */
+     -moz-user-select: none;
+    /* Firefox */
+     -ms-user-select: none;
+    /* Internet Explorer/Edge */
+     user-select: none;
+    /* Non-prefixed version, currently supported by Chrome and Opera */
+}
+
+/*  TIPSY  */
+
+
+.tipsy { 
+	
+	font-size: .8em; line-height:1em; position: absolute; padding: 0px; z-index: 99; 
+	font-family: 'Yanone Kaffeesatz', sans-serif;
+	
+}
+
+
+.tipsy sup
+{
+	vertical-align:baseline;
+    position: relative;
+    top: -.5em;
+}
+
+
+  .tipsy-inner { background-color: #000; color: #FFF; max-width: 300px; padding: 10px; text-align: justify; }
+
+  /* Rounded corners */
+  .tipsy-inner { border-radius: 3px; -moz-border-radius: 3px; -webkit-border-radius: 3px; }
+  
+  /* Uncomment for shadow */
+  /*.tipsy-inner { box-shadow: 0 0 5px #000000; -webkit-box-shadow: 0 0 5px #000000; -moz-box-shadow: 0 0 5px #000000; }*/
+  
+  .tipsy-arrow { position: absolute; width: 0; height: 0; line-height: 0; border: 5px dashed #000; }
+  
+  /* Rules to colour arrows */
+  .tipsy-arrow-n { border-bottom-color: #000; }
+  .tipsy-arrow-s { border-top-color: #000; }
+  .tipsy-arrow-e { border-left-color: #000; }
+  .tipsy-arrow-w { border-right-color: #000; }
+  
+	.tipsy-n .tipsy-arrow { top: 0px; left: 50%; margin-left: -5px; border-bottom-style: solid; border-top: none; border-left-color: transparent; border-right-color: transparent; }
+    .tipsy-nw .tipsy-arrow { top: 0; left: 10px; border-bottom-style: solid; border-top: none; border-left-color: transparent; border-right-color: transparent;}
+    .tipsy-ne .tipsy-arrow { top: 0; right: 10px; border-bottom-style: solid; border-top: none;  border-left-color: transparent; border-right-color: transparent;}
+  .tipsy-s .tipsy-arrow { bottom: 0; left: 50%; margin-left: -5px; border-top-style: solid; border-bottom: none;  border-left-color: transparent; border-right-color: transparent; }
+    .tipsy-sw .tipsy-arrow { bottom: 0; left: 10px; border-top-style: solid; border-bottom: none;  border-left-color: transparent; border-right-color: transparent; }
+    .tipsy-se .tipsy-arrow { bottom: 0; right: 10px; border-top-style: solid; border-bottom: none; border-left-color: transparent; border-right-color: transparent; }
+  .tipsy-e .tipsy-arrow { right: 0; top: 50%; margin-top: -5px; border-left-style: solid; border-right: none; border-top-color: transparent; border-bottom-color: transparent; }
+  .tipsy-w .tipsy-arrow { left: 0; top: 50%; margin-top: -5px; border-right-style: solid; border-left: none; border-top-color: transparent; border-bottom-color: transparent; }

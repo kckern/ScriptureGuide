@@ -1,0 +1,206 @@
+
+table
+{
+	margin-top:2em;
+	margin-bottom:2em;
+}
+.parallel td
+{
+	font-size:1em;
+	vertical-align:top;
+}
+
+.parallel td div.verse
+{
+	line-height:1em;
+}
+.parallel tr.header td
+{
+	
+	font-size:1.8em;
+	text-align:center;
+	letter-spacing:-.5px;
+}
+div.seemore
+{
+	text-align:center;
+	font-style:italic;
+	margin-top:10px;
+	letter-spacing:3px;
+	color:#777;
+	cursor:pointer;
+}
+.plinks a
+{
+	text-decoration:none;
+	color:#6f2c12;
+}
+div.cutoff
+{
+	overflow:hidden;
+	height:196px;
+	border-bottom:1px dashed #777;	
+	
+	
+       -moz-box-shadow: inset 0 -20px 40px -30px #000000;
+    -webkit-box-shadow: inset 0 -20px 40px -30px #000000;
+            box-shadow: inset 0 -20px 40px -30px #000000;
+}
+
+#floater
+{
+	background-color:black;
+	border-radius:10px;
+	padding:10px;
+	position:absolute;
+	top:0;
+	width:390px;
+	height:200px;
+	min-height:50px;
+	display:none;
+}
+
+#floater div
+{
+	color:#AAA;
+	text-align:center;
+	font-size:14px;
+	font-style:italic;
+}
+
+div.seemore:hover
+{
+	color:#000;
+	text-decoration:underline;
+}
+span.match
+{   
+	background: url(/img/yellow.png);
+}
+
+.greyout2 .text div
+{
+	color:#888;
+}
+
+.parallel tr.header td button
+{
+	
+	position:relative;
+	
+	width:40px;
+	height:40px;
+	font-size:.7em;
+	margin-bottom:5px;
+	text-align:center;
+	padding-top:-.5em;
+	cursor:pointer;
+}
+
+.parallel tr.header td small
+{
+	font-size:.4em;
+}
+
+.ref a img
+{
+	position:relative;
+	bottom:-2px;
+}
+.right.ref a img
+{
+	margin-right:5px;
+}
+.left.ref a img
+{
+	
+	margin-left:5px;
+}
+
+ button.chapter,
+ button.swap
+ {
+	height:30px;
+	font-size:.5em;
+	margin-bottom:5px;
+	width:200px;
+ }
+ 
+ a.chapter
+ {
+ 	cursor:pointer;
+ 	text-decoration: none;
+    color: #6f2c12;
+    font-weight:800;
+    font-size:1em;
+ }
+
+.parallel td.ref a
+{
+	font-family: 'Yanone Kaffeesatz', sans-serif;
+	letter-spacing:1px;
+	font-size:1em;
+	color:#777;
+	text-decoration:none;
+}
+.header img
+{
+	margin-bottom:10px;
+}
+.header a
+{
+	color:#000;
+	text-decoration:none;
+	line-height:1em;
+}
+
+.parallel td.right
+{
+	width:47.5%;
+}
+.parallel td.left
+{
+	width:47.5%;
+}
+
+.parallel td.ref.right
+{
+	text-align:right;
+}
+.parallel td.text.right
+{
+	padding-right:2em;
+}
+
+.parallel td.text.left
+{
+	padding-left:2em;
+}
+
+.parallel td.original ins,
+.parallel td.changed del
+{
+	display:none;
+}
+img.cover
+{
+	float:none;
+}
+
+.sig
+{
+	
+}
+.insig
+{
+	color:#888;
+}
+table.parallel tr.insig  td.orginal
+{
+	text-align:center;
+}
+table.parallel tr.sig  td
+{
+	text-align:justify;
+	
+}

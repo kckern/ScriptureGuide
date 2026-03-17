@@ -1,0 +1,435 @@
+
+/* Version Specific Styles */
+
+
+ .ver_ABWRKS blockquote, .ver_MBOOK blockquote {
+    font-style: italic;
+}
+ .ver_ABWRKS h3 {
+    font-variant: small-caps;
+}
+ .ver_ABWRKS h3 h4 {
+    font-variant: none;
+}
+ .ver_ABWRKS h3 small {
+     font-size: .5em;
+     letter-spacing: .6px;
+}
+ .ver_ABWRKS .poetry {
+    white-space: nowrap;
+}
+ .ver_ABWRKS .indent + .prose {
+   margin-top:0em;
+}
+ .ver_printer p {
+     font-family: 'Shadows Into Light', Arial, sans-serif;
+     font-size: 0.85em; 
+     line-height: 1.3em;
+     color: #110;
+     letter-spacing: 0.5px;
+}
+ .ver_EARLIEST h2 {
+     text-align: left;
+     font-variant: small-caps;
+     line-height: 1em;
+}
+ .ver_EARLIEST h2 small {
+     text-align: left;
+     font-variant: none;
+}
+ .ver_1837 h2, .ver_1837 h2 small, .ver_1840 h2, .ver_1840 h2 small {
+     font-size: 50px;
+     line-height: 50px;
+}
+ .ver_1835 h2, .ver_1835 h2 small {
+     line-height: 1em;
+     font-size: 2em;
+}
+ .ver_1830 .headnote, .ver_1830 .headnote_sub, .ver_1841 .headnote, .ver_1841 .headnote_sub, .ver_1840 .headnote, .ver_1840 .headnote_sub, .ver_1837 .headnote, .ver_1837 .headnote_sub {
+     padding-left: 2em;
+     text-indent: -2em;
+}
+ .ver_1920.passage .headnote_sub, .ver_1920.passage .headnote, .ver_1920.passage .summary, .ver_1920.passage p.prose, .ver_1879.passage p.prose, .ver_1830.passage p.prose, .ver_1841.passage p.prose, .ver_1837.passage p.prose, .ver_REBOM.passage p.prose, .ver_REBOM.passage p.indent, .ver_SEBOM.passage p.indent, .ver_MBOOK.passage p.prose, .ver_1840.passage p.prose {
+     text-indent: 2em;
+     margin-bottom: -1em;
+}
+ .ver_1920.passage, .ver_1879.passage, .ver_1830.passage, .ver_1841.passage, .ver_1837.passage, .ver_1837.passage, .ver_REBOM.passage, .ver_MBOOK.passage {
+    padding-bottom: 1.5em;
+}
+ .ver_REBOM.passage .verse_head {
+     position: relative;
+     top: 1em;
+     padding-top: 1em;
+}
+ .ver_REBOM.passage .section_footer {
+    padding-top: 1.5em;
+}
+ .ver_REBOM.passage blockquote {
+    margin-left: 0;
+}
+ .ver_REBOM.passage .section_footer:last-child, .ver_REBOM.passage .indent:last-child,  .ver_SEBOM.passage .indent:last-child, .ver_MBOOK.passage blockquote:last-child, .ver_REBOM.passage blockquote:last-child {
+    margin-bottom: -1em;
+}
+ .ver_REBOM.passage p.prose + blockquote, .ver_REBOM.passage p.prose + .indent, .ver_MBOOK.passage p.prose + blockquote {
+    margin-top: 2em;
+}
+
+.ver_REBOM.passage p.prose + .indent {
+    text-indent: 0em;
+}
+.ver_REBOM.passage p.indent + .prose {
+     margin-top: 2em;
+}
+
+.ver_REBOM.passage .poetry + .prose {
+     margin-top: 2em;
+    text-indent: 0em;
+}
+
+.ver_REBOM.passage blockquote.poetry + blockquote.poetry {
+     margin-top: 1em;
+}
+
+ .ver_REBOM.passage p.prose.flush {
+    margin-left: -1em; 
+}
+
+ .ver_1920 .comment, .ver_2013 div.headnote {
+    font-style: normal;
+}
+ .ver_1981 div.headnote div.comment {
+     display: inline;
+     font-size: 1em;
+}
+ .ver_2013 div.headnote div.comment {
+    font-style: italic;
+}
+ .ver_printer sup {
+    font-size: 0.7em;
+}
+ .ver_printer s {
+    letter-spacing: -1px;
+}
+ .ver_EASWARAN .verse_head {
+    font-variant: small-caps;
+    margin-left:4em;
+}
+
+
+
+.ver_ANCHOR.passage p.prose  {
+    text-indent: 2em;
+}
+
+.ver_ANCHOR.passage .nogap  {
+    margin-top: -1em;
+}
+
+ .ver_ANCHOR.passage .verse_head {
+     text-align:center;
+}
+
+
+ .ver_PEBOM.passage .section_footer {
+    text-align:left;
+    line-height:1em;
+    font-style:italic;
+    font-size:.8em;
+    padding-left:2em;
+}
+
+
+.ver_CTBOM.passage h2 small
+{
+	line-height:1em;
+	font-size:.5em;
+}
+
+.ver_CTBOM.passage .timeframe
+{
+	line-height:2em;
+}
+
+.ver_SEBOM.passage
+{
+    padding-bottom: 1.5em;
+	
+}
+
+.ver_SEBOM.passage p
+{
+     margin-bottom: -1em;
+}
+
+
+.ver_SEBOM.passage p.ellipses
+{
+     padding-top: 0.3em;
+     padding-right: 3em;
+}
+.ver_SEBOM.passage p.ellipses + p,
+.ver_SEBOM.passage p.ellipses + div + p,
+.ver_SEBOM.passage p.ellipses + blockquote
+{
+	
+     padding-top: 3em;
+}
+
+
+ .ver_SEBOM.passage .verse_head {
+     position: relative;
+     top: 1em;
+     padding-top: 1em;
+     padding-bottom: 1em;
+}
+
+ .ver_SEBOM.passage p.prose, 
+ .ver_SEBOM.passage blockquote.poetry 
+ {
+ 	text-indent:1.5em;
+ }
+
+ .ver_SEBOM.passage p.flush, 
+ .ver_SEBOM.passage blockquote.flush,
+  .ver_SEBOM.passage .verse_head + p
+ {
+ 	text-indent:0em;
+ 	margin-top: 1em;
+ }
+
+
+
+ .ver_SEBOM.passage .prose + .poetry ,
+ .ver_SEBOM.passage .prose + .indent {
+ 	
+ 	
+     padding-top: 1em;
+ 
+ }
+ 
+
+ .ver_SEBOM.passage .indent + .prose,
+ .ver_SEBOM.passage .poetry + .prose {
+ 	
+ 	
+     padding-top: 1em;
+ 
+ }
+ 
+  .ver_SEBOM.passage strong
+  {
+  	font-family:Georgia;
+  }
+   .ver_SEBOM h3 small
+   {
+   	font-size:.5em;
+ 
+   	font-style:italic;
+   	opacity:0.5;
+   }
+   
+   
+ .ver_SEBOM.passage blockquote + blockquote
+ {
+ 	
+     margin-top: -1em;
+     
+ }
+ 
+ .ver_SEBOM h3.section_title
+ {
+ 		
+    font-variant: small-caps;
+    font-size:1.4em;
+    color:#371f15;
+ }
+ 
+  .ver_SEBOM .fn
+  {
+  	color:#a5897b;
+    position: relative;
+    top: -.5em;
+  font-size: smaller;
+  opacity:0.5;
+  cursor:default;
+  }
+  
+  
+  .ver_SEBOM .fn.ref:hover
+  {
+  	color:red;
+  cursor:pointer;
+  }
+  .ver_SEBOM .fn.ver:hover
+  {
+  	color:blue;
+  cursor:pointer;
+  }
+  
+  /*
+ * KoPub Batang (Korean) http://www.google.com/fonts/earlyaccess
+ */
+@font-face {
+  font-family: 'KoPub Batang';
+  font-style: normal;
+  font-weight: 300;
+  src: url(//fonts.gstatic.com/ea/kopubbatang/v3/KoPubBatang-Light.eot);
+  src: url(//fonts.gstatic.com/ea/kopubbatang/v3/KoPubBatang-Light.eot?#iefix) format('embedded-opentype'),
+       url(//fonts.gstatic.com/ea/kopubbatang/v3/KoPubBatang-Light.woff2) format('woff2'),
+       url(//fonts.gstatic.com/ea/kopubbatang/v3/KoPubBatang-Light.woff) format('woff'),
+       url(//fonts.gstatic.com/ea/kopubbatang/v3/KoPubBatang-Light.ttf) format('truetype');
+}
+@font-face {
+  font-family: 'KoPub Batang';
+  font-style: normal;
+  font-weight: 400;
+  src: url(//fonts.gstatic.com/ea/kopubbatang/v3/KoPubBatang-Regular.eot);
+  src: url(//fonts.gstatic.com/ea/kopubbatang/v3/KoPubBatang-Regular.eot?#iefix) format('embedded-opentype'),
+       url(//fonts.gstatic.com/ea/kopubbatang/v3/KoPubBatang-Regular.woff2) format('woff2'),
+       url(//fonts.gstatic.com/ea/kopubbatang/v3/KoPubBatang-Regular.woff) format('woff'),
+       url(//fonts.gstatic.com/ea/kopubbatang/v3/KoPubBatang-Regular.ttf) format('truetype');
+}
+@font-face {
+  font-family: 'KoPub Batang';
+  font-style: normal;
+  font-weight: 700;
+  src: url(//fonts.gstatic.com/ea/kopubbatang/v3/KoPubBatang-Bold.eot);
+  src: url(//fonts.gstatic.com/ea/kopubbatang/v3/KoPubBatang-Bold.eot?#iefix) format('embedded-opentype'),
+       url(//fonts.gstatic.com/ea/kopubbatang/v3/KoPubBatang-Bold.woff2) format('woff2'),
+       url(//fonts.gstatic.com/ea/kopubbatang/v3/KoPubBatang-Bold.woff) format('woff'),
+       url(//fonts.gstatic.com/ea/kopubbatang/v3/KoPubBatang-Bold.ttf) format('truetype');
+}
+
+  .ver_KRSEB,
+  .ver_KRLDS,
+  .ver_KRBOM,
+  .ver_KRBOM67
+  {
+  	font-family: 'KoPub Batang', serif;
+  }
+  
+  .ver_KRSEB p .verse,
+  .ver_KRSEB blockquote .verse
+  {
+  line-height: 1.3em;
+  	
+  }
+  
+.ver_KRSEB.passage
+{
+    padding-bottom: 1.5em;
+	
+}
+
+.ver_KRSEB.passage p
+{
+     margin-bottom: -.8em;
+}
+
+
+.ver_KRSEB.passage p.ellipses
+{
+     padding-top: 0.3em;
+     padding-right: 3em;
+}
+.ver_KRSEB.passage p.ellipses + p,
+.ver_KRSEB.passage p.ellipses + div + p,
+.ver_KRSEB.passage p.ellipses + blockquote
+{
+	
+     padding-top: 3em;
+}
+
+
+ .ver_KRSEB.passage .verse_head {
+     position: relative;
+     top: 1em;
+     padding-top: 1em;
+     padding-bottom: 1em;
+}
+
+ .ver_KRSEB.passage p.prose, 
+ .ver_KRSEB.passage blockquote.poetry 
+ {
+ 	text-indent:1em;
+ }
+
+ .ver_KRSEB.passage p.flush, 
+ .ver_KRSEB.passage blockquote.flush,
+  .ver_KRSEB.passage .verse_head + p
+ {
+ 	text-indent:0em;
+ 	margin-top: 1em;
+ }
+
+
+
+ .ver_KRSEB.passage .prose + .poetry ,
+ .ver_KRSEB.passage .prose + .indent {
+ 	
+ 	
+     padding-top: 1em;
+ 
+ }
+ 
+
+ .ver_KRSEB.passage .indent + .prose,
+ .ver_KRSEB.passage .poetry + .prose {
+ 	
+ 	
+     padding-top: 1em;
+ 
+ }
+ 
+  .ver_KRSEB.passage strong
+  {
+  	color:brown;
+  	font-weight:1200;
+  	
+  }
+   .ver_KRSEB h3 small
+   {
+   	font-size:.5em;
+ 
+   	font-style:italic;
+   	opacity:0.5;
+   }
+   
+   
+ .ver_KRSEB.passage blockquote + blockquote
+ {
+ 	
+     margin-top: -.5em;
+     
+ }
+ 
+ .ver_KRSEB h3.section_title
+ {
+ 		
+    font-variant: small-caps;
+    font-size:1.4em;
+    color:#371f15;
+ }
+ 
+  .ver_KRSEB .fn
+  {
+  	color:#a5897b;
+    position: relative;
+    top: -.5em;
+  font-size: smaller;
+  opacity:0.5;
+  cursor:default;
+  }
+  
+  
+  .ver_KRSEB .fn.ref:hover
+  {
+  	color:red;
+  cursor:pointer;
+  }
+  .ver_KRSEB .fn.ver:hover
+  {
+  	color:blue;
+  cursor:pointer;
+  }
+  

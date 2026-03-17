@@ -1,0 +1,538 @@
+
+/*  FONT IMPORT */
+
+
+
+ @font-face {
+     font-family: 'Sorts Mill Goudy';
+     font-style: normal;
+     font-weight: 400;
+     src: url('/webfont/SortsMillGoudy-Regular.woff') format('woff');
+}
+ @font-face {
+     font-family: 'Sorts Mill Goudy';
+     font-style: italic;
+     font-weight: 400;
+     src: url('/webfont/SortsMillGoudy-Italic.woff') format('woff');
+}
+ @font-face {
+     font-family: 'Goudy';
+     src: url('/webfont/Goudy-Regular.eot?#iefix') format('embedded-opentype'), url('/webfont/Goudy-Regular.woff') format('woff'), url('/webfont/Goudy-Regular.ttf') format('truetype'), url('/webfont/Goudy-Regular.svg#Goudy-Regular') format('svg');
+     font-weight: 400;
+     font-style: normal;
+}
+ @font-face {
+     font-family: 'Goudy';
+     src: url('/webfont/Goudy-Bold.eot?#iefix') format('embedded-opentype'), url('/webfont/Goudy-Bold.woff') format('woff'), url('/webfont/Goudy-Bold.ttf') format('truetype'), url('/webfont/Goudy-Bold.svg#Goudy-Bold') format('svg');
+     font-weight: 700;
+     font-style: normal;
+}
+ @font-face {
+     font-family: 'Goudy';
+     src: url('/webfont/Goudy-Italic.eot?#iefix') format('embedded-opentype'), url('/webfont/Goudy-Italic.woff') format('woff'), url('/webfont/Goudy-Italic.ttf') format('truetype'), url('/webfont/Goudy-Italic.svg#Goudy-Italic') format('svg');
+     font-weight: 400;
+     font-style: italic;
+}
+ @font-face {
+     font-family: 'Yanone Kaffeesatz';
+     font-style: normal;
+     font-weight: 300;
+     src: url('/webfont/YanoneKaffeesatz-Light.woff') format('woff');
+}
+ @font-face {
+     font-family: 'Yanone Kaffeesatz';
+     font-style: normal;
+     font-weight: 400;
+     src: url('/webfont/YanoneKaffeesatz-Regular.woff') format('woff');
+}
+ @font-face {
+     font-family: 'Yanone Kaffeesatz';
+     font-style: normal;
+     font-weight: 700;
+     src: url('/webfont/YanoneKaffeesatz-Bold.woff') format('woff');
+}
+/* latin */
+@font-face {
+  font-family: 'Shadows Into Light';
+  font-style: normal;
+  font-weight: 400;
+  src: local('Shadows Into Light'), local('ShadowsIntoLight'), url('/webfont/ShadowsIntoLight.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+/* Use Chrome's Faux Bold */
+ body.chrome .passage span, 
+ body.chrome .parallel td, 
+ body.chrome div .section_footer, 
+ body.chrome .gridtext, 
+ body.chrome .diffmodel .original, 
+ body.chrome .diffmodel .changed, 
+ body.chrome .passage div {
+    font-weight: 800;
+}
+
+ body {
+     font-family: 'Sorts Mill Goudy', 'Goudy', Georgia, serif;
+     font-size: 1.5em;
+     line-height: 1.5em;
+     background-color: #333;
+     background: url('/img/back.jpg');
+     background-attachment: fixed;
+     margin-bottom: 1500px;
+}
+ #container {
+     text-align: left;
+     max-width: 800px;
+     min-width: 400px;
+     background-color: #EEE;
+     padding-left: 50px;
+     padding-right: 50px;
+     padding-top: 10px;
+     background: url('/img/paper.jpg');
+     text-align: justify;
+     border: 3px solid black;
+     padding-bottom: 20px;
+     margin-top: 50px;
+}
+
+/* Headings */
+
+
+ h1 {
+     font-size: 2.5em;
+     ;
+     line-height: 1em;
+     margin: 0px;
+}
+ h2 {
+     font-variant: small-caps;
+     text-align: center;
+     margin-bottom: 00px;
+     padding-bottom: 0px;
+     padding-top: 10px;
+     font-weight: 1000;
+     font-size: 2.5em;
+     margin-top: 30px;
+     line-height: 1.5em;
+     letter-spacing: -1px;
+     widows: 3;
+     orphans: 3;
+}
+ h2 small {
+     font-size: 0.8em;
+     line-height: 1.5em;
+}
+ h2 sub, h3 sub {
+     font-family: sans-serif;
+     font-size: 0.5em;
+     color: #333;
+}
+ h3 {
+     cursor: pointer;
+     margin-top: 0;
+     margin-bottom: 0;
+     padding-bottom: 0;
+     padding-top: 10px;
+     padding-right: 122px;
+     font-weight: 1000;
+     font-size: 1.8em;
+     margin-top: 30px;
+     line-height: 1em;
+     text-align: left;
+     widows: 3;
+     orphans: 3;
+}
+ h3.section_title {
+    font-size: 2em;
+}
+
+ h3 span:hover {
+     color: #000;
+     border-color: #000;
+}
+ h4 div {
+     width: 100%;
+     margin-right: 3px;
+}
+ .paddedH3 {
+    margin-right: 130px;
+}
+ h4 {
+     padding: 0;
+     margin: 0;
+     margin-left: 10px;
+     margin-right: -122px;
+     font-family: 'Yanone Kaffeesatz', 'Arial Narrow', Arial;
+     font-size: .4em;
+     line-height: 1em;
+     letter-spacing: .5px;
+     color: #777;
+     text-align: center;
+     float: right;
+     width: 122px;
+     margin-top: -20px;
+}
+.refblock
+{
+     font-family: 'Yanone Kaffeesatz', 'Arial Narrow', Arial;
+     font-size: 1em;
+     line-height: 1em;
+     letter-spacing: .5px;
+     font-weight:800;
+	width:112px;
+     text-align: center;
+}
+.searchtext
+{
+	font-weight:bold;
+	padding-top:20px; 
+	padding-bottom:10px; 
+	padding-left:20px; 
+	border-top:1px dotted #777;
+    line-height:1.6em;
+    display: flex;
+    align-items: center;
+}
+
+.searchtext > span
+{
+	flex-grow: 1;
+}
+
+
+.searchtext img{
+	height: 1em;
+	width: 1em;
+	opacity: 0.5;
+	cursor: pointer;
+	margin-left:1em;
+}
+.searchtext img:hover{
+	opacity: 1;
+}
+
+.searchtext .clipboard
+{
+	display: none;
+}
+
+ span.searchterm {
+     background-color: #d4cbc0;
+     color: #943838;
+     border-bottom: 2px solid #943838;
+     margin-right: 5px;
+     margin-left: 5px;
+     padding-right: 5px;
+     padding-left: 5px;
+     border-radius: 5px;
+}
+
+.refblock a img
+{
+	border:1px solid #000;
+}
+ h4 a,h4 a:visited,.refblock a {
+     text-decoration: none;
+     color: #777;
+     cursor: pointer;
+}
+ h4 a:hover,.refblock a:hover {
+     text-decoration: underline;
+     color: #333;
+     cursor: pointer;
+}
+
+
+/* Divs */ 
+
+
+
+ div.section_footer {
+     text-align: center;
+     font-size: 1em;
+     letter-spacing: 1.5px;
+     color: #522b1a;
+}
+ div.verse_head {
+     text-align: left;
+     font-size: 1em;
+     letter-spacing: 1px;
+     color: #522b1a;
+}
+ h3 + div.verse_head ,
+ .background + div.verse_head ,
+ .summary + div.verse_head {
+     margin-top:2em;
+}
+ p.ellipses {
+     text-align: center;
+     letter-spacing: 30px;
+     font-size: 60px;
+     color: #a5897b;
+     padding-left: 5%;
+     margin: 0;
+     height: 0;
+     line-height: 0;
+     cursor: pointer;
+}
+ div.prompt {
+     color: white;
+     font-style: italic;
+     border: 1px solid black;
+     font-size: smaller;
+     padding: 10px;
+     font-size: .8em;
+     line-height: 1em;
+     margin-top: 10px;
+     text-align: center;
+     border-top: 3px solid black;
+     background-color: rgb(89, 47, 31);
+}
+ div.headnote {
+     padding: 30px;
+     font-style: italic;
+     line-height: 1em;
+     font-size: .8em;
+     padding-bottom: 0px;
+     letter-spacing: 1px;
+}
+ div.headnote div.comment {
+     font-size: .8em;
+     text-align: center;
+     margin-top: 10px;
+}
+ div.summary {
+     padding: 30px;
+     font-style: italic;
+     line-height: 1em;
+     font-size: .8em;
+     padding-bottom: 0px;
+     letter-spacing: 1px;
+}
+ div.background {
+     padding: 10px;
+     padding-top: 20px;
+     font-style: italic;
+     line-height: 1em;
+     font-size: .9em;
+     padding-bottom: 0px;
+     letter-spacing: 1px;
+}
+ .passage {
+    overflow: hidden;
+}
+ .passage div button {
+     text-align: center;
+     font-size: 15px;
+     line-height: 30px;
+}
+ .ellipses.noclick {
+    cursor: not-allowed;
+}
+ .verse.audio_playing, .wh {
+    background: url('/img/yellow.png');
+}
+ .addeddiv {
+     border-bottom: 0px dashed #888;
+     padding-bottom: 15px;
+}
+
+
+
+
+
+
+
+
+
+/* indents and line breaks */
+ .indent {
+    margin-left: 50px;
+}
+ .indent.doubleindent {
+     margin-left: 100px;
+     white-space: nowrap;
+}
+ .indent.tripleindent {
+     margin-left: 150px;
+     white-space: nowrap;
+}
+ .indent.quadindent {
+     margin-left: 150px;
+     white-space: nowrap;
+}
+ .linebreak {
+    display: block;
+}
+ p.prose.linebreak {
+    margin-top: -1em;
+}
+ p.prose.flush {
+    text-indent: 0em;
+    margin-top: 2em; 
+}
+ .linebreak.indent {
+     text-indent: 50px;
+     margin-left: 0px;
+     display: block;
+     white-space: nowrap;
+}
+ .linebreak.indent.doubleindent {
+     text-indent: 100px;
+     margin-left: 0px;
+     display: block;
+     white-space: nowrap;
+}
+ .linebreak.indent.tripleindent {
+     text-indent: 150px;
+     margin-left: 0px;
+     display: block;
+     white-space: nowrap;
+}
+ .linebreak.indent.quadindent {
+     text-indent: 150px;
+     margin-left: 0px;
+     display: block;
+     white-space: nowrap;
+}
+ .backlinebreak.linebreak {
+     white-space: normal;
+     display: inline-block!important;
+    /* See Mormon 8:18 ABWRKS */
+}
+ .backlinebreak.linebreak + .verse {
+     
+ }
+
+
+
+/* Horizontal Lines */
+
+ .scriptures hr.versebreak {
+     padding: 0;
+     border: none;
+     border-top: 1px dashed #C5BCA3;
+}
+ .scriptures hr.sectionbreak {
+     padding: 0;
+     border: none;
+     border-top: medium double #C5BCA3;
+     text-align: center;
+     padding-bottom: 0em;
+}
+
+/* Images */
+
+ img.cover ,img.option {
+     width: 120px;
+     height: 40px;
+     float: left;
+     border: 1px solid black;
+     display: inline-block;
+     cursor: pointer;
+}
+ img.option {
+     border: 0;
+     border-top: 1px solid black;
+}
+
+
+/* Other */
+
+
+ span.verse.fadedVerse {
+    color: #A8A39B;
+}
+ h3 span.b {
+     font-size: 0.3em;
+     color: #a5897b;
+     font: Arial;
+     border: 1px solid #cbbcb4;
+     border-radius: 5px;
+     position: relative;
+     bottom: 0.7em;
+     margin-left: 0.5em;
+     padding-left: 0.6em;
+     padding-top: 0.2em;
+     padding-right: 0.5em;
+     text-align: center;
+     z-index: 2;
+     line-height: 2.4em;
+}
+
+ span.sense {
+     white-space: nowrap;
+     text-align: left;
+}
+ .verse,p,.passage {
+     cursor: text;
+     line-height: 1.45em;
+}
+ ins {
+     background: url('/img/green.png');
+     text-decoration: none;
+}
+ del {
+    background: url('/img/red.png');
+}
+ a.note {
+     color: #1c3080;
+     cursor: pointer;
+}
+ .fax {
+    color: #e9e3d7;
+}
+ a.note.hover {
+     color: #1b3cbf;
+     position: relative;
+     bottom: 2px;
+}
+ blockquote {
+    margin-left: 50px;
+}
+
+ body.chrome .passage span.ssrf, span.ssrf {
+     font-family: Arial,sans-serif;
+     font-weight: 100;
+}
+ .smallcaps {
+     font-variant: small-caps;
+     font-style: normal;
+}
+ .breaker {
+     display: inline-block;
+    /* add an extra line */
+     width: 100%;
+}
+
+
+.passage .nogap  {
+    margin-top: -1em;
+}
+
+
+.ellipses ~ .verse_head
+{
+	display:none;
+}
+
+.sansserif
+{
+	font-family:sans-serif;
+	color:#2c1c13;
+}
+
+.prose
+{
+	flex-grow: 1;
+}
+
+.copyprose img{
+	width: 1.5ex;
+    margin-left: 1em;
+    line-height: 2rem;
+    opacity: 0.2;
+    cursor: pointer;
+    margin-top: 0.8ex;
+    user-select: none;
+}
