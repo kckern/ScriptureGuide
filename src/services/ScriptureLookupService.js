@@ -106,9 +106,9 @@ export class ScriptureLookupService {
             book_id: bookId,
             synthetic: true  // flag: renders with headless="1"
           });
-        } else if (firstH3VerseId && firstH3VerseId > firstVerseId && !chapterHeading) {
+        } else if (firstH3VerseId && firstH3VerseId > firstVerseId && !(chapterHeading && chapterHeading.heading)) {
           // Pre-section synthetic: inline headings exist but first one is AFTER firstVerseId,
-          // AND there is no chapter heading at or before firstVerseId.
+          // AND there is no meaningful chapter-level section heading (title-only records don't count).
           // PHP renders a headless h3 at firstVerseId spanning the whole chapter,
           // with ref/slug scoped to just verse 1 (using _sectionLast = firstH3VerseId - 1).
           headings.push({
@@ -144,27 +144,41 @@ export class ScriptureLookupService {
             }).map(v => v.verse_id)
           );
 
+          // Build set of actual verse_ids present in scripture_verses for this version
+          const verseIdSet = new Set(verseRows.map(v => v.verse_id));
+
           const ranges = h3s.map((h) => {
-            const last = h.last_verse_id || lastVerseId;
+            // preSectionSynthetic: use _sectionLast (verses before first real heading) for parallel range,
+            // not last_verse_id (which spans the whole chapter for display purposes).
+            const effectiveLast = (h.preSectionSynthetic && h._sectionLast) ? h._sectionLast : (h.last_verse_id || lastVerseId);
+            const last = effectiveLast;
             // Cap range at passage end to avoid cross-chapter parallels
             const rangeEnd = Math.min(last, lastVerseId);
             const fv = vNumMap[h.verse_id] ?? 1;
             // extendedEnd is for lastVerseNum display only (h3 ref/slug attr).
             // The parallel query uses rangeEnd (non-extended) to match PHP's $verselist behavior.
             const extendedEnd = midSectionIds.has(rangeEnd + 1) && rangeEnd + 1 <= lastVerseId ? rangeEnd + 1 : rangeEnd;
-            const lv = vNumMap[extendedEnd] ?? passLastNum;
+            // Fallback to -1 in case a verse_id is missing from scripture_verses for this version
+            const lv = vNumMap[extendedEnd] ?? vNumMap[extendedEnd - 1] ?? passLastNum;
             // A "whole chapter" heading starts at verse 1 and covers to the end of the passage.
             // PHP renders these with chapter-level slug/ref (no verse range), same as synthetic headings.
             const isWholeChapter = fv === 1 && rangeEnd >= lastVerseId;
             if (isWholeChapter) h._wholeChapter = true;
             // rangeLastVerse: verse number at rangeEnd (non-extended) — used for parallel DST slug
             // lastVerse: verse number at extendedEnd — used for H3 ref/slug display in HtmlPresenter
-            const rangeLastVerse = vNumMap[rangeEnd] ?? passLastNum;
+            const rangeLastVerse = vNumMap[rangeEnd] ?? vNumMap[rangeEnd - 1] ?? passLastNum;
             // Zero-length sections (rangeEnd === h.verse_id): extend query range and DST to extendedEnd
             // so that the parallel query includes the next verse (which the section "owns" its first segment).
             const isZeroLength = rangeEnd === h.verse_id;
             const queryTo = isZeroLength ? extendedEnd : rangeEnd;
-            return { from: h.verse_id, to: queryTo, bookSlug: bookPart, chapter: chapterPart, firstVerse: fv, lastVerse: lv, rangeLastVerse, zeroLength: isZeroLength, synthetic: !!h.synthetic, wholeChapter: !!h.synthetic || isWholeChapter };
+            // PHP computes parallels using actual rendered verse_ids (only those in scripture_verses),
+            // not a numeric range. Extend to extendedEnd to include mid-section verse at section boundary.
+            const actualIds = verseRows
+              .filter(v => v.verse_id >= h.verse_id && v.verse_id <= extendedEnd)
+              .map(v => v.verse_id);
+            // verseNums: verse numbers for actualIds, used for DST slug (handles missing verses/gaps)
+            const verseNums = actualIds.map(id => vNumMap[id]).filter(v => v != null);
+            return { from: h.verse_id, to: queryTo, ids: actualIds, verseNums, bookSlug: bookPart, chapter: chapterPart, firstVerse: fv, lastVerse: lv, rangeLastVerse, zeroLength: isZeroLength, synthetic: !!h.synthetic, wholeChapter: !!h.synthetic || isWholeChapter };
           });
 
           const parallelMap = await this.headingRepository.findParallels(ranges, version);

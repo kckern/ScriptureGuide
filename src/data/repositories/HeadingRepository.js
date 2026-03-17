@@ -1,5 +1,76 @@
 import db from '../db/connection.js';
 
+// Build comma-separated contiguous verse number ranges, e.g. [21,22,23,25,26] → "21-23,25-26"
+function buildVerseRanges(nums) {
+  if (!nums || !nums.length) return '';
+  const segs = [];
+  let s = nums[0], e = nums[0];
+  for (let i = 1; i < nums.length; i++) {
+    if (nums[i] === e + 1) { e = nums[i]; }
+    else { segs.push(s === e ? `${s}` : `${s}-${e}`); s = e = nums[i]; }
+  }
+  segs.push(s === e ? `${s}` : `${s}-${e}`);
+  return segs.join(',');
+}
+
+// Build SRC slug from parallel rows, handling multi-chapter and non-consecutive ranges.
+// Mirrors PHP's referenceFromVerseIds+slufigyRef behavior for src_verse_ids.
+function buildSrcSlug(labelRows, chapterSizeMap) {
+  // Deduplicate by src_verse_id and sort
+  const rows = [...new Map(labelRows.map(r => [r.src_verse_id, r])).values()]
+    .sort((a, b) => a.src_verse_id - b.src_verse_id);
+  if (!rows.length) return '';
+  const first = rows[0];
+  const srcBookSlug = first.src_book_slug.toLowerCase().replace(/\./g, '').replace(/\s+/g, '.');
+
+  // Split into consecutive segments: new segment when chapter changes AND verse_id is not consecutive
+  // (mirrors PHP: segment splits on chapter change + non-consecutive id)
+  const segments = [[rows[0]]];
+  for (let i = 1; i < rows.length; i++) {
+    const prev = rows[i - 1], curr = rows[i];
+    if (curr.src_chapter !== prev.src_chapter && curr.src_verse_id !== prev.src_verse_id + 1) {
+      segments.push([curr]);
+    } else {
+      segments[segments.length - 1].push(curr);
+    }
+  }
+
+  const segSlugs = segments.map(seg => {
+    const chapters = [...new Set(seg.map(r => r.src_chapter))];
+    if (chapters.length > 1) {
+      // Consecutive verse_ids spanning multiple chapters (e.g. JST Matt 1-2)
+      const minCh = chapters[0], maxCh = chapters[chapters.length - 1];
+      const minV = seg[0].src_verse;
+      const maxV = seg[seg.length - 1].src_verse;
+      const maxChSize = chapterSizeMap[`${seg[0].src_book_id}:${maxCh}`] ?? 0;
+      if (minV === 1 && maxChSize > 0 && maxV === maxChSize) {
+        return `${srcBookSlug}.${minCh}-${maxCh}`;
+      }
+      // Partial cross-chapter: fall through to single-chapter handling using first chapter
+      return `${srcBookSlug}.${minCh}.${minV}-${maxCh}.${maxV}`;
+    }
+    // Single chapter
+    const ch = chapters[0];
+    const chSize = chapterSizeMap[`${seg[0].src_book_id}:${ch}`] ?? 0;
+    const verses = [...new Set(seg.map(r => r.src_verse))].sort((a, b) => a - b);
+    const isWholeChapter = chSize > 0 && verses[0] === 1 && verses.length === chSize &&
+      verses.every((v, i) => i === 0 || v === verses[i - 1] + 1);
+    if (isWholeChapter) return `${srcBookSlug}.${ch}`;
+    if (verses.length === 1) return `${srcBookSlug}.${ch}.${verses[0]}`;
+    return `${srcBookSlug}.${ch}.${buildVerseRanges(verses)}`;
+  });
+
+  // PHP omits the book prefix for subsequent segments in the same book (e.g. "isa.52.1-2;54.2")
+  const result2 = [];
+  for (let i = 0; i < segSlugs.length; i++) {
+    if (i === 0) { result2.push(segSlugs[i]); continue; }
+    // Strip srcBookSlug prefix from subsequent same-book segments
+    const prefix = `${srcBookSlug}.`;
+    result2.push(segSlugs[i].startsWith(prefix) ? segSlugs[i].slice(prefix.length) : segSlugs[i]);
+  }
+  return result2.join(';');
+}
+
 export class HeadingRepository {
   // Inline headings for verses - filtered by version, includes last_verse_id via self-join
   async findByVerseIds(verseIds, version = 'LDS') {
@@ -102,11 +173,11 @@ export class HeadingRepository {
     if (!verseIdRanges || verseIdRanges.length === 0) return {};
     const versionPrefix = version ? `${version.toLowerCase()}/` : '';
 
-    const allIds = verseIdRanges.flatMap(r => {
+    const allIds = verseIdRanges.flatMap(r => r.ids && r.ids.length ? r.ids : (() => {
       const ids = [];
       for (let i = r.from; i <= r.to; i++) ids.push(i);
       return ids;
-    });
+    })());
     if (!allIds.length) return {};
 
     const rows = await db.query(
@@ -144,63 +215,37 @@ export class HeadingRepository {
 
     const result = {};
     for (const range of verseIdRanges) {
-      const rangeRows = rows.filter(r => r.dst_verse_id >= range.from && r.dst_verse_id <= range.to);
+      const rangeIdSet = range.ids && range.ids.length ? new Set(range.ids) : null;
+      const rangeRows = rows.filter(r => rangeIdSet ? rangeIdSet.has(r.dst_verse_id) : (r.dst_verse_id >= range.from && r.dst_verse_id <= range.to));
       if (!rangeRows.length) continue;
 
       // Only output if at least one row is significant (PHP: $sig check)
       const hasSig = rangeRows.some(r => r.significant === 1);
       if (!hasSig) continue;
 
-      // Group by label: JST→"JST", OT/NT→volume, numeric vol_org (e.g. "1835")→vol_org, else→book_title
-      const byLabel = {};
+      // Group by label — use Map to preserve insertion order (matches PHP's array ordering).
+      // JS plain objects sort integer-like keys first, breaking insertion order for e.g. "1835".
+      // Label: UPPER(vol_org) with DC→D&C, JSTN/JSTO→JST replacements (mirrors PHP findParallelLabel).
+      // Exception: PGP volumes use book_title_short (Moses, Abraham, etc.).
+      const byLabel = new Map();
       for (const row of rangeRows) {
-        const vol = row.vol_org.toLowerCase();
-        let label;
-        if (vol.startsWith('jst')) label = 'JST';
-        else if (vol === 'ot') label = 'OT';
-        else if (vol === 'nt') label = 'NT';
-        else if (/^\d/.test(vol)) label = row.vol_org;  // e.g. "1835" volume
-        else label = row.src_book_title;  // e.g. "Moses", "Abraham"
-        if (!byLabel[label]) byLabel[label] = [];
-        byLabel[label].push(row);
+        let volLabel = row.vol_org.toUpperCase()
+          .replace('JSTN', 'JST').replace('JSTO', 'JST').replace(/^DC$/, 'D&C');
+        const label = volLabel === 'PGP' ? row.src_book_title : volLabel;
+        if (!byLabel.has(label)) byLabel.set(label, []);
+        byLabel.get(label).push(row);
       }
 
       // Synthetic or whole-chapter headings use chapter-level slug (no verse range) for DST
       const useChapterSlug = range.synthetic || range.wholeChapter;
-      // DST slug: zero-length sections use extended lastVerse (matches h3 display and includes next verse);
-      // normal sections use rangeLastVerse (non-extended, avoids bleeding into next section)
-      const dstLastVerse = range.zeroLength ? (range.lastVerse ?? range.rangeLastVerse) : (range.rangeLastVerse ?? range.lastVerse);
+      // DST slug: build from actual verse numbers (handles missing-verse gaps like NRSV Mark 15:28)
+      const dstVerseRangeStr = buildVerseRanges(range.verseNums);
       const dstSlug = useChapterSlug
         ? `${versionPrefix}${range.bookSlug}.${range.chapter}`
-        : `${versionPrefix}${range.bookSlug}.${range.chapter}.${range.firstVerse}-${dstLastVerse}`;
+        : `${versionPrefix}${range.bookSlug}.${range.chapter}.${dstVerseRangeStr || `${range.firstVerse}-${range.lastVerse ?? range.rangeLastVerse}`}`;
       const parts = [];
-      for (const [label, labelRows] of Object.entries(byLabel)) {
-        const first = labelRows[0];
-        // src book slug: "JST John" → "jst.john", "Gen." → "gen", "1 Ne." → "1ne"
-        // Use space→dot for multi-word (JST John → jst.john), strip periods
-        const srcBookSlug = first.src_book_slug.toLowerCase().replace(/\./g, '').replace(/\s+/g, '.');
-        let srcSlug;
-        {
-          // Always check if src verses cover the full chapter (chapter-level slug)
-          const srcVerses = [...new Set(labelRows.map(r => r.src_verse))].sort((a, b) => a - b);
-          const chapterSize = chapterSizeMap[`${first.src_book_id}:${first.src_chapter}`] ?? 0;
-          const isWholeChapter = chapterSize > 0 && srcVerses[0] === 1 && srcVerses.length === chapterSize && srcVerses.every((v, i) => i === 0 || v === srcVerses[i - 1] + 1);
-          if (isWholeChapter) {
-            srcSlug = `${srcBookSlug}.${first.src_chapter}`;
-          } else if (srcVerses.length === 1) {
-            srcSlug = `${srcBookSlug}.${first.src_chapter}.${srcVerses[0]}`;
-          } else {
-            // Build comma-separated contiguous segments for non-contiguous ranges
-            const segs = [];
-            let segStart = srcVerses[0], segEnd = srcVerses[0];
-            for (let i = 1; i < srcVerses.length; i++) {
-              if (srcVerses[i] === segEnd + 1) { segEnd = srcVerses[i]; }
-              else { segs.push(segStart === segEnd ? `${segStart}` : `${segStart}-${segEnd}`); segStart = segEnd = srcVerses[i]; }
-            }
-            segs.push(segStart === segEnd ? `${segStart}` : `${segStart}-${segEnd}`);
-            srcSlug = `${srcBookSlug}.${first.src_chapter}.${segs.join(',')}`;
-          }
-        }
+      for (const [label, labelRows] of byLabel.entries()) {
+        const srcSlug = buildSrcSlug(labelRows, chapterSizeMap);
         parts.push(`${label}*${dstSlug}~${srcSlug}`);
       }
       if (parts.length) result[range.from] = parts.join('|');

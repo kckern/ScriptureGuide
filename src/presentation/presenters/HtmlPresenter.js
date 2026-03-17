@@ -59,7 +59,8 @@ export class HtmlPresenter {
       // If the next verse after h.last starts a new section mid-verse (§¶), include its verse number
       // This mirrors PHP behavior where the current section "owns" the first part of that verse
       const nextMid = midSectionVerseIds.has(h.last + 1) ? verseNumMap[h.last + 1] : undefined;
-      h.lastVerseNum = nextMid ?? verseNumMap[h.last] ?? passageLastVerseNum;
+      // Fallback to h.last-1 in case h.last is not in verseNumMap (data gap: verse missing from this version)
+      h.lastVerseNum = nextMid ?? verseNumMap[h.last] ?? verseNumMap[h.last - 1] ?? passageLastVerseNum;
       // preSectionSynthetic: override lastVerseNum to the verse just before the first real heading
       // so that ref/slug say "1:1" (verse 1 only), while verse_count/last_verse_id span the full chapter
       if (h.preSectionSynthetic && h._sectionLast) {
@@ -68,6 +69,8 @@ export class HtmlPresenter {
       h.img = img;
       h.ver = version;
       h.tver = version;
+      // Audio: apply chapter-level audio to all h3s (PHP computes per-section but result is same for whole chapter)
+      h.audio = result.chapterHeading?.audio > 0 ? 1 : 0;
       // parallel is attached by ScriptureLookupService if significant cross-refs exist
     });
 
@@ -92,10 +95,36 @@ export class HtmlPresenter {
         } else {
           const f = h.firstVerseNum;
           const l = h.lastVerseNum;
-          const verseRange = (f && l && f !== l) ? `.${f}-${l}` : (f ? `.${f}` : '');
-          h.slug = `${version}/${bookSlugForH3}.${chapter}${verseRange}`;
-          // ref: "Book Chapter:first–last" with en-dash
-          h.ref = (f && l && f !== l) ? `${bookName} ${chapter}:${f}\u2013${l}` : `${bookName} ${chapter}:${f || ''}`;
+          // Compute actual verse numbers in section range, bounded by verse number [f,l]
+          // Using verseNum bounds (not verse_id) ensures mid-section boundary verse is included (e.g. John 18:38)
+          // and also handles missing-verse gaps (e.g. NRSV Mark 15:28 absent → [21-27,29-32])
+          const sectionVerseNums = (f != null && l != null) ? result.verses
+            .filter(v => v.id >= h.verse_id && v.verseNum != null && v.verseNum >= f && v.verseNum <= l)
+            .map(v => v.verseNum) : [];
+          let verseRangeSlug, refVerse;
+          if (sectionVerseNums.length > 0) {
+            // Build contiguous ranges from actual verse numbers (handles gaps)
+            const segs = [];
+            let s = sectionVerseNums[0], e = sectionVerseNums[0];
+            for (let i = 1; i < sectionVerseNums.length; i++) {
+              if (sectionVerseNums[i] === e + 1) { e = sectionVerseNums[i]; }
+              else { segs.push(s === e ? `${s}` : `${s}-${e}`); s = e = sectionVerseNums[i]; }
+            }
+            segs.push(s === e ? `${s}` : `${s}-${e}`);
+            if (segs.length > 1) {
+              // Non-contiguous: use comma-separated format (with en-dashes within ranges)
+              verseRangeSlug = `.${segs.join(',')}`;
+              refVerse = segs.map(seg => seg.replace('-', '\u2013')).join(',');
+            } else {
+              verseRangeSlug = segs[0] === `${f}` ? `.${f}` : `.${segs[0]}`;
+              refVerse = segs[0].replace('-', '\u2013');
+            }
+          } else {
+            verseRangeSlug = (f && l && f !== l) ? `.${f}-${l}` : (f ? `.${f}` : '');
+            refVerse = (f && l && f !== l) ? `${f}\u2013${l}` : `${f || ''}`;
+          }
+          h.slug = `${version}/${bookSlugForH3}.${chapter}${verseRangeSlug}`;
+          h.ref = `${bookName} ${chapter}:${refVerse}`;
         }
       }
     });
@@ -129,8 +158,9 @@ export class HtmlPresenter {
       let preH3Ref, preH3Slug;
       if (chLast >= firstVId && chLast < passageLastVerseId && bookSlugForH3 && chapter) {
         const firstVNum = verseNumMap[firstVId];
-        // lastVNum: verse number at chLast+1 (exclusive end, PHP convention) or fallback to chLast
-        const lastVNum = verseNumMap[chLast + 1] ?? verseNumMap[chLast];
+        // lastVNum: when chLast === firstVId (section ends exactly at first passage verse),
+        // use chLast (single-verse ref); otherwise use chLast+1 (exclusive end convention)
+        const lastVNum = (chLast === firstVId) ? verseNumMap[chLast] : (verseNumMap[chLast + 1] ?? verseNumMap[chLast]);
         const verseRange = (firstVNum && lastVNum && firstVNum !== lastVNum)
           ? `.${firstVNum}-${lastVNum}` : (firstVNum ? `.${firstVNum}` : '');
         preH3Slug = `${version}/${bookSlugForH3}.${chapter}${verseRange}`;

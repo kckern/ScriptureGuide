@@ -6,8 +6,8 @@ const VOLUME_RANGES = {
   [VolumeType.OLD_TESTAMENT]: { start: 1, end: 23145 },
   [VolumeType.NEW_TESTAMENT]: { start: 23146, end: 31102 },
   [VolumeType.BOOK_OF_MORMON]: { start: 31103, end: 37706 },
-  [VolumeType.DOCTRINE_COVENANTS]: { start: 37707, end: 40368 },
-  [VolumeType.PEARL_OF_GREAT_PRICE]: { start: 40369, end: 40919 }
+  [VolumeType.DOCTRINE_COVENANTS]: { start: 37707, end: 41360 },
+  [VolumeType.PEARL_OF_GREAT_PRICE]: { start: 41361, end: 41995 }
 };
 
 export function volumeDetection(verseId) {
