@@ -87,12 +87,19 @@ export class ScriptureLookupService {
         const audioFlag = await this.headingRepository.hasAudio(verseIds, version);
         // Always store bookTitle on config so HtmlPresenter can build slugs even when chapterHeading is null
         config._bookTitle = bookTitle;
-        config._vChapterMap = vChapterMap;
         if (chapterHeading) {
           chapterHeading.bookSlug = bookSlug;
           chapterHeading.bookTitle = bookTitle;
           chapterHeading.audio = audioFlag;
+          // Fetch chapter for chapterHeading.last and store on the heading object (NOT in vChapterMap,
+          // to avoid polluting it with verse_ids outside the passage which causes false cross-chapter
+          // detection in isWholeChapter / endChapter logic for inline headings).
+          if (chapterHeading.last != null) {
+            const chHRows = await this.verseRepository.findChaptersByVerseIds([chapterHeading.last]);
+            if (chHRows[0]) chapterHeading._lastChapter = chHRows[0].chapter;
+          }
         }
+        config._vChapterMap = vChapterMap;
 
         // Compute canonical ref slug using book_title_short stripped of periods, spaces→dots
         // "Gen." → "gen", "D&C" → "d&c", "1 Cor." → "1.cor", "1 Ne." → "1.ne"
@@ -297,8 +304,27 @@ export class ScriptureLookupService {
                 chapterHeading._prePassageParallel = ppParallelMap[firstVerseId];
               }
             }
-            // Fallback: section ends before passage (chLast < firstVerseId) → copy parallel from inline/synthetic
-            // h3 at firstVerseId (which covers the full chapter and is removed from display by HtmlPresenter)
+            // Fallback: section ends before passage (chLast < firstVerseId).
+            // Two sub-cases:
+            //   A) Same-chapter prePassageH3 (e.g. Mk 16:1-8 before Mk 16:9-20): compute single-verse parallel
+            //      for just the first verse, because prePassageH3 ref uses first-verse-only slug.
+            //   B) Cross-chapter prePassageH3 (e.g. Ps.21 heading before Ps.22 passage): copy parallel from
+            //      the inline h3 at firstVerseId (which uses the full passage range as its DST slug).
+            if (!chapterHeading._prePassageParallel && chapterHeading.heading && chLast < firstVerseId) {
+              const chLastChap = chapterHeading._lastChapter ?? null;
+              const firstVChap = vChapterMap[firstVerseId];
+              const isCrossChap = chLastChap != null && firstVChap != null && chLastChap !== firstVChap;
+              if (!isCrossChap) {
+                // Same-chapter: compute parallel for just the first verse
+                const ppFv = vNumMap[firstVerseId] ?? 1;
+                const ppStartChapter = vChapterMap[firstVerseId] ?? chapterPart;
+                const ppSingleRange = [{ from: firstVerseId, to: firstVerseId, ids: [firstVerseId], verseNums: [ppFv], bookSlug: bookPart, chapter: ppStartChapter, endChapter: ppStartChapter, firstVerse: ppFv, lastVerse: ppFv, rangeLastVerse: ppFv, synthetic: false, wholeChapter: false }];
+                const ppSingleMap = await this.headingRepository.findParallels(ppSingleRange, version);
+                if (ppSingleMap[firstVerseId]) {
+                  chapterHeading._prePassageParallel = ppSingleMap[firstVerseId];
+                }
+              }
+            }
             if (!chapterHeading._prePassageParallel && chapterHeading.heading) {
               const firstH3 = h3s.find(h => h.verse_id === firstVerseId);
               if (firstH3 && firstH3.parallel) {

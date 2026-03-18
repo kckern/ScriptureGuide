@@ -264,6 +264,14 @@ export class HtmlPresenter {
       // Use the DB heading's own last_verse_id (the range it covers in the DB),
       // not the passage end — verse_count and last_verse_id attrs reference the DB range
       const chLast = ch.last ?? passageLastVerseId;
+      // Detect cross-chapter boundary: chLast is in a different chapter from firstVId.
+      // e.g. Ps.21 heading (chLast=14205=Ps.21:13) before Ps.22 passage (firstVId=14206=Ps.22:1).
+      // vs. Mark 16 heading (chLast=24882=Mk16:8) before Mk 16:9-20 (firstVId=24883=Mk16:9).
+      // Use ch._lastChapter (fetched in ScriptureLookupService, stored on heading object, NOT in vChapterMap
+      // to avoid polluting vChapterMap with verse_ids outside the passage).
+      const chLastChapter = ch._lastChapter ?? null;
+      const firstVIdChapter = vChapterMap[firstVId];
+      const isCrossChapterBoundary = chLast < firstVId && chLastChapter != null && firstVIdChapter != null && chLastChapter !== firstVIdChapter;
       const chVerseCount = chLast - ch.verse_id;
       const bookName = result.reference.book || '';
       // Choose ref/slug format based on section coverage:
@@ -283,9 +291,9 @@ export class HtmlPresenter {
         preH3Ref = (firstVNum && lastVNum && firstVNum !== lastVNum)
           ? `${bookName} ${chapter}:${firstVNum}\u2013${lastVNum}`
           : `${bookName} ${chapter}:${firstVNum || ''}`;
-      } else if (chLast < firstVId && isSubChapterRequest && bookSlugForH3 && chapter) {
-        // Sub-chapter request: chapter heading's section ends before passage starts.
-        // Use just the first verse of the passage as ref/slug (mirrors PHP behavior for e.g. mark.16.9-20).
+      } else if (chLast < firstVId && !isCrossChapterBoundary && isSubChapterRequest && bookSlugForH3 && chapter) {
+        // Sub-chapter request: section ends before passage, same chapter (e.g. mark.16.9-20).
+        // Use just the first verse of the passage as ref/slug (mirrors PHP behavior).
         const firstVNum = verseNumMap[firstVId];
         preH3Slug = firstVNum ? `${version}/${bookSlugForH3}.${chapter}.${firstVNum}` : '';
         preH3Ref = firstVNum ? `${bookName} ${chapter}:${firstVNum}` : '';
@@ -330,9 +338,11 @@ export class HtmlPresenter {
         audio: ch.audio > 0 ? 1 : 0,
         parallel: ch._prePassageParallel || null
       };
-      // Remove inline heading at firstVerseId when the section overlaps with the passage.
-      // When section ends before passage (chLast < firstVId), keep the inline h3 (production renders both).
-      if (chLast >= firstVId) {
+      // Remove inline heading at firstVerseId when the section overlaps with the passage,
+      // OR when the prePassageH3 crosses a chapter boundary (different chapter heading, e.g. Ps.21→Ps.22).
+      // When the section ends before the passage AND is from the same chapter (e.g. Mk 16:1-8 before 16:9-20),
+      // keep the inline h3 so both the prior section and the current section render.
+      if (chLast >= firstVId || isCrossChapterBoundary) {
         delete h3ByVerse[firstVId];
       }
     }
