@@ -53,8 +53,12 @@ export class ScriptureLookupService {
     const verseRows = await this.verseRepository.findByIds(verseIds, version);
     const verses = verseRows.map(row => Verse.fromRow(row));
 
-    // Build verse_id → chapter map (needed for multi-chapter slug/parallel computation)
+    // Build verse_id → chapter map from canonical verse table (covers ALL verse_ids, including
+    // heading-only ones that have no text entry in scripture_verses for this version, e.g. NRSV Psalms)
+    const chapterRows = await this.verseRepository.findChaptersByVerseIds(verseIds);
     const vChapterMap = {};
+    for (const row of chapterRows) vChapterMap[row.verse_id] = row.chapter;
+    // Also fill from verseRows JOIN result (same data, but ensures consistency for fetched verses)
     for (const row of verseRows) {
       if (row.chapter != null) vChapterMap[row.verse_id] = row.chapter;
     }
@@ -83,6 +87,7 @@ export class ScriptureLookupService {
         const audioFlag = await this.headingRepository.hasAudio(verseIds, version);
         // Always store bookTitle on config so HtmlPresenter can build slugs even when chapterHeading is null
         config._bookTitle = bookTitle;
+        config._vChapterMap = vChapterMap;
         if (chapterHeading) {
           chapterHeading.bookSlug = bookSlug;
           chapterHeading.bookTitle = bookTitle;
@@ -216,11 +221,21 @@ export class ScriptureLookupService {
             const extendedEnd = midSectionIds.has(rangeEnd + 1) && rangeEnd + 1 <= lastVerseId ? rangeEnd + 1 : rangeEnd;
             // Fallback to -1 in case a verse_id is missing from scripture_verses for this version
             const lv = vNumMap[extendedEnd] ?? vNumMap[extendedEnd - 1] ?? passLastNum;
-            // A "whole chapter" heading starts at verse 1 and covers to the end of the passage.
+            // Per-heading chapter: use _chapterNum (multi-chapter synthetics), vChapterMap (inline), or chapterPart
+            const hChapter = h._chapterNum ?? vChapterMap[h.verse_id] ?? chapterPart;
+            // A "whole chapter" heading starts at verse 1 and covers to the end of its chapter.
             // PHP renders these with chapter-level slug/ref (no verse range), same as synthetic headings.
             // Sub-chapter requests (explicit verses in URL) are never whole-chapter.
             // Preserve h._wholeChapter if already set (e.g. per-chapter synthetics in multi-chapter requests).
-            const isWholeChapter = h._wholeChapter || (!isSubChapterRequest && fv === 1 && rangeEnd >= lastVerseId);
+            // For multi-chapter requests: also treat as whole-chapter when the heading covers exactly one
+            // full chapter (rangeEnd+1 is in a different chapter or not in the passage).
+            const nextChapter = vChapterMap[rangeEnd + 1] ?? hChapter;
+            const rangeEndChapter = vChapterMap[rangeEnd] ?? hChapter;
+            // Whole-chapter: starts at verse 1 AND ends at the last verse of its own chapter
+            // (rangeEnd is in the same chapter as heading, and the next verse is a different chapter).
+            // Cross-chapter sections (e.g. Gen 1:1–2:3) are excluded because rangeEnd is in a different chapter.
+            const isWholeChapter = h._wholeChapter || (!isSubChapterRequest && fv === 1 &&
+              (rangeEnd >= lastVerseId || (nextChapter !== hChapter && rangeEndChapter === hChapter)));
             if (isWholeChapter) h._wholeChapter = true;
             // rangeLastVerse: verse number at rangeEnd (non-extended) — used for parallel DST slug
             // lastVerse: verse number at extendedEnd — used for H3 ref/slug display in HtmlPresenter
@@ -236,8 +251,6 @@ export class ScriptureLookupService {
               .map(v => v.verse_id);
             // verseNums: verse numbers for actualIds, used for DST slug (handles missing verses/gaps)
             const verseNums = actualIds.map(id => vNumMap[id]).filter(v => v != null);
-            // Per-heading chapter: use _chapterNum (multi-chapter synthetics), vChapterMap (inline), or chapterPart
-            const hChapter = h._chapterNum ?? vChapterMap[h.verse_id] ?? chapterPart;
             // endChapter: chapter of the last verse in the range (for cross-chapter DST slug detection)
             const endChapter = vChapterMap[extendedEnd] ?? hChapter;
             return { from: h.verse_id, to: queryTo, ids: actualIds, verseNums, bookSlug: bookPart, chapter: hChapter, endChapter, firstVerse: fv, lastVerse: lv, rangeLastVerse, zeroLength: isZeroLength, synthetic: !!h.synthetic, wholeChapter: isWholeChapter, dstSlugOverride };
@@ -275,7 +288,10 @@ export class ScriptureLookupService {
               const ppLv = vNumMap[ppRangeEnd] ?? passLastNum;
               const ppRangeLastVerse = ppLv;
               // Sub-chapter requests: never use chapter-level DST slug even if section covers full passage
-              const ppRange = [{ from: firstVerseId, to: ppRangeEnd, ids: ppIds, verseNums: ppVerseNums, bookSlug: bookPart, chapter: chapterPart, firstVerse: ppFv, lastVerse: ppLv, rangeLastVerse: ppRangeLastVerse, synthetic: false, wholeChapter: isFullPassage && !isSubChapterRequest }];
+              // For multi-chapter requests, use per-verse chapter mapping for correct DST slug
+              const ppStartChapter = vChapterMap[firstVerseId] ?? chapterPart;
+              const ppEndChapter = vChapterMap[ppRangeEnd] ?? vChapterMap[lastVerseId] ?? ppStartChapter;
+              const ppRange = [{ from: firstVerseId, to: ppRangeEnd, ids: ppIds, verseNums: ppVerseNums, bookSlug: bookPart, chapter: ppStartChapter, endChapter: ppEndChapter, firstVerse: ppFv, lastVerse: ppLv, rangeLastVerse: ppRangeLastVerse, synthetic: false, wholeChapter: isFullPassage && !isSubChapterRequest }];
               const ppParallelMap = await this.headingRepository.findParallels(ppRange, version);
               if (ppParallelMap[firstVerseId]) {
                 chapterHeading._prePassageParallel = ppParallelMap[firstVerseId];

@@ -136,10 +136,11 @@ export class HtmlPresenter {
     const bookSlugForH3 = bookTitle.toLowerCase().replace(/\s+/g, '.');
     const chapter = result.reference.chapter;
 
-    // Build verse_id → chapter map (from Verse.chapter, set by JOIN in VerseRepository)
-    const vChapterMap = {};
+    // Build verse_id → chapter map: use canonical map from ScriptureLookupService (covers all
+    // verse_ids including heading-only ones not in scripture_verses), fallback to Verse.chapter
+    const vChapterMap = Object.assign({}, result.config._vChapterMap || {});
     for (const v of result.verses) {
-      if (v.chapter != null) vChapterMap[v.id] = v.chapter;
+      if (v.chapter != null && vChapterMap[v.id] == null) vChapterMap[v.id] = v.chapter;
     }
 
     // Sub-chapter request: reference has explicit verse(s) (e.g. john.3.16, isa.53.1-6)
@@ -163,8 +164,15 @@ export class HtmlPresenter {
         // use chapter-level slug/ref (no verse range)
         const isChapterLevel = (h.synthetic && h._wholeChapter) || (h._wholeChapter && !h.synthetic && !h.preSectionSynthetic);
         if (isChapterLevel) {
-          h.slug = `${version}/${bookSlugForH3}.${h3Chapter}`;
-          h.ref = `${bookName} ${h3Chapter}`;
+          // Check if the whole-chapter heading spans multiple chapters (e.g. NRSV Ps.22-23 single section)
+          const hLastChap = vChapterMap[h.last] ?? h3Chapter;
+          if (hLastChap !== h3Chapter) {
+            h.slug = `${version}/${bookSlugForH3}.${h3Chapter}-${hLastChap}`;
+            h.ref = `${bookName} ${h3Chapter}\u2013${hLastChap}`;
+          } else {
+            h.slug = `${version}/${bookSlugForH3}.${h3Chapter}`;
+            h.ref = `${bookName} ${h3Chapter}`;
+          }
         } else if (crossChapterMatch && h.verse_id <= (result.verses[0]?.id ?? 0) + 1) {
           // Cross-chapter range (e.g. "Genesis 1:1-2:3"): format as chapter-range slug
           // This applies to the heading at the start of the passage that spans multiple chapters.
@@ -286,8 +294,18 @@ export class HtmlPresenter {
           ? `${bookName} ${chapter}:${firstVNum}\u2013${lastVNum}`
           : `${bookName} ${chapter}:${firstVNum || ''}`;
       } else {
-        preH3Ref = `${bookName} ${chapter}`;
-        preH3Slug = bookSlugForH3 && chapter ? `${version}/${bookSlugForH3}.${chapter}` : '';
+        // Chapter-level (or full-passage) heading. For multi-chapter requests, determine the actual
+        // chapter range from vChapterMap since reference.chapter is null.
+        const preStartChap = chapter ?? vChapterMap[ch.verse_id] ?? vChapterMap[firstVId];
+        const preEndChap = passageLastVerseId ? (vChapterMap[passageLastVerseId] ?? preStartChap) : preStartChap;
+        if (preStartChap && preEndChap && preEndChap !== preStartChap) {
+          preH3Ref = `${bookName} ${preStartChap}\u2013${preEndChap}`;
+          preH3Slug = bookSlugForH3 ? `${version}/${bookSlugForH3}.${preStartChap}-${preEndChap}` : '';
+        } else {
+          const chToUse = preStartChap ?? chapter;
+          preH3Ref = `${bookName} ${chToUse}`;
+          preH3Slug = bookSlugForH3 && chToUse ? `${version}/${bookSlugForH3}.${chToUse}` : '';
+        }
       }
       prePassageH3 = {
         verse_id: ch.verse_id,

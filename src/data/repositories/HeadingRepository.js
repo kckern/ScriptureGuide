@@ -279,13 +279,15 @@ export class HeadingRepository {
 
       // Whole-chapter headings use chapter-level slug (no verse range) for DST
       const useChapterSlug = range.wholeChapter;
-      // Cross-chapter section DST: verseNums loop across chapters, need chapter-range format
-      const isMultiChapterDst = !useChapterSlug && range.endChapter && range.endChapter !== range.chapter;
+      // Cross-chapter: either whole-passage multi-chapter (book.N-M) or section spanning chapters (book.N.v-M.w)
+      const isMultiChapterDst = range.endChapter && range.endChapter !== range.chapter;
       // DST slug: build from actual verse numbers (handles missing-verse gaps like NRSV Mark 15:28)
       const dstVerseRangeStr = buildVerseRanges(range.verseNums);
       const endVerse = range.lastVerse ?? range.rangeLastVerse;
       const dstSlug = useChapterSlug
-        ? `${versionPrefix}${range.bookSlug}.${range.chapter}`
+        ? isMultiChapterDst
+          ? `${versionPrefix}${range.bookSlug}.${range.chapter}-${range.endChapter}`
+          : `${versionPrefix}${range.bookSlug}.${range.chapter}`
         : range.dstSlugOverride
           ? `${versionPrefix}${range.dstSlugOverride}`
           : isMultiChapterDst

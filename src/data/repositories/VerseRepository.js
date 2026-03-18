@@ -30,6 +30,16 @@ export class VerseRepository {
     return rows;
   }
 
+  // Get chapter number for each verse_id from the canonical verse table (no version filter)
+  async findChaptersByVerseIds(verseIds) {
+    if (!verseIds || verseIds.length === 0) return [];
+    const rows = await db.query(
+      'SELECT verse_id, chapter FROM lds_scriptures_verses WHERE verse_id IN (?)',
+      [verseIds]
+    );
+    return rows;
+  }
+
   async findVersionsForVerseIds(verseIds) {
     if (!verseIds || verseIds.length === 0) {
       return [];
