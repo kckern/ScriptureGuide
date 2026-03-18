@@ -283,6 +283,12 @@ export class HtmlPresenter {
         preH3Ref = (firstVNum && lastVNum && firstVNum !== lastVNum)
           ? `${bookName} ${chapter}:${firstVNum}\u2013${lastVNum}`
           : `${bookName} ${chapter}:${firstVNum || ''}`;
+      } else if (chLast < firstVId && isSubChapterRequest && bookSlugForH3 && chapter) {
+        // Sub-chapter request: chapter heading's section ends before passage starts.
+        // Use just the first verse of the passage as ref/slug (mirrors PHP behavior for e.g. mark.16.9-20).
+        const firstVNum = verseNumMap[firstVId];
+        preH3Slug = firstVNum ? `${version}/${bookSlugForH3}.${chapter}.${firstVNum}` : '';
+        preH3Ref = firstVNum ? `${bookName} ${chapter}:${firstVNum}` : '';
       } else if (isSubChapterRequest && bookSlugForH3 && chapter) {
         // Sub-chapter request: section covers full passage — use passage verse range for ref/slug
         const firstVNum = verseNumMap[firstVId];
@@ -324,8 +330,11 @@ export class HtmlPresenter {
         audio: ch.audio > 0 ? 1 : 0,
         parallel: ch._prePassageParallel || null
       };
-      // Remove inline heading at firstVerseId — production doesn't render it when pre-passage h3 takes its place
-      delete h3ByVerse[firstVId];
+      // Remove inline heading at firstVerseId when the section overlaps with the passage.
+      // When section ends before passage (chLast < firstVId), keep the inline h3 (production renders both).
+      if (chLast >= firstVId) {
+        delete h3ByVerse[firstVId];
+      }
     }
 
     // Non-heading inline elements (verse_head, summary, headnote, background)
