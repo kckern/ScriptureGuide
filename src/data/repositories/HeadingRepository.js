@@ -46,6 +46,34 @@ function buildSrcSlug(labelRows, chapterSizeMap) {
       if (minV === 1 && maxChSize > 0 && maxV === maxChSize) {
         return `${srcBookSlug}.${minCh}-${maxCh}`;
       }
+      // PHP uses compact cross-chapter format when:
+      //   A) first chapter is whole + last chapter starts at verse 1 (partial end): "book.N-M.endVerse"
+      //   B) first chapter is partial + last chapter starts at verse 1 (partial end): "book.N.startVerse-M.endVerse"
+      // This applies when all intermediate chapters are also whole.
+      {
+        const firstCh = chapters[0], lastCh = chapters[chapters.length - 1];
+        const firstChVerses = [...new Set(seg.filter(r => r.src_chapter === firstCh).map(r => r.src_verse))].sort((a, b) => a - b);
+        const lastChVerses = [...new Set(seg.filter(r => r.src_chapter === lastCh).map(r => r.src_verse))].sort((a, b) => a - b);
+        const firstChSize = chapterSizeMap[`${seg[0].src_book_id}:${firstCh}`] ?? 0;
+        const firstChIsWhole = firstChSize > 0 && firstChVerses[0] === 1 && firstChVerses.length === firstChSize && firstChVerses.every((v, i) => i === 0 || v === firstChVerses[i - 1] + 1);
+        const lastChStartsAtOne = lastChVerses[0] === 1;
+        const allIntermediateWhole = chapters.slice(1, -1).every(ch => {
+          const chSize = chapterSizeMap[`${seg[0].src_book_id}:${ch}`] ?? 0;
+          const chV = [...new Set(seg.filter(r => r.src_chapter === ch).map(r => r.src_verse))].sort((a, b) => a - b);
+          return chSize > 0 && chV[0] === 1 && chV.length === chSize && chV.every((v, i) => i === 0 || v === chV[i - 1] + 1);
+        });
+        const firstChContiguous = firstChVerses.every((v, i) => i === 0 || v === firstChVerses[i - 1] + 1);
+        if (lastChStartsAtOne && allIntermediateWhole && firstChContiguous) {
+          const endVerse = lastChVerses[lastChVerses.length - 1];
+          if (firstChIsWhole) {
+            // Case A: first whole, last partial-from-1 → "book.N-M.endVerse"
+            return `${srcBookSlug}.${minCh}-${maxCh}.${endVerse}`;
+          } else if (firstChVerses[0] !== 1) {
+            // Case B: first contiguous partial (not from 1), last partial-from-1 → "book.N.startVerse-M.endVerse"
+            return `${srcBookSlug}.${minCh}.${firstChVerses[0]}-${maxCh}.${endVerse}`;
+          }
+        }
+      }
       // Partial cross-chapter (not whole chapters): split into per-chapter sub-slugs joined by ';'.
       // PHP outputs e.g. "gen.8.47,49-56;9.1-3" not "gen.8.47-9.3".
       // Strip book prefix from 2nd+ per-chapter sub-slugs (mirrors same-book segment prefix stripping).
@@ -255,7 +283,9 @@ export class HeadingRepository {
       const dstVerseRangeStr = buildVerseRanges(range.verseNums);
       const dstSlug = useChapterSlug
         ? `${versionPrefix}${range.bookSlug}.${range.chapter}`
-        : `${versionPrefix}${range.bookSlug}.${range.chapter}.${dstVerseRangeStr || `${range.firstVerse}-${range.lastVerse ?? range.rangeLastVerse}`}`;
+        : range.dstSlugOverride
+          ? `${versionPrefix}${range.dstSlugOverride}`
+          : `${versionPrefix}${range.bookSlug}.${range.chapter}.${dstVerseRangeStr || `${range.firstVerse}-${range.lastVerse ?? range.rangeLastVerse}`}`;
       const parts = [];
       for (const [label, labelRows] of byLabel.entries()) {
         const srcSlug = buildSrcSlug(labelRows, chapterSizeMap);

@@ -94,6 +94,15 @@ export class ScriptureLookupService {
         // Sub-chapter request: has explicit verse(s) in the reference (e.g. john.3.16, gen.1.1-5)
         const isSubChapterRequest = !!versePart;
 
+        // Cross-chapter range DST slug override (e.g. "Genesis 1:1-2:3" → "genesis.1-2.3")
+        const crossChapterNorm = reference.normalized?.match(/:(\d+)-(\d+):(\d+)/);
+        const dstSlugOverride = crossChapterNorm ? (() => {
+          const sv = parseInt(crossChapterNorm[1]);
+          const ec = parseInt(crossChapterNorm[2]);
+          const ev = parseInt(crossChapterNorm[3]);
+          return sv === 1 ? `${bookPart}.${chapterPart}-${ec}.${ev}` : `${bookPart}.${chapterPart}.${sv}-${ec}.${ev}`;
+        })() : null;
+
         // For sub-chapter requests, look up the chapter's actual first/last verse IDs.
         // These are used for synthetic heading display attrs (heading_verse_id, verse_count, last_verse_id).
         // We cannot use chapterHeading.verse_id because it may come from a different chapter (e.g. KJV).
@@ -198,7 +207,7 @@ export class ScriptureLookupService {
               .map(v => v.verse_id);
             // verseNums: verse numbers for actualIds, used for DST slug (handles missing verses/gaps)
             const verseNums = actualIds.map(id => vNumMap[id]).filter(v => v != null);
-            return { from: h.verse_id, to: queryTo, ids: actualIds, verseNums, bookSlug: bookPart, chapter: chapterPart, firstVerse: fv, lastVerse: lv, rangeLastVerse, zeroLength: isZeroLength, synthetic: !!h.synthetic, wholeChapter: isWholeChapter };
+            return { from: h.verse_id, to: queryTo, ids: actualIds, verseNums, bookSlug: bookPart, chapter: chapterPart, firstVerse: fv, lastVerse: lv, rangeLastVerse, zeroLength: isZeroLength, synthetic: !!h.synthetic, wholeChapter: isWholeChapter, dstSlugOverride };
           });
 
           const parallelMap = await this.headingRepository.findParallels(ranges, version);

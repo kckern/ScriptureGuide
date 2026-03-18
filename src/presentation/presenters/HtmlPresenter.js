@@ -139,6 +139,10 @@ export class HtmlPresenter {
     // Sub-chapter request: reference has explicit verse(s) (e.g. john.3.16, isa.53.1-6)
     const isSubChapterRequest = result.reference.normalized?.includes(':') ?? false;
 
+    // Cross-chapter request: e.g. "Genesis 1:1-2:3" → format as chapter-range slug
+    // Captures: [_, startVerse, endChap, endVerse] from normalized like "Genesis 1:1-2:3"
+    const crossChapterMatch = result.reference.normalized?.match(/:(\d+)-(\d+):(\d+)/);
+
     // Assign slug/ref/headless to each h3 heading
     h3Headings.forEach(h => {
       if (bookSlugForH3 && chapter) {
@@ -151,6 +155,19 @@ export class HtmlPresenter {
         if (isChapterLevel) {
           h.slug = `${version}/${bookSlugForH3}.${chapter}`;
           h.ref = `${bookName} ${chapter}`;
+        } else if (crossChapterMatch && h.verse_id <= (result.verses[0]?.id ?? 0) + 1) {
+          // Cross-chapter range (e.g. "Genesis 1:1-2:3"): format as chapter-range slug
+          // This applies to the heading at the start of the passage that spans multiple chapters.
+          const startVerse = parseInt(crossChapterMatch[1]);
+          const endChap = parseInt(crossChapterMatch[2]);
+          const endVerse = parseInt(crossChapterMatch[3]);
+          if (startVerse === 1) {
+            h.slug = `${version}/${bookSlugForH3}.${chapter}-${endChap}.${endVerse}`;
+            h.ref = `${bookName} ${chapter}\u2013${endChap}.${endVerse}`;
+          } else {
+            h.slug = `${version}/${bookSlugForH3}.${chapter}.${startVerse}-${endChap}.${endVerse}`;
+            h.ref = `${bookName} ${chapter}:${startVerse}\u2013${endChap}.${endVerse}`;
+          }
         } else {
           const f = h.firstVerseNum;
           const l = h.lastVerseNum;
