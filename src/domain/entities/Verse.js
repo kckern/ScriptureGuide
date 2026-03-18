@@ -1,5 +1,5 @@
 export class Verse {
-  constructor({ id, verseNum, text, version, format = 'prose', hasFootnotes = false, paraBreak = false }) {
+  constructor({ id, verseNum, text, version, format = 'prose', hasFootnotes = false, paraBreak = false, chapter = null }) {
     this.id = id;
     this.verseNum = verseNum;
     this.text = text;
@@ -7,6 +7,7 @@ export class Verse {
     this.format = format;
     this.hasFootnotes = hasFootnotes;
     this.paraBreak = paraBreak; // true if a paragraph break precedes this verse
+    this.chapter = chapter;
   }
 
   get wordCount() {
@@ -29,7 +30,8 @@ export class Verse {
       version: row.version,
       format: row.format || 'prose',
       hasFootnotes: !!row.has_footnotes,
-      paraBreak: !!(row.p && row.p.includes('¶'))
+      paraBreak: !!(row.p && row.p.includes('¶')),
+      chapter: row.chapter ?? null
     });
   }
 }

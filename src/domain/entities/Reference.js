@@ -36,11 +36,12 @@ export class Reference {
     return volumeDetection(this.firstVerseId);
   }
 
-  // Parse book name from normalized ref: "John 3:16" → "John", "1 Nephi 1" → "1 Nephi"
+  // Parse book name from normalized ref: "John 3:16" → "John", "1 Nephi 1" → "1 Nephi", "Genesis 1-2" → "Genesis"
   get book() {
     if (this._book) return this._book;
     if (!this.normalized) return '';
-    const match = this.normalized.match(/^(.*?)\s+(\d+)(?::\d.*)?$/);
+    // Match everything before the first space+digits (handles ranges like "1-2" and "1:1-2:3")
+    const match = this.normalized.match(/^(.*?)\s+\d/);
     return match ? match[1] : this.normalized;
   }
 

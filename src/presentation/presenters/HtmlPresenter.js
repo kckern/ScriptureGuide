@@ -136,6 +136,12 @@ export class HtmlPresenter {
     const bookSlugForH3 = bookTitle.toLowerCase().replace(/\s+/g, '.');
     const chapter = result.reference.chapter;
 
+    // Build verse_id → chapter map (from Verse.chapter, set by JOIN in VerseRepository)
+    const vChapterMap = {};
+    for (const v of result.verses) {
+      if (v.chapter != null) vChapterMap[v.id] = v.chapter;
+    }
+
     // Sub-chapter request: reference has explicit verse(s) (e.g. john.3.16, isa.53.1-6)
     const isSubChapterRequest = result.reference.normalized?.includes(':') ?? false;
 
@@ -145,7 +151,11 @@ export class HtmlPresenter {
 
     // Assign slug/ref/headless to each h3 heading
     h3Headings.forEach(h => {
-      if (bookSlugForH3 && chapter) {
+      // Per-h3 chapter: use heading's own _chapterNum (multi-chapter synthetic),
+      // or look up the heading verse's chapter from the vChapterMap (inline headings),
+      // falling back to reference.chapter (single-chapter requests).
+      const h3Chapter = h._chapterNum ?? chapter ?? vChapterMap[h.verse_id];
+      if (bookSlugForH3 && h3Chapter) {
         const bookName = result.reference.book || '';
         // All synthetic headings are headless
         if (h.synthetic) h.headless = true;
@@ -153,8 +163,8 @@ export class HtmlPresenter {
         // use chapter-level slug/ref (no verse range)
         const isChapterLevel = (h.synthetic && h._wholeChapter) || (h._wholeChapter && !h.synthetic && !h.preSectionSynthetic);
         if (isChapterLevel) {
-          h.slug = `${version}/${bookSlugForH3}.${chapter}`;
-          h.ref = `${bookName} ${chapter}`;
+          h.slug = `${version}/${bookSlugForH3}.${h3Chapter}`;
+          h.ref = `${bookName} ${h3Chapter}`;
         } else if (crossChapterMatch && h.verse_id <= (result.verses[0]?.id ?? 0) + 1) {
           // Cross-chapter range (e.g. "Genesis 1:1-2:3"): format as chapter-range slug
           // This applies to the heading at the start of the passage that spans multiple chapters.
@@ -162,45 +172,66 @@ export class HtmlPresenter {
           const endChap = parseInt(crossChapterMatch[2]);
           const endVerse = parseInt(crossChapterMatch[3]);
           if (startVerse === 1) {
-            h.slug = `${version}/${bookSlugForH3}.${chapter}-${endChap}.${endVerse}`;
-            h.ref = `${bookName} ${chapter}\u2013${endChap}.${endVerse}`;
+            h.slug = `${version}/${bookSlugForH3}.${h3Chapter}-${endChap}.${endVerse}`;
+            h.ref = `${bookName} ${h3Chapter}\u2013${endChap}.${endVerse}`;
           } else {
-            h.slug = `${version}/${bookSlugForH3}.${chapter}.${startVerse}-${endChap}.${endVerse}`;
-            h.ref = `${bookName} ${chapter}:${startVerse}\u2013${endChap}.${endVerse}`;
+            h.slug = `${version}/${bookSlugForH3}.${h3Chapter}.${startVerse}-${endChap}.${endVerse}`;
+            h.ref = `${bookName} ${h3Chapter}:${startVerse}\u2013${endChap}.${endVerse}`;
           }
         } else {
           const f = h.firstVerseNum;
           const l = h.lastVerseNum;
-          // Compute actual verse numbers in section range, bounded by verse number [f,l]
-          // Using verseNum bounds (not verse_id) ensures mid-section boundary verse is included (e.g. John 18:38)
-          // and also handles missing-verse gaps (e.g. NRSV Mark 15:28 absent → [21-27,29-32])
-          const sectionVerseNums = (f != null && l != null) ? result.verses
-            .filter(v => v.id >= h.verse_id && v.verseNum != null && v.verseNum >= f && v.verseNum <= l)
-            .map(v => v.verseNum) : [];
-          let verseRangeSlug, refVerse;
-          if (sectionVerseNums.length > 0) {
-            // Build contiguous ranges from actual verse numbers (handles gaps)
-            const segs = [];
-            let s = sectionVerseNums[0], e = sectionVerseNums[0];
-            for (let i = 1; i < sectionVerseNums.length; i++) {
-              if (sectionVerseNums[i] === e + 1) { e = sectionVerseNums[i]; }
-              else { segs.push(s === e ? `${s}` : `${s}-${e}`); s = e = sectionVerseNums[i]; }
-            }
-            segs.push(s === e ? `${s}` : `${s}-${e}`);
-            if (segs.length > 1) {
-              // Non-contiguous: use comma-separated format (with en-dashes within ranges)
-              verseRangeSlug = `.${segs.join(',')}`;
-              refVerse = segs.map(seg => seg.replace('-', '\u2013')).join(',');
+          // Detect cross-chapter section headings (e.g. NRSV Gen 1:1–2:4, Isa 52:13–53:12).
+          // vChapterMap only contains chapters for verses in the current passage, so if h.last is
+          // beyond the passage it won't be in the map and we safely fall back to h3Chapter (no false trigger).
+          const hLastChapter = vChapterMap[h.last] ?? h3Chapter;
+          if (hLastChapter !== h3Chapter) {
+            // Cross-chapter section heading: use chapter-range ref/slug format
+            const endChap = hLastChapter;
+            // Use h.lastVerseNum (computed above with nextMid extension) as the end verse number
+            const endVerse = h.lastVerseNum ?? verseNumMap[h.last];
+            if (f === 1) {
+              // Starts at verse 1: compact format (no starting verse in slug/ref)
+              h.slug = `${version}/${bookSlugForH3}.${h3Chapter}-${endChap}.${endVerse}`;
+              h.ref = `${bookName} ${h3Chapter}\u2013${endChap}.${endVerse}`;
             } else {
-              verseRangeSlug = segs[0] === `${f}` ? `.${f}` : `.${segs[0]}`;
-              refVerse = segs[0].replace('-', '\u2013');
+              h.slug = `${version}/${bookSlugForH3}.${h3Chapter}.${f}-${endChap}.${endVerse}`;
+              h.ref = `${bookName} ${h3Chapter}:${f}\u2013${endChap}:${endVerse}`;
             }
           } else {
-            verseRangeSlug = (f && l && f !== l) ? `.${f}-${l}` : (f ? `.${f}` : '');
-            refVerse = (f && l && f !== l) ? `${f}\u2013${l}` : `${f || ''}`;
+            // Normal single-chapter section: compute verse range within this chapter
+            // Using verseNum bounds ensures mid-section boundary verse is included (e.g. John 18:38)
+            // and handles missing-verse gaps (e.g. NRSV Mark 15:28 absent → [21-27,29-32]).
+            // Scope by chapter to avoid matching duplicate verse numbers from adjacent chapters.
+            const sectionVerseNums = (f != null && l != null) ? result.verses
+              .filter(v => v.id >= h.verse_id && v.verseNum != null && v.verseNum >= f && v.verseNum <= l &&
+                (h3Chapter == null || v.chapter == null || v.chapter === h3Chapter))
+              .map(v => v.verseNum) : [];
+            let verseRangeSlug, refVerse;
+            if (sectionVerseNums.length > 0) {
+              // Build contiguous ranges from actual verse numbers (handles gaps)
+              const segs = [];
+              let s = sectionVerseNums[0], e = sectionVerseNums[0];
+              for (let i = 1; i < sectionVerseNums.length; i++) {
+                if (sectionVerseNums[i] === e + 1) { e = sectionVerseNums[i]; }
+                else { segs.push(s === e ? `${s}` : `${s}-${e}`); s = e = sectionVerseNums[i]; }
+              }
+              segs.push(s === e ? `${s}` : `${s}-${e}`);
+              if (segs.length > 1) {
+                // Non-contiguous: use comma-separated format (with en-dashes within ranges)
+                verseRangeSlug = `.${segs.join(',')}`;
+                refVerse = segs.map(seg => seg.replace('-', '\u2013')).join(',');
+              } else {
+                verseRangeSlug = segs[0] === `${f}` ? `.${f}` : `.${segs[0]}`;
+                refVerse = segs[0].replace('-', '\u2013');
+              }
+            } else {
+              verseRangeSlug = (f && l && f !== l) ? `.${f}-${l}` : (f ? `.${f}` : '');
+              refVerse = (f && l && f !== l) ? `${f}\u2013${l}` : `${f || ''}`;
+            }
+            h.slug = `${version}/${bookSlugForH3}.${h3Chapter}${verseRangeSlug}`;
+            h.ref = `${bookName} ${h3Chapter}:${refVerse}`;
           }
-          h.slug = `${version}/${bookSlugForH3}.${chapter}${verseRangeSlug}`;
-          h.ref = `${bookName} ${chapter}:${refVerse}`;
         }
       }
     });

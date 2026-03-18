@@ -279,13 +279,20 @@ export class HeadingRepository {
 
       // Whole-chapter headings use chapter-level slug (no verse range) for DST
       const useChapterSlug = range.wholeChapter;
+      // Cross-chapter section DST: verseNums loop across chapters, need chapter-range format
+      const isMultiChapterDst = !useChapterSlug && range.endChapter && range.endChapter !== range.chapter;
       // DST slug: build from actual verse numbers (handles missing-verse gaps like NRSV Mark 15:28)
       const dstVerseRangeStr = buildVerseRanges(range.verseNums);
+      const endVerse = range.lastVerse ?? range.rangeLastVerse;
       const dstSlug = useChapterSlug
         ? `${versionPrefix}${range.bookSlug}.${range.chapter}`
         : range.dstSlugOverride
           ? `${versionPrefix}${range.dstSlugOverride}`
-          : `${versionPrefix}${range.bookSlug}.${range.chapter}.${dstVerseRangeStr || `${range.firstVerse}-${range.lastVerse ?? range.rangeLastVerse}`}`;
+          : isMultiChapterDst
+            ? (range.firstVerse === 1
+                ? `${versionPrefix}${range.bookSlug}.${range.chapter}-${range.endChapter}.${endVerse}`
+                : `${versionPrefix}${range.bookSlug}.${range.chapter}.${range.firstVerse}-${range.endChapter}.${endVerse}`)
+            : `${versionPrefix}${range.bookSlug}.${range.chapter}.${dstVerseRangeStr || `${range.firstVerse}-${endVerse}`}`;
       const parts = [];
       for (const [label, labelRows] of byLabel.entries()) {
         const srcSlug = buildSrcSlug(labelRows, chapterSizeMap);

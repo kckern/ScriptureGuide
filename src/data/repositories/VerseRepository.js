@@ -7,10 +7,11 @@ export class VerseRepository {
     }
 
     const rows = await db.query(
-      `SELECT verse_id, verse, text, version, format, s, p
-       FROM scripture_verses
-       WHERE verse_id IN (?) AND version = ?
-       ORDER BY verse_id`,
+      `SELECT sv.verse_id, sv.verse, sv.text, sv.version, sv.format, sv.s, sv.p, v.chapter
+       FROM scripture_verses sv
+       JOIN lds_scriptures_verses v ON v.verse_id = sv.verse_id
+       WHERE sv.verse_id IN (?) AND sv.version = ?
+       ORDER BY sv.verse_id`,
       [verseIds, version]
     );
 
