@@ -46,3 +46,25 @@ test('does not descend into an existing anchor', () => {
   // the only anchor is the pre-existing one; no sg_autolink created inside it
   expect(document.querySelectorAll('a.sg_autolink')).toHaveLength(0);
 });
+
+
+import { collectAnchorGroups, annotateAnchor } from '../../src/content/footnotes.js';
+
+test('back-to-back reference anchors merge into one combined 🔗 link', () => {
+  document.body.innerHTML =
+    '<li><a href="/byu/1">Isa. 44:13</a>; <a href="/byu/2">1 Ne. 18:12,21</a>; <a href="/byu/3">Alma 37:43-44</a></li>';
+  const groups = collectAnchorGroups(document.body);
+  expect(groups.length).toBe(1);
+  const combined = [];
+  for (const anchor of groups[0]) combined.push(...findReferences(anchor.textContent, { contextAware: true }));
+  const link = annotateAnchor(groups[0][groups[0].length - 1], combined);
+  // exactly one 🔗, after the last anchor, covering all three refs
+  expect(document.querySelectorAll('a.sg_reflink').length).toBe(1);
+  expect(groups[0][2].nextElementSibling).toBe(link);
+  const href = link.getAttribute('href');
+  expect(href).toContain('isaiah.44.13');
+  expect(href).toContain('1.nephi.18.12;18.21');
+  expect(href).toContain('alma.37.43-44');
+  // the three original page links are untouched
+  expect(document.querySelectorAll('a[href^="/byu"]').length).toBe(3);
+});

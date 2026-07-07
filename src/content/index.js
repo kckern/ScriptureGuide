@@ -6,10 +6,9 @@ import { findReferences, setLanguage, setCanon } from 'scripture-guide';
 import { mergeSettings, siteEnabled } from '../shared/settings.js';
 import { collectCandidates, isCandidate } from './detect.js';
 import { annotateTextNode, removeAllAnnotations } from './annotate.js';
-import { collectAnchorCandidates, annotateAnchor, removeAllReflinks, MARK } from './footnotes.js';
+import { collectAnchorGroups, annotateAnchor, removeAllReflinks, MARK } from './footnotes.js';
 import { createQueue } from './scheduler.js';
 import { createObserver } from './observer.js';
-import { createViewportScanner } from './lazy.js';
 
 (async function main() {
   if (window.__sgActive) return; // guard against double-injection
@@ -48,49 +47,40 @@ import { createViewportScanner } from './lazy.js';
     if (matches && matches.length) annotateTextNode(node, matches, processed);
   };
 
-  // Existing <a> whose text is a reference: append a 🔗 to Scripture Guide.
-  const processAnchor = (anchor) => {
-    if (!anchor.isConnected || anchor.hasAttribute(MARK)) return;
-    let matches;
-    try {
-      matches = findReferences(anchor.textContent, detectOptions());
-    } catch (e) {
-      return;
+  // A run of back-to-back reference anchors ("D&C 28:7; D&C 64:5") gets one 🔗
+  // after the last anchor, linking to all of them together.
+  const processGroup = (group) => {
+    const anchors = group.filter((a) => a.isConnected && !a.hasAttribute(MARK));
+    if (!anchors.length) return;
+    const combined = [];
+    for (const anchor of anchors) {
+      let matches = null;
+      try { matches = findReferences(anchor.textContent, detectOptions()); } catch (e) { /* skip */ }
+      anchor.setAttribute(MARK, 'true');
+      if (matches && matches.length) combined.push(...matches);
     }
-    if (matches && matches.length) annotateAnchor(anchor, matches);
-    else anchor.setAttribute(MARK, 'true'); // mark as checked
+    if (combined.length) annotateAnchor(anchors[anchors.length - 1], combined);
   };
 
   const queue = createQueue((item) => {
-    if (item && item.nodeType === 1) processAnchor(item); // element = anchor
-    else processNode(item);                               // text node
+    if (Array.isArray(item)) processGroup(item); // anchor run
+    else processNode(item);                      // text node
   });
 
-  // Initial scan: process what's on screen now, and defer everything else until
-  // it scrolls near the viewport — a 2MB page shouldn't parse end-to-end up
-  // front. Off-screen text nodes are grouped by their parent element (one
-  // observed target per block); anchors are observed individually.
-  const scanner = createViewportScanner({ rootMargin: '800px' });
+  // Initial scan: process the whole page progressively via the idle scheduler
+  // (visible content first for perceived speed; no waiting on scroll). The idle
+  // queue yields between slices so it never janks the page.
   const candidates = collectCandidates(document.body, processed);
   const inView = [];
-  const deferredByEl = new Map();
+  const rest = [];
   for (const n of candidates) {
     const el = n.parentElement;
     const r = el && el.getBoundingClientRect();
-    if (r && r.bottom > 0 && r.top < window.innerHeight) inView.push(n);
-    else if (!el) queue.push([n]);
-    else {
-      const arr = deferredByEl.get(el);
-      if (arr) arr.push(n);
-      else deferredByEl.set(el, [n]);
-    }
+    (r && r.bottom > 0 && r.top < window.innerHeight ? inView : rest).push(n);
   }
+  queue.push(rest);
   queue.pushFront(inView);
-  for (const [el, nodes] of deferredByEl) scanner.add(el, () => queue.push(nodes));
-
-  if (settings.appearance.footnoteLinks) {
-    for (const a of collectAnchorCandidates(document.body)) scanner.add(a, () => queue.push([a]));
-  }
+  if (settings.appearance.footnoteLinks) queue.push(collectAnchorGroups(document.body));
 
   // Dynamic content: re-scan changed/added text nodes.
   const observer = createObserver(document.body, (nodes) => {
@@ -102,16 +92,16 @@ import { createViewportScanner } from './lazy.js';
     queue.push(fresh);
     if (settings.appearance.footnoteLinks) {
       // Newly added subtrees may contain reference anchors too. Dedupe hosts
-      // first (a mutation can report many text nodes under one parent) and
-      // include the anchor itself when the added node IS an anchor.
+      // (a mutation can report many text nodes under one parent) and resolve
+      // the enclosing <a> when the added node IS inside an anchor.
       const hosts = new Set();
       for (const n of nodes) {
         const host = (n.parentElement && n.parentElement.closest('a')) || n.parentElement;
         if (host) hosts.add(host);
       }
-      const anchors = new Set();
-      for (const host of hosts) for (const a of collectAnchorCandidates(host)) anchors.add(a);
-      if (anchors.size) queue.push([...anchors]);
+      const groups = [];
+      for (const host of hosts) for (const g of collectAnchorGroups(host)) groups.push(g);
+      if (groups.length) queue.push(groups);
     }
   });
 
@@ -133,7 +123,6 @@ import { createViewportScanner } from './lazy.js';
       if (!siteEnabled(location.hostname, settings)) {
         queue.stop();
         observer.disconnect();
-        scanner.disconnect();
         removeAllAnnotations(document);
         removeAllReflinks(document);
         window.__sgActive = false;

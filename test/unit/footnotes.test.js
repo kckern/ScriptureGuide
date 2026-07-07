@@ -68,3 +68,39 @@ describe('collectAnchorCandidates root inclusion (review fix)', () => {
     expect(collectAnchorCandidates(root).map((a) => a.id)).toEqual(['fn']);
   });
 });
+
+describe('collectAnchorGroups', () => {
+  const { collectAnchorGroups } = require('../../src/content/footnotes.js');
+  const body = (html) => { document.body.innerHTML = html; return document.body; };
+
+  test('groups back-to-back reference anchors separated by ";"', () => {
+    const b = body('<li><a href="/a">D&C 28:7</a>; <a href="/b">D&C 64:5</a></li>');
+    const groups = collectAnchorGroups(b).map((g) => g.map((a) => a.textContent));
+    expect(groups).toEqual([['D&C 28:7', 'D&C 64:5']]);
+  });
+
+  test('groups three separated by ";" and ","', () => {
+    const b = body('<li><a href="/1">Isa. 44:13</a>; <a href="/2">1 Ne. 18:12,21</a>; <a href="/3">Alma 37:43-44</a></li>');
+    expect(collectAnchorGroups(b)[0].length).toBe(3);
+  });
+
+  test('a lone reference is its own singleton group', () => {
+    const b = body('<li><a href="/a">D&C 1:17</a></li>');
+    expect(collectAnchorGroups(b).map((g) => g.length)).toEqual([1]);
+  });
+
+  test('anchors in separate list items are NOT grouped', () => {
+    const b = body('<ol><li><a href="/a">D&C 28:7</a></li><li><a href="/b">2 Pet. 1:11</a></li></ol>');
+    expect(collectAnchorGroups(b).map((g) => g.length)).toEqual([1, 1]);
+  });
+
+  test('a non-joiner element between anchors breaks the run', () => {
+    const b = body('<li><a href="/a">D&C 28:7</a> and see <span>note</span> <a href="/b">D&C 64:5</a></li>');
+    expect(collectAnchorGroups(b).map((g) => g.length)).toEqual([1, 1]);
+  });
+
+  test('prose words between anchors break the run', () => {
+    const b = body('<p><a href="/a">Matt. 4:4</a> which quotes <a href="/b">Deut. 8:3</a></p>');
+    expect(collectAnchorGroups(b).map((g) => g.length)).toEqual([1, 1]);
+  });
+});

@@ -52,6 +52,41 @@ export function collectAnchorCandidates(root) {
   return out;
 }
 
+// True when anchor `b` follows anchor `a` with nothing between them but joiner
+// text — ";", ",", "and", whitespace — so they read as one citation
+// ("D&C 28:7; D&C 64:5"). Any element in the gap (or a different parent) breaks
+// the run.
+const JOINER_GAP = /^[\s;,]*(?:and\b[\s;,]*)?$/i;
+function adjacentByJoiner(a, b) {
+  let n = a.nextSibling;
+  let gap = '';
+  while (n && n !== b) {
+    if (n.nodeType === 3) gap += n.nodeValue;
+    else return false; // an element (not b) between -> not a plain run
+    n = n.nextSibling;
+  }
+  if (n !== b) return false; // b is not a following sibling of a
+  return JOINER_GAP.test(gap);
+}
+
+// Group candidate anchors into runs of back-to-back references separated only
+// by joiners. Each run gets a single 🔗 (after its last anchor). Returns an
+// array of arrays (singletons for lone references).
+export function collectAnchorGroups(root) {
+  const anchors = collectAnchorCandidates(root);
+  const groups = [];
+  let i = 0;
+  while (i < anchors.length) {
+    const group = [anchors[i]];
+    while (i + 1 < anchors.length && adjacentByJoiner(anchors[i], anchors[i + 1])) {
+      group.push(anchors[++i]);
+    }
+    groups.push(group);
+    i++;
+  }
+  return groups;
+}
+
 // Given an anchor and the references detected in its text, append one 🔗 that
 // links to scripture.guide for all of them. Returns the created element (or
 // null if there was nothing to link).
