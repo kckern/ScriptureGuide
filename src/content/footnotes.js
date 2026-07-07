@@ -91,9 +91,13 @@ export function collectAnchorGroups(root) {
 // links to scripture.guide for all of them. Returns the created element (or
 // null if there was nothing to link).
 export function annotateAnchor(anchor, matches) {
-  if (anchor.hasAttribute(MARK)) return null;
-  anchor.setAttribute(MARK, 'true');
   if (!matches || !matches.length) return null;
+  // Idempotence is based on an existing 🔗 sibling, NOT the MARK attribute:
+  // the caller (processGroup) marks every anchor in a run before annotating the
+  // last one, so a MARK check here would always bail and never append.
+  const next = anchor.nextElementSibling;
+  if (next && next.classList && next.classList.contains('sg_reflink')) return null;
+  anchor.setAttribute(MARK, 'true');
 
   const ref = matches.map((m) => m.ref).join('; ');
   const doc = anchor.ownerDocument;

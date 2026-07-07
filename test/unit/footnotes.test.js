@@ -104,3 +104,15 @@ describe('collectAnchorGroups', () => {
     expect(collectAnchorGroups(b).map((g) => g.length)).toEqual([1, 1]);
   });
 });
+
+describe('annotateAnchor after caller-marking (real-flow regression)', () => {
+  test('still appends a 🔗 when the anchor was already MARK-ed by the caller', () => {
+    const { annotateAnchor, MARK } = require('../../src/content/footnotes.js');
+    document.body.innerHTML = '<li><a id="fn" href="/x">D&C 28:7</a></li>';
+    const anchor = document.getElementById('fn');
+    anchor.setAttribute(MARK, 'true'); // processGroup marks every anchor first
+    const link = annotateAnchor(anchor, [{ ref: 'Doctrine and Covenants 28:7' }]);
+    expect(link).not.toBeNull();
+    expect(document.querySelectorAll('a.sg_reflink').length).toBe(1);
+  });
+});
