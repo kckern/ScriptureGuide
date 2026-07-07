@@ -6,6 +6,7 @@ import { findReferences, setLanguage, setCanon } from 'scripture-guide';
 import { mergeSettings, siteEnabled } from '../shared/settings.js';
 import { collectCandidates, isCandidate } from './detect.js';
 import { annotateTextNode, removeAllAnnotations } from './annotate.js';
+import { collectAnchorCandidates, annotateAnchor, removeAllReflinks } from './footnotes.js';
 import { createQueue } from './scheduler.js';
 import { createObserver } from './observer.js';
 
@@ -46,7 +47,23 @@ import { createObserver } from './observer.js';
     if (matches && matches.length) annotateTextNode(node, matches, processed);
   };
 
-  const queue = createQueue(processNode);
+  // Existing <a> whose text is a reference: append a 🔗 to Scripture Guide.
+  const processAnchor = (anchor) => {
+    if (!anchor.isConnected) return;
+    let matches;
+    try {
+      matches = findReferences(anchor.textContent, detectOptions());
+    } catch (e) {
+      return;
+    }
+    if (matches && matches.length) annotateAnchor(anchor, matches);
+    else anchor.setAttribute('data-sg-reflinked', 'true'); // mark as checked
+  };
+
+  const queue = createQueue((item) => {
+    if (item && item.nodeType === 1) processAnchor(item); // element = anchor
+    else processNode(item);                               // text node
+  });
 
   // Initial scan: process visible nodes first for perceived speed.
   const candidates = collectCandidates(document.body, processed);
@@ -60,6 +77,7 @@ import { createObserver } from './observer.js';
   }
   queue.push(rest);
   queue.pushFront(inView);
+  if (settings.appearance.footnoteLinks) queue.push(collectAnchorCandidates(document.body));
 
   // Dynamic content: re-scan changed/added text nodes.
   const observer = createObserver(document.body, (nodes) => {
@@ -69,11 +87,20 @@ import { createObserver } from './observer.js';
       if (isCandidate(n, processed)) fresh.push(n);
     }
     queue.push(fresh);
+    if (settings.appearance.footnoteLinks) {
+      // Newly added subtrees may contain reference anchors too.
+      const anchors = new Set();
+      for (const n of nodes) {
+        const host = n.parentElement;
+        if (host) for (const a of collectAnchorCandidates(host)) anchors.add(a);
+      }
+      if (anchors.size) queue.push([...anchors]);
+    }
   });
 
-  // One delegated click handler for popup-mode navigation.
+  // One delegated click handler: popup-mode for our own links (badges + 🔗).
   document.addEventListener('click', (e) => {
-    const a = e.target && e.target.closest && e.target.closest('a.sg_autolink');
+    const a = e.target && e.target.closest && e.target.closest('a.sg_autolink, a.sg_reflink');
     if (!a || settings.click.action !== 'popup') return;
     e.preventDefault();
     openCenteredPopup(a.href, settings.click.popupWidth, settings.click.popupHeight);
@@ -90,6 +117,7 @@ import { createObserver } from './observer.js';
         queue.stop();
         observer.disconnect();
         removeAllAnnotations(document);
+        removeAllReflinks(document);
         window.__sgActive = false;
       }
     });

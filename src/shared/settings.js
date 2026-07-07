@@ -28,7 +28,8 @@ export const DEFAULTS = {
   },
   appearance: {
     linkStyle: 'badge',
-    useKreonFont: true
+    useKreonFont: true,
+    footnoteLinks: true
   },
   click: {
     action: 'popup',

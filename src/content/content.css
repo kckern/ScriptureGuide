@@ -34,3 +34,16 @@
 }
 
 /* data-sg-style="plain": no rules — links inherit the page's own anchor styling. */
+
+/* The 🔗 appended after an existing reference link (footnotes etc.). Small,
+   unobtrusive, independent of the badge link style. */
+a.sg_reflink,
+a.sg_reflink:link,
+a.sg_reflink:visited {
+  text-decoration: none !important;
+  font-size: 0.85em !important;
+  margin-left: 0.15em !important;
+  opacity: 0.7 !important;
+  cursor: pointer !important;
+}
+a.sg_reflink:hover { opacity: 1 !important; }
