@@ -1,1 +1,120 @@
-<!DOCTYPE html><html><head><meta charset="utf-8"><link rel="stylesheet" href="options.css"></head><body><script src="options.js"></script></body></html>
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Scripture Guide — Settings</title>
+  <link rel="stylesheet" href="options.css">
+</head>
+<body>
+  <main>
+    <h1>Scripture Guide settings</h1>
+
+    <section class="card">
+      <h2>Sites</h2>
+      <div class="row">
+        <div><div class="label">Where to run</div><div class="hint">Choose which sites get scripture links.</div></div>
+      </div>
+      <label class="row">
+        <span>Run on all sites <em>except</em> those below</span>
+        <input type="radio" name="siteMode" data-path="siteMode" value="blacklist">
+      </label>
+      <label class="row">
+        <span>Run <em>only</em> on the sites below</span>
+        <input type="radio" name="siteMode" data-path="siteMode" value="whitelist">
+      </label>
+      <div class="row col" id="blacklist-row">
+        <div class="label">Excluded sites</div>
+        <textarea data-path="blacklist" rows="4" spellcheck="false" placeholder="one host per line, e.g. reddit.com or *.google.com"></textarea>
+      </div>
+      <div class="row col" id="whitelist-row">
+        <div class="label">Included sites</div>
+        <textarea data-path="whitelist" rows="4" spellcheck="false" placeholder="one host per line, e.g. en.wikipedia.org"></textarea>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>Scripture</h2>
+      <label class="row">
+        <span>Canon</span>
+        <select data-path="canon">
+          <option value="lds">LDS Standard Works</option>
+          <option value="bible">Protestant Bible</option>
+          <option value="rlds">Community of Christ (RLDS)</option>
+          <option value="hindu">Hindu scriptures</option>
+          <option value="buddhist">Buddhist texts</option>
+          <option value="islam">Islamic texts</option>
+        </select>
+      </label>
+      <label class="row">
+        <span>Language</span>
+        <select data-path="language">
+          <option value="en">English</option>
+          <option value="ko">한국어 (Korean)</option>
+        </select>
+      </label>
+    </section>
+
+    <section class="card">
+      <h2>Detection</h2>
+      <label class="row">
+        <div><span>Context-aware references</span><div class="hint">Detect “v. 16” from a nearby “John 3”.</div></div>
+        <input type="checkbox" data-path="detection.contextAware">
+      </label>
+      <label class="row">
+        <div><span>Implied books</span><div class="hint">Resolve bare verse numbers from context.</div></div>
+        <input type="checkbox" data-path="detection.impliedBooks">
+      </label>
+      <label class="row">
+        <div><span>Abbreviations</span><div class="hint">Match “Mt 5:3”, “1 Ne 3:7”.</div></div>
+        <input type="checkbox" data-path="detection.abbreviations">
+      </label>
+      <label class="row">
+        <div><span>Chapter-only references</span><div class="hint">Match “Genesis 2” with no verse.</div></div>
+        <input type="checkbox" data-path="detection.chapterOnly">
+      </label>
+      <label class="row">
+        <div><span>Whole-book mentions</span><div class="hint">Match a bare book name like “Genesis”. Experimental — can be noisy.</div></div>
+        <input type="checkbox" data-path="detection.wholeBooks">
+      </label>
+    </section>
+
+    <section class="card">
+      <h2>Appearance</h2>
+      <label class="row">
+        <span>Link style</span>
+        <select data-path="appearance.linkStyle">
+          <option value="badge">Badge</option>
+          <option value="subtle">Subtle underline</option>
+          <option value="plain">Plain link</option>
+        </select>
+      </label>
+      <label class="row">
+        <div><span>Kreon font on links</span><div class="hint">Use the bundled serif font for badges.</div></div>
+        <input type="checkbox" data-path="appearance.useKreonFont">
+      </label>
+    </section>
+
+    <section class="card">
+      <h2>Behavior</h2>
+      <label class="row">
+        <span>Clicking a reference</span>
+        <select data-path="click.action">
+          <option value="popup">Opens a popup window</option>
+          <option value="tab">Opens a new tab</option>
+        </select>
+      </label>
+      <label class="row">
+        <span>Popup width</span>
+        <input type="number" data-path="click.popupWidth" min="400" max="2400" step="50">
+      </label>
+      <label class="row">
+        <span>Popup height</span>
+        <input type="number" data-path="click.popupHeight" min="300" max="1800" step="50">
+      </label>
+    </section>
+
+    <p class="saved" id="saved" hidden>Saved</p>
+  </main>
+  <script src="options.js"></script>
+</body>
+</html>

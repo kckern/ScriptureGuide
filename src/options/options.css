@@ -1,1 +1,74 @@
-/* Options styles — real rules land in Task 16. */
+:root {
+  color-scheme: light dark;
+  --bg: #f5f6f7;
+  --card: #fff;
+  --text: #202124;
+  --muted: #5f6368;
+  --border: #dadce0;
+  --accent: #1a73e8;
+}
+@media (prefers-color-scheme: dark) {
+  :root { --bg: #1b1b1d; --card: #292a2d; --text: #e8eaed; --muted: #9aa0a6; --border: #3c4043; --accent: #8ab4f8; }
+}
+
+* { box-sizing: border-box; }
+body {
+  font-family: system-ui, -apple-system, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.5;
+}
+main { max-width: 680px; margin: 0 auto; padding: 32px 16px 64px; }
+h1 { font-size: 22px; font-weight: 400; margin: 0 0 24px; }
+
+.card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  margin-bottom: 16px;
+  overflow: hidden;
+}
+.card h2 {
+  font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em;
+  color: var(--muted); margin: 0; padding: 14px 20px; border-bottom: 1px solid var(--border);
+}
+
+.row {
+  display: flex; align-items: center; justify-content: space-between; gap: 16px;
+  padding: 14px 20px;
+}
+.row + .row { border-top: 1px solid var(--border); }
+.row.col { flex-direction: column; align-items: stretch; gap: 8px; }
+.label { font-weight: 500; }
+.hint { color: var(--muted); font-size: 12px; }
+.row em { font-style: normal; font-weight: 600; }
+
+select, input[type="number"], textarea {
+  font: inherit; color: var(--text); background: var(--bg);
+  border: 1px solid var(--border); border-radius: 6px; padding: 6px 8px;
+}
+select { min-width: 200px; }
+input[type="number"] { width: 90px; text-align: right; }
+textarea { width: 100%; resize: vertical; font-family: ui-monospace, Menlo, monospace; font-size: 13px; }
+
+input[type="checkbox"] {
+  appearance: none; -webkit-appearance: none;
+  position: relative; width: 34px; height: 18px; border-radius: 9px;
+  background: var(--border); cursor: pointer; transition: background 0.15s; flex: none;
+}
+input[type="checkbox"]:checked { background: var(--accent); }
+input[type="checkbox"]::after {
+  content: ''; position: absolute; top: 2px; left: 2px;
+  width: 14px; height: 14px; border-radius: 50%; background: #fff; transition: left 0.15s;
+}
+input[type="checkbox"]:checked::after { left: 18px; }
+
+input[type="radio"] { accent-color: var(--accent); width: 18px; height: 18px; flex: none; }
+
+.saved {
+  position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
+  background: var(--text); color: var(--bg); padding: 8px 18px; border-radius: 20px;
+  font-size: 13px; opacity: 0.95;
+}
