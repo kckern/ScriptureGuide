@@ -1,56 +1,38 @@
 {
   "manifest_version": 3,
   "name": "Scripture Guide",
-  "description": "In-browser integration of scripture.guide",
-  "version": "2.0.0",
+  "description": "Detects scripture references on any page and links them to scripture.guide",
+  "version": "3.0.0",
   "background": {
     "service_worker": "background.js"
   },
-  "omnibox": { "keyword" : "sg" },
-  "icons": { 
+  "omnibox": { "keyword": "sg" },
+  "icons": {
     "16": "icons/icon_16.png",
     "32": "icons/icon_32.png",
     "48": "icons/icon_48.png",
-    "64": "icons/icon_64.png",
-    "128": "icons/icon_128.png" 
+    "128": "icons/icon_128.png"
   },
   "action": {
-    "default_icon": "icons/icon_128.png"
+    "default_icon": "icons/icon_128.png",
+    "default_popup": "popup.html"
+  },
+  "options_ui": {
+    "page": "options.html",
+    "open_in_tab": true
   },
   "content_scripts": [
     {
-      "matches": [
-        "*://*/*"
-      ],
-      "exclude_matches": [
-        "*://scripture.guide/*",
-        "*://scriptures.info/*",
-        "*://isaiahexplained.com/*",
-        "*://*.isaiahexplained.com/*",
-        "*://*.bookofmormon.online/*",
-        "*://*.scripture.guide/*",
-        "*://*.scriptures.info/*",
-        "*://*.google.com/*",
-        "*://*.google.co.kr/*",
-        "*://*.google.co.jp/*",
-        "*://*.google.ca/*",
-        "*://*.bing.com/*",
-        "*://*.kckern.info/*",
-        "*://*.churchofjesuschrist.org/search*"
-      ],
-      "js": [
-        "linker.js"
-      ],
-      "run_at": "document_end"
+      "matches": ["*://*/*"],
+      "js": ["content.js"],
+      "css": ["content.css"],
+      "run_at": "document_idle"
     }
   ],
   "permissions": [
-    "activeTab",
-    "scripting",
-    "contextMenus"
-  ],
-  "host_permissions": [
-    "*://*/*"
+    "storage",
+    "contextMenus",
+    "activeTab"
   ],
   "web_accessible_resources": [
     {
