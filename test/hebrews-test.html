@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Hebrews 11:1 Test Case</title>
+    <style>
+        body { 
+            font-family: Arial, sans-serif; 
+            padding: 20px;
+            line-height: 1.6;
+        }
+        .test-case {
+            margin: 20px 0;
+            padding: 15px;
+            border: 2px solid #ccc;
+            border-radius: 5px;
+            background-color: #f9f9f9;
+        }
+        .problem-case {
+            border-color: #ff6666;
+            background-color: #fff0f0;
+        }
+        .processed {
+            border-color: #66cc66;
+            background-color: #f0fff0;
+        }
+    </style>
+</head>
+<body>
+    <h1>Hebrews 11:1 Test Case</h1>
+    <p>This test specifically addresses the issue where "Hebrews 11:1" was not being captured.</p>
+    
+    <div class="test-case problem-case">
+        <h3>Original Problem Case:</h3>
+        <p sg-flag="true">Hebrews 11:1</p>
+        <div style="font-size: 12px; color: #666; margin-top: 10px;">
+            This element has sg-flag="true" but no .sg_autolink elements, so it should be re-processed.
+        </div>
+    </div>
+    
+    <div class="test-case">
+        <h3>Control Case (no flag):</h3>
+        <p>Hebrews 11:1</p>
+        <div style="font-size: 12px; color: #666; margin-top: 10px;">
+            This element has no sg-flag, so it should definitely be processed.
+        </div>
+    </div>
+    
+    <div class="test-case">
+        <h3>Already Processed Case:</h3>
+        <p sg-flag="true">
+            <a class="sg_autolink" href="https://scripture.guide/hebrews.11.1" target="_blank">Hebrews 11:1</a>
+        </p>
+        <div style="font-size: 12px; color: #666; margin-top: 10px;">
+            This element has sg-flag="true" AND contains .sg_autolink, so it should be skipped.
+        </div>
+    </div>
+    
+    <div class="test-case">
+        <h3>Multiple References:</h3>
+        <p sg-flag="true">See Hebrews 11:1 and also James 1:5-6 for understanding.</p>
+        <div style="font-size: 12px; color: #666; margin-top: 10px;">
+            This element has sg-flag but no links, so it should be re-processed to find both references.
+        </div>
+    </div>
+
+    <script>
+        window.addEventListener('load', function() {
+            console.log('=== Hebrews 11:1 Test Case ===');
+            
+            // Monitor before processing
+            setTimeout(function() {
+                console.log('Before processing (1s):');
+                logElementStates();
+            }, 1000);
+            
+            // Monitor after processing
+            setTimeout(function() {
+                console.log('After processing (4s):');
+                logElementStates();
+                updateVisualFeedback();
+            }, 4000);
+            
+            // Monitor even later
+            setTimeout(function() {
+                console.log('Final check (8s):');
+                logElementStates();
+                updateVisualFeedback();
+            }, 8000);
+        });
+        
+        function logElementStates() {
+            var testCases = document.querySelectorAll('.test-case');
+            
+            testCases.forEach(function(testCase, index) {
+                var title = testCase.querySelector('h3').textContent;
+                var p = testCase.querySelector('p');
+                
+                console.log(`${title}:`);
+                console.log('  Original HTML:', p.outerHTML);
+                console.log('  Text content:', p.textContent.trim());
+                console.log('  Has sg-flag:', p.hasAttribute('sg-flag'));
+                console.log('  Scripture links:', p.querySelectorAll('.sg_autolink').length);
+                
+                var links = p.querySelectorAll('.sg_autolink');
+                if (links.length > 0) {
+                    links.forEach(function(link, i) {
+                        console.log(`    Link ${i + 1}: "${link.textContent}" → ${link.href}`);
+                    });
+                }
+                console.log('');
+            });
+        }
+        
+        function updateVisualFeedback() {
+            var testCases = document.querySelectorAll('.test-case');
+            
+            testCases.forEach(function(testCase) {
+                var p = testCase.querySelector('p');
+                var hasLinks = p.querySelectorAll('.sg_autolink').length > 0;
+                
+                if (hasLinks) {
+                    testCase.classList.remove('problem-case');
+                    testCase.classList.add('processed');
+                }
+            });
+        }
+    </script>
+</body>
+</html>

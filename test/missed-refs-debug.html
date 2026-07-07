@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Debug Missed References</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .test-section { margin-bottom: 30px; border: 1px solid #ccc; padding: 15px; }
+        .test-title { font-weight: bold; margin-bottom: 10px; }
+        .before { background: #ffeeee; padding: 10px; margin: 5px 0; }
+        .after { background: #eeffee; padding: 10px; margin: 5px 0; }
+        .debug-info { background: #f0f0f0; padding: 10px; margin: 5px 0; font-family: monospace; }
+    </style>
+</head>
+<body>
+    <h1>Debug Missed Scripture References</h1>
+    
+    <div class="test-section">
+        <div class="test-title">Test 1: Basic References That Should Work</div>
+        <div class="before">
+            <p>This is 1 Corinthians 7:25 and this is 1 Corinthians 9:8 which should be detected.</p>
+        </div>
+        <div class="debug-info">HTML: <span id="test1-html"></span></div>
+        <div class="debug-info">Text: <span id="test1-text"></span></div>
+        <div class="debug-info">Cleaned: <span id="test1-cleaned"></span></div>
+    </div>
+    
+    <div class="test-section">
+        <div class="test-title">Test 2: With Various Entities</div>
+        <div class="before">
+            <p>Check 1&nbsp;Corinthians&nbsp;7:25 and 1&#8203;Corinthians&#8203;9:8 here.</p>
+        </div>
+        <div class="debug-info">HTML: <span id="test2-html"></span></div>
+        <div class="debug-info">Text: <span id="test2-text"></span></div>
+        <div class="debug-info">Cleaned: <span id="test2-cleaned"></span></div>
+    </div>
+    
+    <div class="test-section">
+        <div class="test-title">Test 3: With Directional Marks</div>
+        <div class="before">
+            <p>See 1‏Corinthians‏7:25 and 1‎Corinthians‎9:8 examples.</p>
+        </div>
+        <div class="debug-info">HTML: <span id="test3-html"></span></div>
+        <div class="debug-info">Text: <span id="test3-text"></span></div>
+        <div class="debug-info">Cleaned: <span id="test3-cleaned"></span></div>
+    </div>
+    
+    <div class="test-section">
+        <div class="test-title">Test 4: With Class Attributes</div>
+        <div class="before">
+            <p class="comment-text">This has 1 Corinthians 7:25 and 1 Corinthians 9:8 in it.</p>
+        </div>
+        <div class="debug-info">HTML: <span id="test4-html"></span></div>
+        <div class="debug-info">Text: <span id="test4-text"></span></div>
+        <div class="debug-info">Cleaned: <span id="test4-cleaned"></span></div>
+    </div>
+    
+    <div class="test-section">
+        <div class="test-title">Test 5: With Nested Elements</div>
+        <div class="before">
+            <div>
+                <span>Look at 1 Corinthians 7:25</span> and <em>1 Corinthians 9:8</em> please.
+            </div>
+        </div>
+        <div class="debug-info">HTML: <span id="test5-html"></span></div>
+        <div class="debug-info">Text: <span id="test5-text"></span></div>
+        <div class="debug-info">Cleaned: <span id="test5-cleaned"></span></div>
+    </div>
+    
+    <button onclick="runTests()">Run Detection Tests</button>
+    <button onclick="clearAll()">Clear All</button>
+    
+    <script>
+        // Copy the cleanHTMLForScriptureDetection function for testing
+        function cleanHTMLForScriptureDetection(html) {
+            if (!html) return html;
+            
+            // Replace problematic HTML entities that interfere with scripture detection
+            return html
+                // Zero-width characters
+                .replace(/[\u200B-\u200D\uFEFF]/g, '')
+                // Directional marks
+                .replace(/[\u200E\u200F\u202A-\u202E]/g, '')
+                // Non-breaking spaces and similar
+                .replace(/&nbsp;/g, ' ')
+                .replace(/&#160;/g, ' ')
+                .replace(/&#8203;/g, '')
+                .replace(/&#8204;/g, '')
+                .replace(/&#8205;/g, '')
+                .replace(/&#8206;/g, '')
+                .replace(/&#8207;/g, '')
+                // Normalize whitespace
+                .replace(/\s+/g, ' ')
+                .trim();
+        }
+        
+        function runTests() {
+            for (let i = 1; i <= 5; i++) {
+                const section = document.querySelector(`.test-section:nth-child(${i + 1}) .before`);
+                const html = section.innerHTML;
+                const text = section.textContent;
+                const cleaned = cleanHTMLForScriptureDetection(html);
+                
+                document.getElementById(`test${i}-html`).textContent = JSON.stringify(html);
+                document.getElementById(`test${i}-text`).textContent = JSON.stringify(text);
+                document.getElementById(`test${i}-cleaned`).textContent = JSON.stringify(cleaned);
+            }
+        }
+        
+        function clearAll() {
+            // Remove all sg_autolink elements
+            document.querySelectorAll('.sg_autolink').forEach(el => {
+                el.outerHTML = el.textContent;
+            });
+            // Remove sg-flag attributes
+            document.querySelectorAll('[sg-flag]').forEach(el => {
+                el.removeAttribute('sg-flag');
+            });
+        }
+    </script>
+</body>
+</html>

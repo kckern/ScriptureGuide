@@ -37,7 +37,8 @@ module.exports = {
       patterns: [
         { from: 'manifest.json', to: 'manifest.json' },
         { from: 'background.js', to: 'background.js', noErrorOnMissing: false },
-        { from: 'icons/*.png', to: 'icons/[name][ext]' }
+        { from: 'icons/*.png', to: 'icons/[name][ext]' },
+        { from: 'fonts', to: 'fonts' }
       ],
     }),
   ],

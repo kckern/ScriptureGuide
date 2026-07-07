@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Element Filtering Test</title>
+    <style>
+        body { padding: 20px; font-family: Arial, sans-serif; }
+        .test-element { 
+            margin: 10px 0; 
+            padding: 10px; 
+            border: 1px solid #ccc; 
+            background: #f9f9f9;
+        }
+        .should-process { border-color: green; }
+        .should-skip { border-color: red; }
+        .processed { border-color: blue; background: #e8f4ff; }
+    </style>
+</head>
+<body>
+    <h1>Element Filtering Logic Test</h1>
+    <p>This page tests which elements get processed by the extension.</p>
+    
+    <div class="test-element should-process">
+        <h3>Should Process:</h3>
+        <p>John 3:16 - Simple case</p>
+    </div>
+    
+    <div class="test-element should-skip">
+        <h3>Should Skip (already flagged):</h3>
+        <p sg-flag="true">Hebrews 11:1 - Pre-flagged</p>
+    </div>
+    
+    <div class="test-element should-process">
+        <h3>Should Process (text length > 10):</h3>
+        <p>Romans 8:28 teaches us about God's plan</p>
+    </div>
+    
+    <div class="test-element should-skip">
+        <h3>Should Skip (text too short):</h3>
+        <p>Short</p>
+    </div>
+    
+    <div class="test-element should-skip">
+        <h3>Should Skip (complex HTML ratio):</h3>
+        <p>1 John <span class="lots-of-classes complicated-html-structure with-many-attributes">4:7</span></p>
+    </div>
+    
+    <div class="test-element should-skip">
+        <h3>Should Skip (contains images):</h3>
+        <p>Matthew 5:14 <img src="fake.jpg" alt="test"> verse</p>
+    </div>
+    
+    <div class="test-element should-skip">
+        <h3>Should Skip (has class attribute):</h3>
+        <p class="some-class">Luke 2:10-11</p>
+    </div>
+    
+    <div class="test-element should-process">
+        <h3>Should Process (clean text):</h3>
+        <p>D&C 130:20-21</p>
+    </div>
+
+    <script>
+        // Test the filtering logic manually
+        window.addEventListener('load', function() {
+            console.log('=== Element Filtering Test ===');
+            
+            // Simulate the extension's filtering logic
+            setTimeout(function() {
+                testFiltering();
+            }, 1000);
+            
+            // Check results after extension processing
+            setTimeout(function() {
+                checkResults();
+            }, 4000);
+        });
+        
+        function testFiltering() {
+            console.log('--- Testing Filtering Logic ---');
+            
+            var allElements = document.querySelectorAll('p');
+            var elementsToProcess = [];
+            
+            for (var i = 0; i < allElements.length; i++) {
+                var el = allElements[i];
+                var shouldProcess = true;
+                var reason = '';
+                
+                // Apply the same logic as the extension
+                if (el.getAttribute("sg-flag")) {
+                    shouldProcess = false;
+                    reason = 'Already has sg-flag';
+                } else if (!el.textContent || el.textContent.length <= 10) {
+                    shouldProcess = false;
+                    reason = 'Text too short or empty';
+                } else {
+                    var htmlContent = el.innerHTML;
+                    var textContent = el.textContent;
+                    
+                    // Skip if HTML is significantly longer than text
+                    if (htmlContent.length > textContent.length * 1.5) {
+                        shouldProcess = false;
+                        reason = 'HTML/text ratio too high';
+                    }
+                    
+                    // Check for problematic content
+                    else if (htmlContent.indexOf('<img') > -1) {
+                        shouldProcess = false;
+                        reason = 'Contains images';
+                    } else if (htmlContent.indexOf('class=') > -1) {
+                        shouldProcess = false;
+                        reason = 'Contains class attributes';
+                    } else if (htmlContent.indexOf('src=') > -1) {
+                        shouldProcess = false;
+                        reason = 'Contains src attributes';
+                    }
+                }
+                
+                var testCase = el.closest('.test-element');
+                var expected = testCase ? testCase.classList.contains('should-process') : false;
+                var result = shouldProcess === expected ? '✅' : '❌';
+                
+                console.log(`${result} Element ${i + 1}:`);
+                console.log(`  Text: "${el.textContent.trim()}"`);
+                console.log(`  Should process: ${shouldProcess} (${reason || 'passes all checks'})`);
+                console.log(`  Expected: ${expected}`);
+                console.log(`  HTML length: ${htmlContent.length}, Text length: ${textContent.length}`);
+                
+                if (shouldProcess) {
+                    elementsToProcess.push(el);
+                }
+            }
+            
+            console.log(`Total elements to process: ${elementsToProcess.length}`);
+        }
+        
+        function checkResults() {
+            console.log('--- Extension Processing Results ---');
+            
+            var allPs = document.querySelectorAll('p');
+            allPs.forEach(function(p, index) {
+                var hasLinks = p.querySelectorAll('.sg_autolink').length > 0;
+                var hasFlag = p.hasAttribute('sg-flag');
+                var testCase = p.closest('.test-element');
+                
+                if (hasLinks || hasFlag) {
+                    if (testCase) testCase.classList.add('processed');
+                    
+                    console.log(`Element ${index + 1} processed:`);
+                    console.log(`  Text: "${p.textContent.trim()}"`);
+                    console.log(`  Has links: ${hasLinks}`);
+                    console.log(`  Has sg-flag: ${hasFlag}`);
+                    console.log(`  Final HTML: ${p.innerHTML}`);
+                }
+            });
+        }
+    </script>
+</body>
+</html>

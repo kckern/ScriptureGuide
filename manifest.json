@@ -51,5 +51,11 @@
   ],
   "host_permissions": [
     "*://*/*"
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": ["fonts/*"],
+      "matches": ["*://*/*"]
+    }
   ]
 }
