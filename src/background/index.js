@@ -17,11 +17,19 @@ chrome.runtime.onInstalled.addListener(() => {
     title: 'Look up "%s" in Scripture Guide',
     contexts: ['selection']
   });
+  chrome.contextMenus.create({
+    id: 'scan-references',
+    title: 'Scan page for scripture references',
+    contexts: ['page']
+  });
 });
 
-chrome.contextMenus.onClicked.addListener((info) => {
+chrome.contextMenus.onClicked.addListener((info, tab) => {
   if (info.menuItemId === 'lookup-selection' && info.selectionText) {
     chrome.tabs.create({ url: SG_BASE + refToSlug(info.selectionText) });
+  } else if (info.menuItemId === 'scan-references' && tab && tab.id != null) {
+    // Ask the content script to re-scan (catches lazy/infinite-scroll content).
+    chrome.tabs.sendMessage(tab.id, { type: 'sg-rescan' }, () => void chrome.runtime.lastError);
   }
 });
 

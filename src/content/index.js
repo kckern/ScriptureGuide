@@ -67,20 +67,32 @@ import { createObserver } from './observer.js';
     else processNode(item);                      // text node
   });
 
-  // Initial scan: process the whole page progressively via the idle scheduler
-  // (visible content first for perceived speed; no waiting on scroll). The idle
-  // queue yields between slices so it never janks the page.
-  const candidates = collectCandidates(document.body, processed);
-  const inView = [];
-  const rest = [];
-  for (const n of candidates) {
-    const el = n.parentElement;
-    const r = el && el.getBoundingClientRect();
-    (r && r.bottom > 0 && r.top < window.innerHeight ? inView : rest).push(n);
+  // Scan the whole page progressively via the idle scheduler (visible content
+  // first for perceived speed; no waiting on scroll). The idle queue yields
+  // between slices so it never janks the page. Reusable so the context-menu
+  // "Scan page" and dynamic content can re-run it; the `processed` WeakSet and
+  // MARK attribute make it skip anything already handled.
+  const scan = () => {
+    const candidates = collectCandidates(document.body, processed);
+    const inView = [];
+    const rest = [];
+    for (const n of candidates) {
+      const el = n.parentElement;
+      const r = el && el.getBoundingClientRect();
+      (r && r.bottom > 0 && r.top < window.innerHeight ? inView : rest).push(n);
+    }
+    queue.push(rest);
+    queue.pushFront(inView);
+    if (settings.appearance.footnoteLinks) queue.push(collectAnchorGroups(document.body));
+  };
+  scan();
+
+  // Manual re-scan trigger (context menu) for lazy / infinite-scroll content.
+  if (chrome.runtime && chrome.runtime.onMessage) {
+    chrome.runtime.onMessage.addListener((msg) => {
+      if (msg && msg.type === 'sg-rescan') scan();
+    });
   }
-  queue.push(rest);
-  queue.pushFront(inView);
-  if (settings.appearance.footnoteLinks) queue.push(collectAnchorGroups(document.body));
 
   // Dynamic content: re-scan changed/added text nodes.
   const observer = createObserver(document.body, (nodes) => {
