@@ -14,6 +14,24 @@
 - Phase 1 (Utils): create worktree `/Users/kckern/Documents/GitHub/ScriptureGuideUtils/.worktrees/find-references`, branch `feature/find-references`, **off committed master** — the Utils main working tree has unrelated uncommitted cross-canon work; do not touch it.
 - Phase 2 (Extension): existing worktree `/Users/kckern/Documents/GitHub/ScriptureGuideChromeExtention/.worktrees/rewrite`, branch `rewrite/v3`.
 
+**Status update (2026-07-06, post Task 1.5):** The Utils baseline was found red
+(5 failures) with real detection bugs. A correctness batch was completed on
+`feature/find-references` (commits `a4a01b5`, `fac1a5e`): anchored joiner-gap
+semantics (`gapCanMerge` in scriptlib) + citation joiner tokens (see/c.f./also)
+in en.yml; containment-aware overlap clipping in `findMatchIndexes` (fixes
+"1 Ne" → Nehemiah mangling); context-path crash + wrong match/position pairing
+in `findBookContexts`; snapshots re-baselined (reviewed); COC canon test
+skipped with TODO (belongs to the in-flight cross-canon WIP on master's dirty
+tree — do not touch `scriptcanon.mjs` in this branch); jest ignore made
+`<rootDir>`-anchored so worktree runs work. Suite: 211 pass / 0 fail / 3 skip.
+Known limitation filed: `findImpliedReferences` has no Korean patterns
+(`20~24절` forms are not linked).
+
+**CORRECTION to original plan:** `extraCanons`/`applyCanonOverride` and any
+canon parameter on `getLanguageConfig` exist ONLY in the user's uncommitted
+cross-canon WIP, not on master. On master `getLanguageConfig(language)` takes
+one argument. Task 2/3 code sketches below are otherwise accurate to master.
+
 **Known facts (verified during audit — trust these):**
 - `src/scriptdetect.mjs:153` `processReferenceDetection` computes `mergedIndeces` (`[start,end]` pairs into `content`) before building its string output.
 - `src/scriptdetectcontext.mjs:15` `detectReferencesWithContext` computes `mergedIndices` tuples `[start, end, originalText, verseIds]`.
