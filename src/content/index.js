@@ -6,8 +6,10 @@ import { findReferences, setLanguage, setCanon } from 'scripture-guide';
 import { mergeSettings, siteEnabled } from '../shared/settings.js';
 import { collectCandidates, isCandidate } from './detect.js';
 import { annotateTextNode, removeAllAnnotations } from './annotate.js';
+import { collectAnchorCandidates, annotateAnchor, removeAllReflinks, MARK } from './footnotes.js';
 import { createQueue } from './scheduler.js';
 import { createObserver } from './observer.js';
+import { createViewportScanner } from './lazy.js';
 
 (async function main() {
   if (window.__sgActive) return; // guard against double-injection
@@ -46,20 +48,49 @@ import { createObserver } from './observer.js';
     if (matches && matches.length) annotateTextNode(node, matches, processed);
   };
 
-  const queue = createQueue(processNode);
+  // Existing <a> whose text is a reference: append a 🔗 to Scripture Guide.
+  const processAnchor = (anchor) => {
+    if (!anchor.isConnected || anchor.hasAttribute(MARK)) return;
+    let matches;
+    try {
+      matches = findReferences(anchor.textContent, detectOptions());
+    } catch (e) {
+      return;
+    }
+    if (matches && matches.length) annotateAnchor(anchor, matches);
+    else anchor.setAttribute(MARK, 'true'); // mark as checked
+  };
 
-  // Initial scan: process visible nodes first for perceived speed.
+  const queue = createQueue((item) => {
+    if (item && item.nodeType === 1) processAnchor(item); // element = anchor
+    else processNode(item);                               // text node
+  });
+
+  // Initial scan: process what's on screen now, and defer everything else until
+  // it scrolls near the viewport — a 2MB page shouldn't parse end-to-end up
+  // front. Off-screen text nodes are grouped by their parent element (one
+  // observed target per block); anchors are observed individually.
+  const scanner = createViewportScanner({ rootMargin: '800px' });
   const candidates = collectCandidates(document.body, processed);
   const inView = [];
-  const rest = [];
+  const deferredByEl = new Map();
   for (const n of candidates) {
     const el = n.parentElement;
     const r = el && el.getBoundingClientRect();
     if (r && r.bottom > 0 && r.top < window.innerHeight) inView.push(n);
-    else rest.push(n);
+    else if (!el) queue.push([n]);
+    else {
+      const arr = deferredByEl.get(el);
+      if (arr) arr.push(n);
+      else deferredByEl.set(el, [n]);
+    }
   }
-  queue.push(rest);
   queue.pushFront(inView);
+  for (const [el, nodes] of deferredByEl) scanner.add(el, () => queue.push(nodes));
+
+  if (settings.appearance.footnoteLinks) {
+    for (const a of collectAnchorCandidates(document.body)) scanner.add(a, () => queue.push([a]));
+  }
 
   // Dynamic content: re-scan changed/added text nodes.
   const observer = createObserver(document.body, (nodes) => {
@@ -69,11 +100,24 @@ import { createObserver } from './observer.js';
       if (isCandidate(n, processed)) fresh.push(n);
     }
     queue.push(fresh);
+    if (settings.appearance.footnoteLinks) {
+      // Newly added subtrees may contain reference anchors too. Dedupe hosts
+      // first (a mutation can report many text nodes under one parent) and
+      // include the anchor itself when the added node IS an anchor.
+      const hosts = new Set();
+      for (const n of nodes) {
+        const host = (n.parentElement && n.parentElement.closest('a')) || n.parentElement;
+        if (host) hosts.add(host);
+      }
+      const anchors = new Set();
+      for (const host of hosts) for (const a of collectAnchorCandidates(host)) anchors.add(a);
+      if (anchors.size) queue.push([...anchors]);
+    }
   });
 
-  // One delegated click handler for popup-mode navigation.
+  // One delegated click handler: popup-mode for our own links (badges + 🔗).
   document.addEventListener('click', (e) => {
-    const a = e.target && e.target.closest && e.target.closest('a.sg_autolink');
+    const a = e.target && e.target.closest && e.target.closest('a.sg_autolink, a.sg_reflink');
     if (!a || settings.click.action !== 'popup') return;
     e.preventDefault();
     openCenteredPopup(a.href, settings.click.popupWidth, settings.click.popupHeight);
@@ -89,7 +133,9 @@ import { createObserver } from './observer.js';
       if (!siteEnabled(location.hostname, settings)) {
         queue.stop();
         observer.disconnect();
+        scanner.disconnect();
         removeAllAnnotations(document);
+        removeAllReflinks(document);
         window.__sgActive = false;
       }
     });
