@@ -41,9 +41,15 @@ a.sg_reflink,
 a.sg_reflink:link,
 a.sg_reflink:visited {
   text-decoration: none !important;
-  font-size: 0.85em !important;
-  margin-left: 0.15em !important;
-  opacity: 0.7 !important;
+  margin-left: 0.2em !important;
+  opacity: 0.6 !important;
   cursor: pointer !important;
+  color: inherit !important;
 }
 a.sg_reflink:hover { opacity: 1 !important; }
+a.sg_reflink svg {
+  width: 0.9em !important;
+  height: 0.9em !important;
+  vertical-align: -0.1em !important;
+  display: inline-block !important;
+}
