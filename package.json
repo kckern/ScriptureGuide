@@ -8,7 +8,7 @@
     "deploy": "./deploy.sh"
   },
   "dependencies": {
-    "scripture-guide": "^1.0.91"
+    "scripture-guide": "^1.0.92"
   },
   "devDependencies": {
     "@babel/core": "^7.22.0",
