@@ -9,6 +9,7 @@ import { annotateTextNode, removeAllAnnotations } from './annotate.js';
 import { collectAnchorCandidates, annotateAnchor, removeAllReflinks, MARK } from './footnotes.js';
 import { createQueue } from './scheduler.js';
 import { createObserver } from './observer.js';
+import { createViewportScanner } from './lazy.js';
 
 (async function main() {
   if (window.__sgActive) return; // guard against double-injection
@@ -65,19 +66,31 @@ import { createObserver } from './observer.js';
     else processNode(item);                               // text node
   });
 
-  // Initial scan: process visible nodes first for perceived speed.
+  // Initial scan: process what's on screen now, and defer everything else until
+  // it scrolls near the viewport — a 2MB page shouldn't parse end-to-end up
+  // front. Off-screen text nodes are grouped by their parent element (one
+  // observed target per block); anchors are observed individually.
+  const scanner = createViewportScanner({ rootMargin: '800px' });
   const candidates = collectCandidates(document.body, processed);
   const inView = [];
-  const rest = [];
+  const deferredByEl = new Map();
   for (const n of candidates) {
     const el = n.parentElement;
     const r = el && el.getBoundingClientRect();
     if (r && r.bottom > 0 && r.top < window.innerHeight) inView.push(n);
-    else rest.push(n);
+    else if (!el) queue.push([n]);
+    else {
+      const arr = deferredByEl.get(el);
+      if (arr) arr.push(n);
+      else deferredByEl.set(el, [n]);
+    }
   }
-  queue.push(rest);
   queue.pushFront(inView);
-  if (settings.appearance.footnoteLinks) queue.push(collectAnchorCandidates(document.body));
+  for (const [el, nodes] of deferredByEl) scanner.add(el, () => queue.push(nodes));
+
+  if (settings.appearance.footnoteLinks) {
+    for (const a of collectAnchorCandidates(document.body)) scanner.add(a, () => queue.push([a]));
+  }
 
   // Dynamic content: re-scan changed/added text nodes.
   const observer = createObserver(document.body, (nodes) => {
@@ -120,6 +133,7 @@ import { createObserver } from './observer.js';
       if (!siteEnabled(location.hostname, settings)) {
         queue.stop();
         observer.disconnect();
+        scanner.disconnect();
         removeAllAnnotations(document);
         removeAllReflinks(document);
         window.__sgActive = false;
