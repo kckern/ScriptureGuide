@@ -6,7 +6,7 @@ import { findReferences, setLanguage, setCanon } from 'scripture-guide';
 import { mergeSettings, siteEnabled } from '../shared/settings.js';
 import { collectCandidates, isCandidate } from './detect.js';
 import { annotateTextNode, removeAllAnnotations } from './annotate.js';
-import { collectAnchorCandidates, annotateAnchor, removeAllReflinks } from './footnotes.js';
+import { collectAnchorCandidates, annotateAnchor, removeAllReflinks, MARK } from './footnotes.js';
 import { createQueue } from './scheduler.js';
 import { createObserver } from './observer.js';
 
@@ -49,7 +49,7 @@ import { createObserver } from './observer.js';
 
   // Existing <a> whose text is a reference: append a 🔗 to Scripture Guide.
   const processAnchor = (anchor) => {
-    if (!anchor.isConnected) return;
+    if (!anchor.isConnected || anchor.hasAttribute(MARK)) return;
     let matches;
     try {
       matches = findReferences(anchor.textContent, detectOptions());
@@ -57,7 +57,7 @@ import { createObserver } from './observer.js';
       return;
     }
     if (matches && matches.length) annotateAnchor(anchor, matches);
-    else anchor.setAttribute('data-sg-reflinked', 'true'); // mark as checked
+    else anchor.setAttribute(MARK, 'true'); // mark as checked
   };
 
   const queue = createQueue((item) => {
@@ -88,12 +88,16 @@ import { createObserver } from './observer.js';
     }
     queue.push(fresh);
     if (settings.appearance.footnoteLinks) {
-      // Newly added subtrees may contain reference anchors too.
-      const anchors = new Set();
+      // Newly added subtrees may contain reference anchors too. Dedupe hosts
+      // first (a mutation can report many text nodes under one parent) and
+      // include the anchor itself when the added node IS an anchor.
+      const hosts = new Set();
       for (const n of nodes) {
-        const host = n.parentElement;
-        if (host) for (const a of collectAnchorCandidates(host)) anchors.add(a);
+        const host = (n.parentElement && n.parentElement.closest('a')) || n.parentElement;
+        if (host) hosts.add(host);
       }
+      const anchors = new Set();
+      for (const host of hosts) for (const a of collectAnchorCandidates(host)) anchors.add(a);
       if (anchors.size) queue.push([...anchors]);
     }
   });

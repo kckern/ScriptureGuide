@@ -59,3 +59,12 @@ describe('annotateAnchor', () => {
     expect(document.querySelector('[data-sg-reflinked]')).toBeNull();
   });
 });
+
+describe('collectAnchorCandidates root inclusion (review fix)', () => {
+  test('includes the root element itself when it is a candidate anchor', () => {
+    const { collectAnchorCandidates } = require('../../src/content/footnotes.js');
+    document.body.innerHTML = '<a id="fn" href="/x">D&C 8:11</a>';
+    const root = document.getElementById('fn');
+    expect(collectAnchorCandidates(root).map((a) => a.id)).toEqual(['fn']);
+  });
+});

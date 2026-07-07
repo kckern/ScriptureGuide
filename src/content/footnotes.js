@@ -5,18 +5,25 @@
 
 import { refToSlug } from '../shared/slug.js';
 
-const MARK = 'data-sg-reflinked';
+export const MARK = 'data-sg-reflinked';
 
-// Anchors worth checking: have a digit and a letter (cheap pre-filter), aren't
-// our own elements, aren't already handled, and are short enough to be a
-// reference rather than a paragraph.
+// Is this an <a> worth checking: has a digit and a letter (cheap pre-filter),
+// isn't one of our own elements, isn't already handled, and is short enough to
+// be a reference rather than a paragraph.
+export function isAnchorCandidate(a) {
+  if (!a || a.tagName !== 'A') return false;
+  if (a.classList.contains('sg_autolink') || a.classList.contains('sg_reflink')) return false;
+  if (a.hasAttribute(MARK)) return false;
+  const t = a.textContent;
+  return !!t && t.length <= 60 && /\d/.test(t) && /[A-Za-z]/.test(t);
+}
+
+// Candidate anchors within `root`, including `root` itself when it is an anchor
+// (querySelectorAll only returns descendants).
 export function collectAnchorCandidates(root) {
-  return [...root.querySelectorAll('a')].filter((a) => {
-    if (a.classList.contains('sg_autolink') || a.classList.contains('sg_reflink')) return false;
-    if (a.hasAttribute(MARK)) return false;
-    const t = a.textContent;
-    return !!t && t.length <= 60 && /\d/.test(t) && /[A-Za-z]/.test(t);
-  });
+  const out = isAnchorCandidate(root) ? [root] : [];
+  for (const a of root.querySelectorAll('a')) if (isAnchorCandidate(a)) out.push(a);
+  return out;
 }
 
 // Given an anchor and the references detected in its text, append one 🔗 that
@@ -36,7 +43,7 @@ export function annotateAnchor(anchor, matches) {
   link.setAttribute('rel', 'noopener noreferrer');
   link.setAttribute('title', 'Open ' + ref + ' in Scripture Guide');
   link.setAttribute('aria-label', 'Open ' + ref + ' in Scripture Guide');
-  link.textContent = '🔗'; // 🔗
+  link.textContent = '🔗';
   anchor.insertAdjacentElement('afterend', link);
   return link;
 }
