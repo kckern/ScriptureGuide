@@ -810,13 +810,39 @@ const loadMaxVerse = function(book, chapter, config) {
     return config.raw_index[book][parseInt(chapter) - 1]
 }
 
+// Merging adjacent references across a prose marker ("see also", "cf.") is right
+// for lookupReference — "A; see also B" is one verse set — but wrong for the
+// detectors, which linkify prose: merging swallows the connective words out of
+// the rendered text. chainAcrossMarkers: false restricts the joiner list to
+// structural separators so markers stay outside the link.
+const STRUCTURAL_JOINERS = [';', ',', '&', 'and'];
+// Structural = no letters (";",",","&") or the conjunction "and". Everything else
+// in the joiner list is a prose marker (see also / cf / compare / cited at / see).
+const isStructuralJoiner = (token) =>
+    typeof token === 'string' && (!/[a-z]/i.test(token) || token.trim().toLowerCase() === 'and');
+const restrictJoinersToStructural = (lang_extra) => {
+    const src = lang_extra || {};
+    const j = src.joiners;
+    let joiners;
+    if (Array.isArray(j)) {
+        joiners = j.filter(isStructuralJoiner);
+        if (!joiners.length) joiners = [...STRUCTURAL_JOINERS];
+    } else if (j && Array.isArray(j.patterns)) {
+        const patterns = j.patterns.filter(isStructuralJoiner);
+        joiners = patterns.length ? { ...j, patterns } : [...STRUCTURAL_JOINERS];
+    } else {
+        joiners = [...STRUCTURAL_JOINERS];
+    }
+    return { ...src, joiners };
+};
+
 const detectReferences = (content, callBack, options = null) => {
     // Handle legacy API: (content, callback, language)
     if (typeof options === 'string' || options === null) {
         const language = options;
         options = { language };
     }
-    
+
     // Default options
     const defaultOptions = {
         language: null,
@@ -824,25 +850,30 @@ const detectReferences = (content, callBack, options = null) => {
         contextScope: 'sentence',
         maxContextDistance: 500,
         enableImpliedBooks: true,
-        enableVerseAbbrev: true
+        enableVerseAbbrev: true,
+        chainAcrossMarkers: true
     };
-    
+
     const finalOptions = { ...defaultOptions, ...options };
     callBack = callBack ? callBack : (i)=>{return `[${i}]`};
-    
+
     const effectiveLanguage = getEffectiveLanguage(finalOptions.language);
     const config = getLanguageConfig(effectiveLanguage);
     const src = config.raw_regex.books.map(i => i[0]);
     const dst = [...new Set(config.raw_regex.books.map(i => i[1]))];
     const books = [...dst, ...src];
-    
+    // Clone rather than mutate: config.lang_extra is shared and cached.
+    const langExtra = finalOptions.chainAcrossMarkers === false
+        ? restrictJoinersToStructural(config.lang_extra)
+        : config.lang_extra;
+
     // Use enhanced processing if context-aware mode is enabled
     if (finalOptions.contextAware) {
-        return detectReferencesWithContext(content, books, config.lang_extra, (query) => lookupReference(query, effectiveLanguage), callBack, finalOptions, generateReference);
+        return detectReferencesWithContext(content, books, langExtra, (query) => lookupReference(query, effectiveLanguage), callBack, finalOptions, generateReference);
     }
-    
+
     // Fallback to original processing
-    return processReferenceDetection(content, books, config.lang_extra, (query) => lookupReference(query, effectiveLanguage), callBack);
+    return processReferenceDetection(content, books, langExtra, (query) => lookupReference(query, effectiveLanguage), callBack);
 }
 
 // Position-based sibling of detectReferences: instead of returning a
@@ -864,7 +895,8 @@ const findReferences = (content, options = null) => {
         enableImpliedBooks: true,
         enableVerseAbbrev: true,
         abbreviations: true,
-        chapterOnly: true
+        chapterOnly: true,
+        chainAcrossMarkers: true
     };
 
     const finalOptions = { ...defaultOptions, ...options };
@@ -875,10 +907,14 @@ const findReferences = (content, options = null) => {
     const dst = [...new Set(config.raw_regex.books.map(i => i[1]))];
     const books = [...dst, ...src];
     const lookup = (query) => lookupReference(query, effectiveLanguage);
+    // Clone rather than mutate: config.lang_extra is shared and cached.
+    const langExtra = finalOptions.chainAcrossMarkers === false
+        ? restrictJoinersToStructural(config.lang_extra)
+        : config.lang_extra;
 
     const found = finalOptions.contextAware
-        ? collectReferencesWithContext(content, books, config.lang_extra, lookup, finalOptions)
-        : collectReferences(content, books, config.lang_extra, lookup);
+        ? collectReferencesWithContext(content, books, langExtra, lookup, finalOptions)
+        : collectReferences(content, books, langExtra, lookup);
 
     // `ref` is a canonical, scripture.guide-resolvable string derived from the
     // resolved verse_ids (uniform across both collection paths); `text` remains

@@ -126,6 +126,7 @@ detectReferences('In John 3, Jesus explains (v. 16) that God loved the world.');
 | `options.language` | string | Language code |
 | `options.contextAware` | boolean | Enable context detection (default: true) |
 | `options.enableImpliedBooks` | boolean | Detect bare verse numbers (default: true) |
+| `options.chainAcrossMarkers` | boolean | Merge references joined by prose markers — `see also`, `cf.`, `compare`, `cited at` — into a single reference (default: true). Set `false` to keep the marker words outside the link: `'A; see also B'` yields two links instead of one. Structural joiners (`;` `,` `&` `and`) still merge either way. |
 
 ### setLanguage(language)
 
