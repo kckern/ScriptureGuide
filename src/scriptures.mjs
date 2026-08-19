@@ -1067,6 +1067,7 @@ const getLanguageConfig = function(language, canon = null) {
     // For English or if language not found, use defaults
     if (effectiveLanguage === 'en' || !raw_lang[effectiveLanguage]) {
         config.lang_extra.joiners = config.raw_regex.joiners;
+        config.lang_extra.capitalizedOnly = config.raw_regex.capitalized_only || [];
         return applyCanonOverride(config, effectiveCanon);
     }
 
