@@ -142,7 +142,7 @@ export const mergeAdjacentMatches = (matches, gapMergeFlags, compatibilityCheck 
                     // Extended format: [start, end, text, verseIds]
                     const startPos = prevIndex[0];
                     const endPos = current[1];
-                    const combinedText = prevIndex[2] + ";" + current[2]; // Combine with semicolon
+                    const combinedText = prevIndex[2] + "; " + current[2]; // Combine with semicolon + space
                     const combinedVerseIds = [...(prevIndex[3] || []), ...(current[3] || [])]; // Merge verse ID arrays
                     const merged = [startPos, endPos, combinedText, combinedVerseIds];
                     prev[prev.length - 1] = merged;

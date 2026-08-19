@@ -440,8 +440,11 @@ tests:
   - id: en-detect-prose-004
     input: For biblical numerology, compare Gen 2:2-3, Exod 20:8-11, and Rev 1:4.
     expected_refs:
-      - Genesis 2:2-3
-      - Revelation 20:8-11; 1:4
+      # Corrected 2026-08-19: this previously read
+      #   [Genesis 2:2-3, "Revelation 20:8-11; 1:4"]
+      # which attributed Exodus 20:8-11 to Revelation. The detector was right and
+      # the fixture was wrong; it had never run, so nothing caught it.
+      - Genesis 2:2-3; Exodus 20:8-11; Revelation 1:4
     tags:
       - academic
       - compare

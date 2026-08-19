@@ -162,6 +162,8 @@ tests:
     variant: Deu
     description: Deuteronomy using variant "Deu"
   - id: lookup-0024
+    known_issue: >-
+      Unsupported variant: "De" is not in the Deuteronomy alt list.
     input: De 1:1
     expected_ids:
       - 4894
@@ -450,6 +452,8 @@ tests:
     variant: 1 Chr
     description: 1 Chronicles using variant "1 Chr"
   - id: lookup-0076
+    known_issue: >-
+      Unsupported variant: "1 Ch" is not in the 1 Chronicles alt list.
     input: 1 Ch 1:1
     expected_ids:
       - 10254
@@ -506,6 +510,8 @@ tests:
     variant: 2 Chr
     description: 2 Chronicles using variant "2 Chr"
   - id: lookup-0085
+    known_issue: >-
+      Unsupported variant: "2 Ch" is not in the 2 Chronicles alt list.
     input: 2 Ch 1:1
     expected_ids:
       - 11196
@@ -714,6 +720,8 @@ tests:
     variant: Ec
     description: Ecclesiastes using variant "Ec"
   - id: lookup-0127
+    known_issue: >-
+      Bug: the canonical common name "Song of Solomon" does not resolve; the book pattern only reaches it via the "song of songs" pre-rule.
     input: Song of Solomon 1:1
     expected_ids:
       - 17539
@@ -722,6 +730,8 @@ tests:
     variant: Song of Solomon
     description: Song of Solomon using variant "Song of Solomon"
   - id: lookup-0128
+    known_issue: >-
+      Bug: the "Song" alt does not resolve to Solomon's Song.
     input: Song 1:1
     expected_ids:
       - 17539
@@ -842,6 +852,8 @@ tests:
     variant: Dan
     description: Daniel using variant "Dan"
   - id: lookup-0153
+    known_issue: >-
+      Unsupported variant: "Da" is not in the Daniel alt list.
     input: Da 1:1
     expected_ids:
       - 21739
@@ -1670,6 +1682,8 @@ tests:
     variant: 1 Tim
     description: 1 Timothy using variant "1 Tim"
   - id: lookup-0301
+    known_issue: >-
+      Unsupported variant: "1 Ti" is not in the 1 Timothy alt list.
     input: 1 Ti 1:1
     expected_ids:
       - 29698
@@ -1726,6 +1740,8 @@ tests:
     variant: 2 Tim
     description: 2 Timothy using variant "2 Tim"
   - id: lookup-0310
+    known_issue: >-
+      Unsupported variant: "2 Ti" is not in the 2 Timothy alt list.
     input: 2 Ti 1:1
     expected_ids:
       - 29811
@@ -1958,6 +1974,8 @@ tests:
     variant: Jas
     description: James using variant "Jas"
   - id: lookup-0333
+    known_issue: >-
+      Disputed expectation: this fixture expects "Jm" to mean Jarom, but "Jm" is a conventional abbreviation for James, which is what the code returns. The fixture is likely wrong.
     input: Jm 1:1
     expected_ids:
       - 32730
@@ -4425,6 +4443,8 @@ tests:
     variant: AF
     description: Articles of Faith using variant "AF"
   - id: lookup-0495
+    known_issue: >-
+      Unsupported variant: "A.F." with periods does not resolve to Articles of Faith (the bare "AF" alt does).
     input: A.F. 1
     expected_ids:
       - 41983

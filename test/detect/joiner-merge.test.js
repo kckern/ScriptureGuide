@@ -100,3 +100,21 @@ describe('context-aware path robustness', () => {
     }
   });
 });
+
+describe('merged citation strings are readable', () => {
+  // The joiner merge used to concatenate spans with a bare ";", producing
+  // "Jacob 4:10;2 Ne. 4:34" in every rendered link.
+  test('merged spans are joined with "; ", not a bare ";"', () => {
+    const out = detectReferences('Jacob 4:10; 2 Ne. 4:34; Prov. 12:15', bracket, { language: 'en' });
+    expect(out).toBe('[Jacob 4:10; 2 Ne. 4:34; Prov. 12:15]');
+  });
+
+  // Clipping a match at the next match's start left the separator inside the
+  // span ("D&C 58:2-4; 136:31;"), so the merge emitted ";;". Reproduced from
+  // a real commentary body where the source text omits the space after ";".
+  test('a citation list written without a space after ";" does not emit ";;"', () => {
+    const out = detectReferences('D&C 58:2-4; 136:31;1 Cor. 10:13', bracket, { language: 'en' });
+    expect(out).toBe('[D&C 58:2-4; 136:31; 1 Cor. 10:13]');
+    expect(out).not.toContain(';;');
+  });
+});

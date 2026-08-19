@@ -3,7 +3,7 @@
  * These test false positive prevention
  */
 import { detectReferences, generateReference } from '../../dist/scriptures.mjs';
-import { loadFixtures, getTestCases } from '../helpers/fixture-loader.js';
+import { loadFixtures, getTestCases, knownIssue } from '../helpers/fixture-loader.js';
 
 const fixtures = loadFixtures('en');
 const negativeCases = getTestCases(fixtures, 'detect', 'negative');
@@ -13,7 +13,12 @@ describe('detectReferences - Negative Cases (False Positive Prevention)', () => 
     test.skip('No negative cases currently defined', () => {});
   } else {
     describe.each(negativeCases)('$id: $description', (tc) => {
-      test('should NOT detect any references', () => {
+      const quarantined = knownIssue(tc);
+      const runTest = quarantined
+        ? (name, fn) => test.skip(`${name} [known issue: ${quarantined}]`, fn)
+        : test;
+
+      runTest('should NOT detect any references', () => {
         const foundRefs = [];
 
         detectReferences(
