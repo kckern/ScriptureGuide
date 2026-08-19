@@ -16,7 +16,7 @@ const SPLIT = { chainAcrossMarkers: false };
 describe('chainAcrossMarkers default (true)', () => {
   test('merges across a prose marker, as before', () => {
     expect(detectReferences('1 Nephi 2:13; see also Helaman 8:21.', link))
-      .toBe('<a>1 Nephi 2:13;Helaman 8:21</a>.');
+      .toBe('<a>1 Nephi 2:13; Helaman 8:21</a>.');
   });
 
   test('explicitly passing true matches the default', () => {
@@ -59,7 +59,7 @@ describe('structural joiners still merge when chainAcrossMarkers is false', () =
 
   test('comma and semicolon lists stay one link', () => {
     expect(detectReferences('1 Ne. 3:7, 8; Mosiah 3:19', link, SPLIT))
-      .toBe('<a>1 Ne. 3:7, 8;Mosiah 3:19</a>');
+      .toBe('<a>1 Ne. 3:7, 8; Mosiah 3:19</a>');
   });
 });
 

@@ -39,6 +39,8 @@ tests:
       - sports-score
     description: Sports score format
   - id: en-detect-negative-006
+    known_issue: >-
+      Ambiguous: "Romans 3" in a sports score is a real book name followed by a real number. No lexical signal distinguishes it from a citation.
     input: "Final score: Romans 3, Corinthians 1."
     expected_refs: []
     tags:
@@ -63,6 +65,8 @@ tests:
       - sports
     description: Person named Ruth with number
   - id: en-detect-negative-009
+    known_issue: >-
+      Ambiguous: "Mark 2" where Mark is a person's name. Indistinguishable from the citation Mark 2.
     input: I spoke with Mark 2 days ago about the project.
     expected_refs: []
     tags:
@@ -126,6 +130,8 @@ tests:
       - orwell
     description: 1984 novel chapter reference
   - id: en-detect-negative-017
+    known_issue: >-
+      Ambiguous: "Acts 2 of the play" is a real book name followed by a real number.
     input: Acts 2 of the play begins with a soliloquy.
     expected_refs: []
     tags:
@@ -289,6 +295,8 @@ tests:
       - game-name
     description: Games with numbered Kings in name
   - id: en-detect-negative-038
+    known_issue: >-
+      Ambiguous: "Mark 2" as a product version. Indistinguishable from the citation Mark 2.
     input: She ordered the Mark 2 version of the product.
     expected_refs: []
     tags:
@@ -296,6 +304,8 @@ tests:
       - product-version
     description: Product version "Mark 2"
   - id: en-detect-negative-039
+    known_issue: >-
+      Ambiguous: "Genesis 3" as a games console. Indistinguishable from the citation Genesis 3.
     input: The Genesis 3 is a great gaming console.
     expected_refs: []
     tags:

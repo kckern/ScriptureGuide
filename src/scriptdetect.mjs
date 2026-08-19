@@ -39,6 +39,9 @@ const findMatches = (content,books,lang_extra) => {
     const gap = "[ \\t]*(?:\\n(?![ \\t]*\\n)[ \\t]*)?(?:,[ \\t]*sec(?:tion)?\\.?[ \\t]*)?\\(?[ \\t]*(?=[0-9])";
     const core = "(?:[0-9:.;,~—–-]|[ \\t]|\\n(?![ \\t]*\\n)|and\\b|cf\\b|\\()*[0-9]";
     const postBookMatch = lang_extra.chapter || (gap + core);
+    const capitalizedOnlyAbbreviations = new Set(
+        (lang_extra.capitalizedOnly || []).map(i=>String(i).toLowerCase())
+    );
     const fullBookMatches = matchingBooks.map(bookMatch=>{
         const patternString =  preBookMatch + bookMatch ;
         const pattern = (new RegExp(patternString,"ig"));
@@ -53,7 +56,18 @@ const findMatches = (content,books,lang_extra) => {
     }).flat().reduce((prev,current)=>{
         if(prev.includes(current)) return prev;
         return [...prev,current]
-    },[]).filter(i=>!!i).map(substring=>{
+    },[]).filter(i=>!!i).filter(substring=>{
+        // A handful of abbreviations are also ordinary English words ("is" ->
+        // Isaiah, "am" -> Amos, "he" -> Hebrews). Matching them case-insensitively
+        // turns prose into citations: "the aspect ratio is 16:9" became
+        // Isaiah 16:9. Require these to be capitalized, so "Is 16:9" still
+        // resolves while the English verb does not. Only the listed short
+        // abbreviations are affected -- full book names are not, so a lowercase
+        // "leviticus 19" keeps matching.
+        const token = substring.trim();
+        if(!capitalizedOnlyAbbreviations.has(token.toLowerCase())) return true;
+        return token !== token.toLowerCase();
+    }).map(substring=>{
         substring = substring.trim();
         let positions = [];
         let index = normalizedContent.indexOf(substring);
@@ -85,6 +99,11 @@ const findMatches = (content,books,lang_extra) => {
             const len = match.length;
             const pos = i;
             const [posIn, posOut] = [pos,pos+len];
+            // "Exodus 3D", "Genesis 4K": a product name, not a citation. Real
+            // trailing annotations are lowercase (footnote markers "1 Ne 8.15-18n",
+            // "Heb 11:1ff"), so only an uppercase letter fused to the closing digit
+            // invalidates the match.
+            if(/[0-9]$/.test(match) && /[A-Z]/.test(normalizedContent[posOut] || "")) return null;
             //console.log({content:content.slice(i),pattern,match,posIn,posOut});
             return [match,posIn,posOut];
         }
@@ -148,6 +167,12 @@ function findMatchIndexes(content, matches,lookupReference, lang_extra) {
         const next = array[index+1];
         if (next && next[0] < end && next[1] > end) {
             end = next[0];
+            // Clipping cuts at the next match's start, which can leave trailing
+            // separator/whitespace inside this span when the two citations are
+            // written without a space ("...136:31;1 Cor. 10:13" -> the D&C span
+            // keeps the ";"). Re-apply the tail trim so the span ends on the
+            // reference itself; otherwise the joiner merge emits ";;".
+            end = start + content.slice(start, end).replace(tail, "").length;
         }
         return [start,end];
     });

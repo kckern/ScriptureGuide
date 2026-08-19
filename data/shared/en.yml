@@ -16,6 +16,15 @@ labels:
 
 joiners: ["and", ";", ",", "&", "compare", "see also", "see", "cf", "c.f.", "cited at", "also"]
 
+# Abbreviations that are also ordinary English words. Matched case-insensitively
+# they turn prose into citations ("the aspect ratio is 16:9" -> Isaiah 16:9), so
+# they only count as book names when capitalized: "Is 16:9" resolves, "is 16:9"
+# does not. Full book names are unaffected -- lowercase "leviticus 19" still
+# matches. "acts" is deliberately absent: it is a real book name people type
+# lowercase, and the theater sense ("Acts 2 of the play") is capitalized anyway,
+# so a case rule would not catch it.
+capitalized_only: ["is", "am", "he", "re", "la", "co", "col", "act"]
+
 pre_rules:
   # Strip Gospel/Epistle prefixes
   - ["\\bgospel\\s+(?:of|according\\s+to)\\s+", ""]
@@ -40,6 +49,12 @@ pre_rules:
   - ["\\bthird\\s+(?=[A-Za-z])", "3 "]
   - ["\\bfourth\\s+(?=[A-Za-z])", "4 "]
   # Punctuation normalization
+  # "&" is a joiner for detection, so a detected span can read
+  # "2 Ne. 21:10-12 & 2 Ne. 27:26" -- but lookup could not parse it, leaving a
+  # rendered citation that does not resolve. Only an "&" that FOLLOWS A DIGIT
+  # joins two references; the book names "D & C" and "Doctrine & Covenants" have
+  # a letter there, and "D&C" has no surrounding space at all.
+  - ["(\\d)\\s+&\\s+", "$1; "]
   - ["[.]{2,}", ";"]
   - ["(\\d+) (\\d+)", "$1.$2"]
   - ["([0-9])[.]\\s*([0-9])", "$1:$2"]

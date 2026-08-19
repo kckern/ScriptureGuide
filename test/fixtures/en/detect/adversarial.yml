@@ -1,0 +1,227 @@
+description: >-
+  Hostile inputs for span integrity. Every real prose sample we had was
+  well-formed (or, in one case, contaminated by the detector's own buggy output),
+  so nothing exercised malformed spacing, doubled punctuation, or string
+  boundaries. These are hand-written and small enough that the correct answer is
+  obvious by inspection -- the property that snapshots of real documents lack.
+
+  expected_output here renders the VERBATIM matched span, not the canonical
+  reference, because these cases are about span arithmetic rather than lookup.
+
+tests:
+  # --- malformed separators in the source -------------------------------------
+  - id: en-detect-adv-001
+    input: 'D&C 58:2-4; 136:31;1 Cor. 10:13'
+    description: citation list written without a space after ";"
+    tags: [separator, no-space]
+    context_variations:
+      contextAware_true:
+        expected_output: '[D&C 58:2-4; 136:31; 1 Cor. 10:13]'
+      contextAware_false:
+        expected_output: '[D&C 58:2-4; 136:31; 1 Cor. 10:13]'
+        known_issue: >-
+          The non-contextAware renderer emits the raw source slice, so it
+          produces "[D&C 58:2-4; 136:31;1 Cor. 10:13]" -- the bare-";" defect
+          that was fixed in the contextAware path only. Same class of bug, second
+          code path, never covered.
+
+  - id: en-detect-adv-002
+    input: '1 Ne. 3:7,8;Mosiah 3:19'
+    description: comma verse-list plus a semicolon with no following space
+    tags: [separator, no-space]
+    context_variations:
+      contextAware_true:
+        expected_output: '[1 Ne. 3:7,8; Mosiah 3:19]'
+      contextAware_false:
+        expected_output: '[1 Ne. 3:7,8; Mosiah 3:19]'
+        known_issue: >-
+          Non-contextAware renderer emits the raw source slice; see
+          en-detect-adv-001.
+
+  - id: en-detect-adv-003
+    input: 'Isa 1:1;; Isa 2:2'
+    description: separator already doubled in the source text
+    tags: [separator, doubled]
+    context_variations:
+      contextAware_true:
+        expected_output: '[Isa 1:1; Isa 2:2]'
+      contextAware_false:
+        expected_output: '[Isa 1:1; Isa 2:2]'
+        known_issue: >-
+          Non-contextAware renderer emits "[Isa 1:1;; Isa 2:2]" -- a ";;" inside
+          a rendered citation, the exact defect the contextAware path was fixed
+          for.
+
+  # --- string boundaries ------------------------------------------------------
+  - id: en-detect-adv-010
+    input: John 3:16 is often quoted.
+    description: reference flush against the start of the input
+    tags: [boundary, start]
+    context_variations:
+      contextAware_true:
+        expected_output: '[John 3:16] is often quoted.'
+      contextAware_false:
+        expected_output: '[John 3:16] is often quoted.'
+
+  - id: en-detect-adv-011
+    input: The best known verse is John 3:16
+    description: reference flush against the end of the input, no trailing period
+    tags: [boundary, end]
+    context_variations:
+      contextAware_true:
+        expected_output: 'The best known verse is [John 3:16]'
+      contextAware_false:
+        expected_output: 'The best known verse is [John 3:16]'
+
+  - id: en-detect-adv-012
+    input: John 3:16
+    description: the reference is the entire input
+    tags: [boundary, whole-input]
+    context_variations:
+      contextAware_true:
+        expected_output: '[John 3:16]'
+      contextAware_false:
+        expected_output: '[John 3:16]'
+
+  - id: en-detect-adv-013
+    input: (John 3:16)
+    description: reference flush against parentheses on both sides
+    tags: [boundary, parenthetical]
+    context_variations:
+      contextAware_true:
+        expected_output: '([John 3:16])'
+      contextAware_false:
+        expected_output: '([John 3:16])'
+
+  - id: en-detect-adv-014
+    input: "Consider\nJohn 3:16\nand ponder."
+    description: reference alone on its own line
+    tags: [boundary, newline]
+    context_variations:
+      contextAware_true:
+        expected_output: "Consider\n[John 3:16]\nand ponder."
+      contextAware_false:
+        expected_output: "Consider\n[John 3:16]\nand ponder."
+
+  # --- overlapping abbreviations ---------------------------------------------
+  - id: en-detect-adv-020
+    input: See 3 Ne 14.23 and 2 Ne 9.50, then read 1 Ne 8.15–18 carefully.
+    description: >-
+      "1 Ne" keeps its full span in a document that also names "3 Ne" and "2 Ne".
+      A shorter overlapping candidate once clipped the longer match and left a
+      mangled "1" span that contaminated the whole document.
+    tags: [overlap, abbreviation]
+    context_variations:
+      contextAware_true:
+        expected_output: 'See [3 Ne 14.23; 2 Ne 9.50], then read [1 Ne 8.15–18] carefully.'
+      contextAware_false:
+        expected_output: 'See [3 Ne 14.23 and 2 Ne 9.50], then read [1 Ne 8.15–18] carefully.'
+
+  - id: en-detect-adv-021
+    input: "He heeded the prophet (see Alma 43:23-26).\nHe was concerned (see Alma 44:1-20)."
+    description: citations in adjacent sentences must not merge across the prose gap
+    tags: [merge, sentence-boundary]
+    context_variations:
+      contextAware_true:
+        expected_output: "He heeded the prophet (see [Alma 43:23-26]).\nHe was concerned (see [Alma 44:1-20])."
+      contextAware_false:
+        expected_output: "He heeded the prophet (see [Alma 43:23-26]).\nHe was concerned (see [Alma 44:1-20])."
+
+  - id: en-detect-adv-022
+    input: 'John 3:16; John 3:16'
+    description: the same reference repeated adjacently still renders as one span
+    tags: [merge, duplicate]
+    context_variations:
+      contextAware_true:
+        expected_output: '[John 3:16; John 3:16]'
+      contextAware_false:
+        expected_output: '[John 3:16; John 3:16]'
+
+  # --- unicode ----------------------------------------------------------------
+  - id: en-detect-adv-030
+    input: Read Isa 55.1–2 today.
+    description: en-dash range
+    tags: [unicode, en-dash]
+    context_variations:
+      contextAware_true:
+        expected_output: 'Read [Isa 55.1–2] today.'
+      contextAware_false:
+        expected_output: 'Read [Isa 55.1–2] today.'
+
+  - id: en-detect-adv-031
+    input: Read Isa 55.1—2 today.
+    description: em-dash range
+    tags: [unicode, em-dash]
+    context_variations:
+      contextAware_true:
+        expected_output: 'Read [Isa 55.1—2] today.'
+      contextAware_false:
+        expected_output: 'Read [Isa 55.1—2] today.'
+
+  - id: en-detect-adv-032
+    input: "“John 3:16” is quoted."
+    description: curly quotes hugging the reference
+    tags: [unicode, quotes]
+    context_variations:
+      contextAware_true:
+        expected_output: "“[John 3:16]” is quoted."
+      contextAware_false:
+        expected_output: "“[John 3:16]” is quoted."
+
+  - id: en-detect-adv-033
+    input: "Read John 3:16 today."
+    description: non-breaking space between the book name and the chapter
+    tags: [unicode, nbsp]
+    context_variations:
+      contextAware_true:
+        expected_output: "Read [John 3:16] today."
+        known_issue: >-
+          A non-breaking space between book and chapter defeats detection
+          entirely -- the reference is silently skipped. The book/chapter binding
+          pattern only accepts [ \t] as the gap. Copy-paste from word processors
+          and web pages routinely carries U+00A0.
+      contextAware_false:
+        expected_output: "Read [John 3:16] today."
+        known_issue: >-
+          Same root cause as the contextAware variant.
+
+  # --- must NOT detect --------------------------------------------------------
+  - id: en-detect-adv-040
+    input: Exodus 3D is a stunning visual experience.
+    description: a product name is not a citation (uppercase letter fused to the chapter)
+    tags: [negative, boundary]
+    context_variations:
+      contextAware_true:
+        expected_output: 'Exodus 3D is a stunning visual experience.'
+      contextAware_false:
+        expected_output: 'Exodus 3D is a stunning visual experience.'
+
+  - id: en-detect-adv-041
+    input: The aspect ratio is 16:9 for widescreen displays.
+    description: the English verb "is" must not resolve to Isaiah
+    tags: [negative, case-sensitivity]
+    context_variations:
+      contextAware_true:
+        expected_output: 'The aspect ratio is 16:9 for widescreen displays.'
+      contextAware_false:
+        expected_output: 'The aspect ratio is 16:9 for widescreen displays.'
+
+  - id: en-detect-adv-042
+    input: Read Is 40:31 for strength.
+    description: the capitalized abbreviation "Is" still resolves to Isaiah
+    tags: [case-sensitivity]
+    context_variations:
+      contextAware_true:
+        expected_output: 'Read [Is 40:31] for strength.'
+      contextAware_false:
+        expected_output: 'Read [Is 40:31] for strength.'
+
+  - id: en-detect-adv-043
+    input: Compare 2 Ne. 21:10-12 & 2 Ne. 27:26 closely.
+    description: an ampersand joins two references and the rendered span must re-parse
+    tags: [merge, ampersand]
+    context_variations:
+      contextAware_true:
+        expected_output: 'Compare [2 Ne. 21:10-12; 2 Ne. 27:26] closely.'
+      contextAware_false:
+        expected_output: 'Compare [2 Ne. 21:10-12 & 2 Ne. 27:26] closely.'

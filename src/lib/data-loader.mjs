@@ -101,7 +101,8 @@ function buildRegexData() {
     books,
     pre_rules: sharedEn.pre_rules || [],
     post_rules: sharedEn.post_rules || [],
-    joiners: sharedEn.joiners || []
+    joiners: sharedEn.joiners || [],
+    capitalized_only: sharedEn.capitalized_only || []
   };
 }
 

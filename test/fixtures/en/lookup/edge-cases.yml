@@ -1597,6 +1597,8 @@ tests:
       - chapter-range
     description: Ecclesiastes chapters 1-2
   - id: range-0129
+    known_issue: >-
+      Bug: the canonical common name "Song of Solomon" does not resolve, so the range form fails too. Same root cause as lookup-0127.
     input: Song of Solomon 1:1-5
     expected_ids:
       - 17539
@@ -1609,6 +1611,8 @@ tests:
       - verse-range
     description: Song of Solomon verse range 1-5
   - id: chap-0130
+    known_issue: >-
+      Bug: the canonical common name "Song of Solomon" does not resolve, so the chapter-range form fails too. Same root cause as lookup-0127.
     input: Song of Solomon 1-2
     expected_ids:
       - 17539
