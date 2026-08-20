@@ -32,6 +32,7 @@ const CONSUMED_TIERS = [
   ['detect', 'edge_cases'],
   ['detect', 'negative'],
   ['detect', 'adversarial'],
+  ['detect', 'implied-book'],
 ];
 
 const loadedTiers = () => {

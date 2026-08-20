@@ -833,7 +833,10 @@ const restrictJoinersToStructural = (lang_extra) => {
     } else {
         joiners = [...STRUCTURAL_JOINERS];
     }
-    return { ...src, joiners };
+    // The restriction governs MERGING only. Book-context inheritance for an
+    // implied "6:2" must still recognise "; see also " as a citation joiner, so
+    // the full list is preserved alongside the restricted one.
+    return { ...src, joiners, unrestrictedJoiners: src.joiners };
 };
 
 const detectReferences = (content, callBack, options = null) => {
@@ -851,7 +854,10 @@ const detectReferences = (content, callBack, options = null) => {
         maxContextDistance: 500,
         enableImpliedBooks: true,
         enableVerseAbbrev: true,
-        chainAcrossMarkers: true
+        chainAcrossMarkers: true,
+        // A bare "6:3" binds to an earlier book only when the token before it is
+        // citation material. false restores pre-1.0.98 distance-only binding.
+        strictImpliedBooks: true
     };
 
     const finalOptions = { ...defaultOptions, ...options };
@@ -896,7 +902,10 @@ const findReferences = (content, options = null) => {
         enableVerseAbbrev: true,
         abbreviations: true,
         chapterOnly: true,
-        chainAcrossMarkers: true
+        chainAcrossMarkers: true,
+        // A bare "6:3" binds to an earlier book only when the token before it is
+        // citation material. false restores pre-1.0.98 distance-only binding.
+        strictImpliedBooks: true
     };
 
     const finalOptions = { ...defaultOptions, ...options };

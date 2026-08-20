@@ -1,0 +1,104 @@
+description: >-
+  Implied-book binding for a bare "chapter:verse". A bare number pair carries no
+  marker declaring it a citation, so it may only inherit a book from an earlier
+  explicit reference when the token immediately before it is citation material.
+  Distance does not separate the good binds from the bad ones.
+tests:
+  # ---- MUST NOT bind: bibliographic volume:page ----
+  - id: en-detect-implied-001
+    input: 'Job 23:10; Teachings of the Prophet Joseph Smith, p. 185; Lectures on Faith, 6:3'
+    expect_refs: ['Job 23:10']
+    tags: [implied, bibliographic]
+    description: Lecture and paragraph number must not become Job 6:3
+  - id: en-detect-implied-002
+    input: 'Alma 32:21, quoted in Ogden and Skinner, Book of Mormon, 1:15'
+    expect_refs: ['Alma 32:21']
+    tags: [implied, bibliographic]
+    description: Volume and page of a commentary must not bind
+  - id: en-detect-implied-003
+    input: 'Mosiah 3:19, cited in McConkie and Millet, Doctrinal Commentary, 1:26–27'
+    expect_refs: ['Mosiah 3:19']
+    tags: [implied, bibliographic]
+    description: Volume and page range must not bind
+  - id: en-detect-implied-004
+    input: 'Alma 5:14, in Studies in Scripture, ed by K. Jackson, 7:19-20'
+    expect_refs: ['Alma 5:14']
+    tags: [implied, bibliographic]
+    description: Editor list before a volume:page must not bind
+
+  # ---- MUST NOT bind: non-canonical books ----
+  - id: en-detect-implied-005
+    input: 'In Moses 5:18 they are called "angels," (Enoch 7:2)'
+    expect_refs: ['Moses 5:18']
+    tags: [implied, non-canonical]
+    description: Enoch is not in the canon and must not borrow Moses
+  - id: en-detect-implied-006
+    input: 'As in Malachi 4:2, "like the Sun of righteousness" (Testament of Judah 24:1)'
+    expect_refs: ['Malachi 4:2']
+    tags: [implied, non-canonical]
+    description: Testament of Judah must not borrow Malachi
+  - id: en-detect-implied-007
+    input: 'Compare Abraham 3:22; the theme is also found in the Apocalypse of Abraham 17:3–21'
+    expect_refs: ['Abraham 3:22']
+    tags: [implied, non-canonical]
+    description: Apocalypse of Abraham must not borrow Abraham
+  - id: en-detect-implied-008
+    input: 'See Alma 40:11; there are two references in the Apocrypha: 2 Maccabees 1:36'
+    expect_refs: ['Alma 40:11']
+    tags: [implied, non-canonical]
+    description: Apocryphal book must not borrow Alma
+
+  # ---- MUST NOT bind: canonical book named immediately before ----
+  - id: en-detect-implied-009
+    input: 'described as enervating (JS—H 2:20, Moses 27:29)'
+    expect_absent: ['Moses 27:29', 'Joseph Smith—History 1:27']
+    tags: [implied, overflow]
+    description: Moses has 8 chapters, so 27:29 cannot bind to an earlier context
+
+  # ---- MUST still bind ----
+  - id: en-detect-implied-010
+    input: 'judgment and justice in the earth" (Jeremiah 23:5; see also 33:15)'
+    expect_contains: ['Jeremiah 33:15']
+    tags: [implied, positive]
+    description: see also introduces a genuine continuation
+  - id: en-detect-implied-011
+    input: 'the term is also used in Jeremiah 11:9; see 12:6'
+    expect_contains: ['Jeremiah 12:6']
+    tags: [implied, positive]
+    description: see introduces a genuine continuation
+  - id: en-detect-implied-012
+    input: 'dreams mentioned in 1 Nephi (see 1:16; 3:1; 8:2)'
+    expect_contains: ['1 Nephi 1:16', '1 Nephi 3:1', '1 Nephi 8:2']
+    known_issue: >-
+      A book name not followed by a digit ("1 Nephi (see") produces no explicit
+      match, so findBookContexts records no context to bind to. Pre-dates the
+      strictImpliedBooks gate -- returns [] on 1.0.97 too. Needs bare book names
+      admitted as contexts, which is a separate change.
+    tags: [implied, positive]
+    description: parenthesised see-list binds to the named book
+  - id: en-detect-implied-013
+    input: 'on the east borders by the seashore" (Alma 31:3, italics added; 51:22, 26, 32)'
+    expect_contains: ['Alma 51:22']
+    skip_invariants: >-
+      The multi-verse implied span "51:22, 26, 32" does not re-parse standalone.
+      Pre-existing on 1.0.97; unchanged by the strictImpliedBooks gate.
+    tags: [implied, positive]
+    description: semicolon after an editorial aside still continues the citation
+  - id: en-detect-implied-014
+    input: 'sacrifices (Lev. 3:1, 6, 12), accompanied by unleavened baked goods (7:12–13)'
+    expect_contains: ['Leviticus 7:12']
+    tags: [implied, positive]
+    description: an opening bracket continues a citation already in progress
+  - id: en-detect-implied-015
+    input: 'some of these were from Jeremiah including 16:16; 30:18-21; 50:4-5'
+    expect_contains: ['Jeremiah 16:16', 'Jeremiah 30:18', 'Jeremiah 50:4']
+    known_issue: >-
+      Same gap as en-detect-implied-012: "Jeremiah including" is not an explicit
+      match, so no book context exists. Returns [] on 1.0.97 too.
+    tags: [implied, positive]
+    description: including introduces a genuine continuation
+  - id: en-detect-implied-016
+    input: 'In John 3, Jesus explains (v. 16) that God loved the world.'
+    expect_contains: ['John 3:16']
+    tags: [implied, positive, marker]
+    description: the vv. marker path is unchanged and still crosses prose

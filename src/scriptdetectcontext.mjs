@@ -26,7 +26,7 @@ export const collectReferencesWithContext = (content, books, lang_extra, lookupR
     const explicitIndices = findMatchIndexes(content, explicitMatches, lookupReference, lang_extra) || [];
 
     // Step 2: Find implied references using context
-    const impliedMatches = findImpliedReferences(content, explicitMatches, explicitIndices, lookupReference, options);
+    const impliedMatches = findImpliedReferences(content, explicitMatches, explicitIndices, lookupReference, options, lang_extra);
 
     // Step 3: Merge and sort all matches - store both original text and verse IDs
     const explicitMatchesWithRefs = explicitIndices.map(([start, end]) => {
@@ -173,6 +173,59 @@ const getNearestBookContext = (position, bookContexts, maxDistance) => {
 };
 
 /**
+ * Extra citation connectives that introduce a bare chapter:verse but are not
+ * joiners in the merge sense (they must stay outside the rendered link).
+ */
+const CITATION_CONNECTIVES = ['including', 'namely', 'e.g', 'i.e'];
+
+/**
+ * Decide whether an implied bare "chapter:verse" may bind to an earlier book.
+ *
+ * "v. 16" / "vv. 3, 5" carry a marker declaring them verse references, so they
+ * may reach across prose. A bare "6:3" carries no such signal, and DISTANCE
+ * does not separate the good binds from the bad ones -- "(Lev. 3:1) ... baked
+ * goods (7:12-13)" is a correct bind further away than the false
+ * "Job 23:10; ... Lectures on Faith, 6:3". What separates them is the token
+ * immediately before the number:
+ *   bind    - a joiner or connective ("see", "see also", "including"), a
+ *             semicolon, or an opening bracket continuing a citation;
+ *   refuse  - a title, proper name, or non-canonical book ("Faith,",
+ *             "Commentary,", "Enoch", "Moses"), which is what "Title, vol:page"
+ *             and "(Apocryphal Book n:m)" both look like.
+ * A comma is deliberately NOT a binding separator: it is the "Title, 1:15"
+ * shape. Comma-separated continuations ("Jeremiah 23:5, 33:15") never reach
+ * here -- the explicit matcher consumes them as one span.
+ *
+ * @param {string} tail - Text between the book context and the implied reference
+ * @param {Array|Object} joiners - Joiner list for the active language
+ * @returns {boolean}
+ */
+const bindsToBookContext = (tail, joiners) => {
+    // Only the LAST token decides. Scanning the whole tail for a sentence
+    // boundary was tried and reverted: a correct parenthetical bind routinely
+    // sits several sentences after its context ('...of the Lord" (1:12)'), so
+    // the scan vetoed 375 good binds across the commentary corpus. A sentence
+    // that ends immediately before the number is still refused below, because
+    // "." is neither a separator nor a joiner word.
+    const trimmed = tail.replace(/\s+$/, '');
+    if (!trimmed) return true;
+
+    // Separator or opening bracket continuing a citation already in progress.
+    if (/[;&([]$/.test(trimmed)) return true;
+
+    const list = Array.isArray(joiners) ? joiners : (joiners && joiners.patterns) || [];
+    const words = new Set([
+        ...list.filter(j => typeof j === 'string' && /[a-z]/i.test(j))
+               .map(j => j.toLowerCase().replace(/\.+$/, '').split(/\s+/).pop()),
+        ...CITATION_CONNECTIVES
+    ]);
+
+    const lastWord = (trimmed.match(/[A-Za-z.']+$/) || [''])[0]
+        .toLowerCase().replace(/[.']+$/, '');
+    return lastWord !== '' && words.has(lastWord);
+};
+
+/**
  * Find implied references using context from explicit references
  * @param {string} content - The text content
  * @param {Array} explicitMatches - Array of explicit reference strings
@@ -181,7 +234,10 @@ const getNearestBookContext = (position, bookContexts, maxDistance) => {
  * @param {Object} options - Detection options including maxContextDistance
  * @returns {Array} Array of [start, end, resolvedReference] tuples for implied references
  */
-const findImpliedReferences = (content, explicitMatches, explicitIndices, lookupReference, options) => {
+const findImpliedReferences = (content, explicitMatches, explicitIndices, lookupReference, options, lang_extra = {}) => {
+    // Longest-first: "see also" must be consumed before "see" leaves "also" behind.
+    const joiners = (lang_extra && (lang_extra.unrestrictedJoiners || lang_extra.joiners))
+        || ['and', ';', ',', '&', 'compare', 'see also', 'see', 'cf', 'c.f.', 'cited at', 'also'];
     const matches = [];
     
     // Find all explicit book references to establish context
@@ -228,7 +284,8 @@ const findImpliedReferences = (content, explicitMatches, explicitIndices, lookup
         
         // Find the nearest book context
         const context = getNearestBookContext(position, bookContexts, options.maxContextDistance);
-        if (context) {
+        if (context && (options.strictImpliedBooks === false ||
+            bindsToBookContext(content.slice(context.endPosition, position), joiners))) {
             const impliedRef = `${context.book} ${chapter}:${verses}`;
             const verification = lookupReference(impliedRef);
             
@@ -243,6 +300,7 @@ const findImpliedReferences = (content, explicitMatches, explicitIndices, lookup
 
 export {
     findBookContexts,
+    bindsToBookContext,
     getNearestBookContext,
     findImpliedReferences
 };
