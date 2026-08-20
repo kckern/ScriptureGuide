@@ -1,6 +1,6 @@
 {
   "name": "scripture-guide",
-  "version": "1.0.97",
+  "version": "1.0.98",
   "description": "A utility for biblical and scripture reference parsing that enables structured queries based on strings of traditional scripture references (e.g. John 3:16).  ",
   "main": "dist/scriptures.cjs",
   "module": "dist/scriptures.mjs",
