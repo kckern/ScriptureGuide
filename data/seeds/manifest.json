@@ -1,0 +1,10 @@
+{
+  "publicVersions": ["KJV", "ASV", "WEB"],
+  "tables": {
+    "lds_scriptures_volumes": { "scope": "all" },
+    "lds_scriptures_books": { "scope": "all" },
+    "lds_scriptures_verses": { "scope": "all", "blank": ["verse_scripture"] },
+    "scripture_versions": { "scope": "version", "versionColumn": "id" },
+    "scripture_verses": { "scope": "version", "versionColumn": "version" }
+  }
+}
