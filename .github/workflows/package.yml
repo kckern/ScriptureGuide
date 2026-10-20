@@ -1,10 +1,12 @@
-name: Test Suite
+name: scripture-guide package
 
 on:
   pull_request:
     branches: [master, main]
+    paths: ['packages/scripture-guide/**', 'package-lock.json', '.github/workflows/package.yml']
   push:
     branches: [master, main]
+    paths: ['packages/scripture-guide/**', 'package-lock.json', '.github/workflows/package.yml']
 
 jobs:
   critical:
@@ -18,10 +20,10 @@ jobs:
           cache: 'npm'
 
       - run: npm ci
-      - run: npm run build
+      - run: npm run build -w scripture-guide
 
       - name: Run Critical Tests
-        run: npm run test:critical -- --ci
+        run: npm run test:critical -w scripture-guide -- --ci
 
   edge-cases:
     name: Edge Case Tests (Release Gate)
@@ -35,10 +37,10 @@ jobs:
           cache: 'npm'
 
       - run: npm ci
-      - run: npm run build
+      - run: npm run build -w scripture-guide
 
       - name: Run Edge Case Tests
-        run: npm run test:edge -- --ci
+        run: npm run test:edge -w scripture-guide -- --ci
 
   known-issues:
     name: Known Issues (Report Only)
@@ -53,7 +55,7 @@ jobs:
           cache: 'npm'
 
       - run: npm ci
-      - run: npm run build
+      - run: npm run build -w scripture-guide
 
       - name: Run Known Issue Tests
-        run: npm run test:known-issues -- --ci
+        run: npm run test:known-issues -w scripture-guide -- --ci
