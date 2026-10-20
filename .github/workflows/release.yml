@@ -96,7 +96,7 @@ jobs:
           CLIENT_SECRET: ${{ secrets.CWS_CLIENT_SECRET }}
           REFRESH_TOKEN: ${{ secrets.CWS_REFRESH_TOKEN }}
       - if: steps.v.outputs.release == 'true'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: chrome-extension-zip
           path: apps/chrome-extension/extension.zip
