@@ -16,7 +16,10 @@ export const config = {
   },
 
   sphinx: {
-    apiUrl: process.env.SPHINX_API || 'http://localhost:9312'
+    apiUrl: process.env.SPHINX_API || 'http://localhost:9312',
+    // SphinxQL (MySQL protocol). Unset host: search falls back to MySQL.
+    host: process.env.SPHINX_HOST || '',
+    port: parseInt(process.env.SPHINX_PORT, 10) || 9306
   },
 
   external: {
