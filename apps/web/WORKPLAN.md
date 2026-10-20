@@ -1,3 +1,5 @@
+> Superseded by docs/plans/2026-10-20-scriptureguide-unification-design.md; kept for history.
+
 # Scripture Guide Node.js Migration - Work Plan
 
 ## Current Status

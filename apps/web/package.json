@@ -1,5 +1,6 @@
 {
-  "name": "scripture-guide",
+  "name": "@scripture-guide/web",
+  "private": true,
   "version": "2.0.0",
   "description": "Scripture reference lookup and display - Node.js SSR",
   "type": "module",
@@ -9,13 +10,10 @@
   },
   "scripts": {
     "start": "node src/app.js",
-    "dev": "nodemon src/app.js",
-    "test": "vitest",
+    "dev": "node --watch src/app.js",
+    "test": "vitest run --passWithNoTests",
     "test:watch": "vitest --watch",
-    "lint": "eslint src/",
-    "docker:build": "docker-compose build",
-    "docker:up": "docker-compose up -d",
-    "docker:down": "docker-compose down"
+    "lint": "eslint src/"
   },
   "keywords": [
     "bible",
@@ -37,13 +35,12 @@
     "fluent-ffmpeg": "^2.1.2",
     "helmet": "^7.1.0",
     "morgan": "^1.10.0",
-    "mysql2": "^3.6.5",
-    "scripture-guide": "^1.0.85"
+    "mysql2": "^3.24.6",
+    "scripture-guide": "^1.0.98"
   },
   "devDependencies": {
     "eslint": "^8.56.0",
-    "nodemon": "^3.0.2",
     "supertest": "^6.3.3",
-    "vitest": "^1.1.0"
+    "vitest": "^4.1.12"
   }
 }
