@@ -6,7 +6,7 @@ import { ScriptureResult } from '../domain/entities/ScriptureResult.js';
 import { Reference } from '../domain/entities/Reference.js';
 import VerseSerializer from '../presentation/serializers/VerseSerializer.js';
 import { defaultVersions, versionOrder } from '../domain/rules/defaultVersions.js';
-import { wantsChapterNav, chapterNavLinks } from '../domain/rules/chapterNav.js';
+import { wantsChapterNav, chapterNavLinks, sectionNavLinks, sectionRef } from '../domain/rules/chapterNav.js';
 
 export class ScriptureLookupService {
   constructor(refService, verseRepo, headingRepo) {
@@ -147,6 +147,16 @@ export class ScriptureLookupService {
         if (!config._multiBlock && wantsChapterNav(reference.normalized) && !/[,;:]/.test(referenceString)) {
           chapterNav = chapterNavLinks({
             ...(await this.headingRepository.findChapterNavRows(firstVerseId, lastVerseId)),
+            versionSpec: config.versionSpec || null,
+          });
+        }
+
+        // Section nav replaces chapter nav when the passage is exactly one titled section
+        const firstSection = headings.find(h => h.type === 'heading' && h.text && h.verse_id === firstVerseId);
+        if (!config._multiBlock && firstSection && firstSection.last_verse_id === lastVerseId && isNewSection) {
+          chapterNav = sectionNavLinks({
+            prev: await this.neighbourSection(firstVerseId - 1, version),
+            next: await this.neighbourSection(lastVerseId + 1, version),
             versionSpec: config.versionSpec || null,
           });
         }
@@ -439,6 +449,24 @@ export class ScriptureLookupService {
       annotations: [],
       config: { ...config, version }
     });
+  }
+
+  // The heading section containing verseId, as { ref, heading } (scriptutil::loadHeading)
+  async neighbourSection(verseId, version) {
+    const book = await this.headingRepository.findBookId(verseId);
+    if (!book) return null;
+    const h = await this.headingRepository.findChapterHeading(verseId, book.book_id, version, true);
+    if (!h || (h.verse_id !== verseId && !h.heading)) return null;
+    const last = h.last ?? (await this.headingRepository.findBookBounds(book.book_id))?.last;
+    if (!last) return null;
+    const [first, end] = await Promise.all([
+      this.verseRepository.findIndexRows([h.verse_id]),
+      this.verseRepository.findIndexRows([last]),
+    ]);
+    if (!first[0] || !end[0]) return null;
+    const bounds = await this.headingRepository.findChapterBounds(end[0].book_id, end[0].chapter);
+    const chapterMax = bounds ? bounds.last - bounds.first + 1 : end[0].verse;
+    return { ref: sectionRef(first[0].book_title_short, first[0], end[0], chapterMax), heading: h.heading || '' };
   }
 
   async getAvailableVersions(referenceString) {

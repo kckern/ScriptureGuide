@@ -168,8 +168,9 @@ for (const p of passages) {
 // Chapter nav: its own passage after the text (no version on its first element)
 if (nav) {
   let links = '';
-  if (nav.prev) links += `<a href="${nav.prev.href}" class="prev">◀ ${nav.prev.label}</a>`;
-  if (nav.next) links += `<a href="${nav.next.href}" class="next">${nav.next.label} ▶</a>`;
+  const sep = nav.sep || ' ';
+  if (nav.prev) links += `<a href="${nav.prev.href}" class="prev">◀${sep}${nav.prev.label}</a>`;
+  if (nav.next) links += `<a href="${nav.next.href}" class="next">${nav.next.label}${sep}▶</a>`;
   passagesHtml += `\n      <div class="passage ver_">\n\t\t<div class="chapterNav">${links}</div>\n      </div>`;
 }
 return passagesHtml;

@@ -314,6 +314,15 @@ export class HeadingRepository {
     return rows[0]?.first ? { first: rows[0].first, last: rows[0].last } : null;
   }
 
+  // First and last verse_id of a book
+  async findBookBounds(bookId) {
+    const rows = await db.query(
+      'SELECT MIN(verse_id) AS first, MAX(verse_id) AS last FROM lds_scriptures_verses WHERE book_id = ?',
+      [bookId]
+    );
+    return rows[0]?.first ? { first: rows[0].first, last: rows[0].last } : null;
+  }
+
   // Mirrors PHP scriptutil::hasAudio($verse_list, $version)
   // audio=1 in DB → always has audio; audio=2 → only Isaiah and Book of Mormon; audio=0 → none
   async hasAudio(verseIds, version) {

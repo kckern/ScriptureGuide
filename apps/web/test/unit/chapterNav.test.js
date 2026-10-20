@@ -1,5 +1,37 @@
 import { describe, test, expect } from 'vitest';
-import { slugifyRef, wantsChapterNav, chapterNavLinks } from '../../src/domain/rules/chapterNav.js';
+import { slugifyRef, wantsChapterNav, chapterNavLinks, sectionRef, sectionNavLinks } from '../../src/domain/rules/chapterNav.js';
+
+describe('sectionRef', () => {
+  const r = (chapter, verse) => ({ chapter, verse });
+  test('within a chapter', () => {
+    expect(sectionRef('Matt.', r(5, 1), r(5, 12), 48)).toBe('Matt. 5:1–12');
+    expect(sectionRef('Matt.', r(5, 13), r(5, 13), 48)).toBe('Matt. 5:13');
+    expect(sectionRef('Ps.', r(23, 1), r(23, 6), 6)).toBe('Ps. 23');
+  });
+  test('across chapters', () => {
+    expect(sectionRef('Gen.', r(1, 1), r(2, 3), 25)).toBe('Gen. 1–2:3');
+    expect(sectionRef('Gen.', r(1, 1), r(2, 25), 25)).toBe('Gen. 1–2');
+    expect(sectionRef('Isa.', r(52, 13), r(53, 12), 12)).toBe('Isa. 52:13–53:12');
+  });
+});
+
+describe('sectionNavLinks', () => {
+  test('links to the neighbouring sections, labelled with their headings', () => {
+    const nav = sectionNavLinks({
+      prev: { ref: 'Matt. 4:23–25', heading: 'Jesus Heals the Sick' },
+      next: { ref: 'Matt. 5:13–16', heading: 'Salt/and Light' },
+      versionSpec: 'niv',
+    });
+    expect(nav).toEqual({
+      sep: '&nbsp;',
+      prev: { href: '/niv/matt.4.23-25', label: 'Jesus Heals the Sick' },
+      next: { href: '/niv/matt.5.13-16', label: 'Salt<br/>and Light' },
+    });
+  });
+  test('no link without a neighbouring section', () => {
+    expect(sectionNavLinks({ prev: null, next: null }).prev).toBeNull();
+  });
+});
 
 describe('slugifyRef', () => {
   test('lowercases and joins with dots like scriptutil::slufigyRef', () => {
