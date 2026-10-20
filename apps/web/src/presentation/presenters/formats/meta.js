@@ -1,7 +1,7 @@
 // meta.scripture.guide: the reference blocks of a query (index.php → inc_api.php with
 // meta_only, returning only "meta"). JSON as PHP's json_encode(PRETTY_PRINT | NUMERIC_CHECK).
 import rawRepository from '../../../data/repositories/RawRepository.js';
-import { hasFlag } from '../../formatOptions.js';
+import { flag } from '../../formatOptions.js';
 import { metaFromRef } from '../../legacy/meta.js';
 import { sendPhpJson } from '../../legacy/phpJson.js';
 
@@ -17,7 +17,7 @@ function blocksFor(ref, result) {
 export async function metaOnly(req, result, repo = rawRepository) {
   const lr = req.config.legacy;
   const meta = blocksFor(lr.ref, result);
-  if (hasFlag(req, 'heads') && meta[0]) {
+  if (flag(req, 'heads', { hostLabels: true }) && meta[0]) {
     const versions = Object.keys(lr.versions || {});
     const heads = new Map();
     for (const id of meta[0].verse_ids) {

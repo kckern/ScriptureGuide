@@ -1,6 +1,6 @@
 import { describe, test, expect } from 'vitest';
 import { parseHost, parseRequest, randomVerseId } from '../../src/domain/rules/requestParsing.js';
-import { hasFlag } from '../../src/presentation/formatOptions.js';
+import { flag } from '../../src/presentation/formatOptions.js';
 
 const req = (path, query = {}, host = 'scripture.guide') => parseRequest({ host, path, query, random: () => 0 });
 
@@ -186,12 +186,14 @@ describe('legacy (what lib.php.inc saw: api input/config, meta, raw, plain)', ()
   });
 });
 
-describe('hasFlag', () => {
-  const flagOf = (name, path, query = {}, host = 'api.scripture.guide') => hasFlag({ config: req(path, query, host) }, name);
-  test('reads query flags, host labels and path fragments', () => {
+describe('flag (formatOptions) on a parsed request', () => {
+  const flagOf = (name, path, query = {}, host = 'api.scripture.guide') =>
+    flag({ config: req(path, query, host) }, name, { hostLabels: true });
+  test('reads query flags, host labels and path fragments; "0" is off as with PHP !empty', () => {
     expect(flagOf('meta_only', '/john.3.16', { meta_only: '' })).toBe(true);
     expect(flagOf('heads', '/john.3.16', {}, 'api.heads.scripture.guide')).toBe(true);
     expect(flagOf('output_only', '/john.3.16&output_only')).toBe(true);
     expect(flagOf('meta_only', '/john.3.16')).toBe(false);
+    expect(flagOf('meta_only', '/john.3.16', { meta_only: '0' })).toBe(false);
   });
 });
