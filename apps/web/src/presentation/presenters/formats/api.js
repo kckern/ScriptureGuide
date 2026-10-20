@@ -1,23 +1,37 @@
-import VerseSerializer from '../../serializers/VerseSerializer.js';
+// api.scripture.guide (also json.): inc_api.php. JSON as PHP's
+// json_encode(PRETTY_PRINT | NUMERIC_CHECK), CORS open.
+//   default        {input, config, output: <scriptures HTML>, meta: [{orig, book, verse_ids, version}]}
+//   ?meta_only     {input, config, meta: [{orig, book, verse_ids}]} (+ meta[0].heads with ?heads)
+//   ?output_only   the HTML string alone
+// "config" is the request's $cfig before lookup: query flags plus versions named in the path, or null.
+import { legacyRequest, hasFlag } from '../../legacy/request.js';
+import { scripturesHtml } from '../../legacy/passages.js';
+import { sendPhpJson } from '../../legacy/phpJson.js';
+import { metaOnly, blocksFor } from './meta.js';
 
 export class ApiPresenter {
-  present(result, req, res) {
-    const data = this.serialize(result);
-    res.json(data);
+  async present(result, req, res) {
+    const lr = legacyRequest(req);
+    if (lr.ref.includes('~')) return res.status(200).type('text/html').send('');
+    sendPhpJson(res, await this.build(result, req, res, lr), { numericCheck: true });
   }
 
-  serialize(result) {
-    return {
-      reference: result.reference.normalized,
-      version: result.version,
-      verses: result.verses.map(v => VerseSerializer.forJson(v)),
-      meta: {
-        query: result.reference.query,
-        volume: result.reference.volume,
-        verseCount: result.verseCount,
-        wordCount: result.wordCount
-      }
-    };
+  async build(result, req, res, lr = legacyRequest(req)) {
+    const data = { input: lr.ref, config: lr.config };
+
+    if (hasFlag(req, 'output_only')) {
+      return (await scripturesHtml(req, res, blocksFor(lr.ref, result), lr.versions)).html;
+    }
+    if (hasFlag(req, 'meta_only')) {
+      data.meta = await metaOnly(req, result);
+      return data;
+    }
+
+    const blocks = blocksFor(lr.ref, result);
+    const { html, versions } = await scripturesHtml(req, res, blocks, lr.versions);
+    data.output = html;
+    data.meta = blocks.map((b, i) => ({ ...b, version: versions[i] }));
+    return data;
   }
 }
 
