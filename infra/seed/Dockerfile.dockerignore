@@ -1,0 +1,3 @@
+*
+!data/seeds/schema.sql
+!data/seeds/*.sql.gz

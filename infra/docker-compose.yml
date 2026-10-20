@@ -1,0 +1,35 @@
+# Local stack on public-domain seeds.
+#   docker compose -f infra/docker-compose.yml up -d --build                 # db + web
+#   docker compose -f infra/docker-compose.yml --profile search up -d --build # + sphinx
+services:
+  db:
+    build: { context: .., dockerfile: infra/seed/Dockerfile }
+    image: ghcr.io/kckern/scripture-guide-seed:local
+    environment:
+      MYSQL_ROOT_PASSWORD: dev
+      MYSQL_USER: sg
+      MYSQL_PASSWORD: dev
+    ports: ["127.0.0.1:3307:3306"]
+    healthcheck:
+      test: ["CMD", "mysql", "-h127.0.0.1", "-usg", "-pdev", "-e", "SELECT 1 FROM scripture_guide.scripture_verses LIMIT 1"]
+      interval: 5s
+      retries: 60
+  web:
+    build: { context: .., dockerfile: apps/web/Dockerfile }
+    image: ghcr.io/kckern/scripture-guide:local
+    environment:
+      MYSQL_HOST: db
+      MYSQL_USER: sg
+      MYSQL_PASSWORD: dev
+      MYSQL_DATABASE: scripture_guide
+      SESSION_SECRET: dev
+    ports: ["127.0.0.1:3000:3000"]
+    depends_on: { db: { condition: service_healthy } }
+  sphinx:
+    profiles: [search]
+    image: macbre/sphinxsearch:3.4.1
+    environment: { MYSQL_HOST: db, MYSQL_USER: sg, MYSQL_PASSWORD: dev, MYSQL_DATABASE: scripture_guide }
+    volumes: ["./sphinx/sphinx.conf:/opt/sphinx/conf/sphinx.conf:ro"]
+    command: sh -c "mkdir -p /opt/sphinx/index /opt/sphinx/log && indexer --all --config /opt/sphinx/conf/sphinx.conf && searchd --nodetach --config /opt/sphinx/conf/sphinx.conf"
+    ports: ["127.0.0.1:9306:9306"]
+    depends_on: { db: { condition: service_healthy } }
