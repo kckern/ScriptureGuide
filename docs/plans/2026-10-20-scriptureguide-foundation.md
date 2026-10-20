@@ -329,50 +329,9 @@ Expected: no high or critical advisories for runtime dependencies. Then run `npm
 git add -A && git commit -m "build(web): import Node app from PHPBox; rename to @scripture-guide/web"
 ```
 
-### Task 1.8: Snapshot the live PHP into `legacy/php`
+### Task 1.8: Snapshot the live PHP (DONE 2026-10-20, private)
 
-**Files:**
-- Create: `legacy/php/**`, `legacy/php/PROVENANCE.md`
-
-**Step 1: See what is large**
-
-```bash
-ssh bom "cd $PHP_ROOT && du -ah . | sort -h | tail -25"   # PHP_ROOT: live scripture.guide docroot on bom (see the private infra repo)
-```
-
-**Step 2: Copy code, skip large binaries**
-
-```bash
-mkdir -p legacy/php
-rsync -az --max-size=1m --exclude '.git' --exclude '*.mp3' --exclude '*.zip' --exclude '*.gz' \
-  "bom:$PHP_ROOT/" legacy/php/
-find legacy/php -type f | wc -l
-```
-
-**Step 3: Scan for secrets before anything is staged**
-
-```bash
-brew install gitleaks
-gitleaks dir legacy/php --no-banner -v
-grep -rnEi "(password|passwd|secret|api[_-]?key|token)\s*[=:>]" legacy/php | grep -v getenv | head -50
-```
-
-For every hit with a literal credential: replace the value with `getenv('NAME')` style placeholder text (e.g. `'REDACTED'`) and note the file in `PROVENANCE.md`. Report to KC any credential that is real and still in use, so it can be rotated.
-
-**Step 4: Diff against PHPBox** and write `legacy/php/PROVENANCE.md`:
-
-```bash
-diff -rq ~/Documents/GitHub/PHPBox/www/scripture.guide legacy/php | grep -v scripture-guide-js > /tmp/php-diff.txt; wc -l /tmp/php-diff.txt
-```
-
-`PROVENANCE.md` contents: source host and path, copy date, rsync exclusions, the diff summary (count of files only in bom, only in PHPBox, differing), the redactions list, and: "Reference only. Not built or deployed from here. Delete after the Node cutover (Plan 2, Phase 6)."
-
-**Step 5: Commit**
-
-```bash
-gitleaks dir legacy/php --no-banner   # must report no leaks after redaction
-git add legacy/php && git commit -m "chore(legacy): snapshot live scripture.guide PHP from bom for parity reference"
-```
+The live PHP is in the private repo `kckern/scripture-guide-legacy` (141 files; fonts and slide images over 1 MB left out; one dead Jenkins token redacted; provenance in its README). It is not in this public repo: it contains editorial tools and private-schema details, and the parity harness compares the live sites over HTTP, so this repo never needs the PHP source. Read it from a local clone at `~/Documents/GitHub/scripture-guide-legacy` when porting a format.
 
 ### Task 1.9: CI for extension and web, and secret scanning
 
@@ -583,7 +542,6 @@ CMD ["node", "src/app.js"]
 **/node_modules
 **/.env
 .git
-legacy
 data
 docs
 apps/chrome-extension
@@ -859,7 +817,7 @@ mysqldump -h 127.0.0.1 -P 13306 -u sg_reader -p --no-data --skip-add-drop-table 
 grep -c "CREATE TABLE" data/seeds/schema.sql
 ```
 
-**Step 2: Remove tables not carried forward**: delete the `CREATE TABLE` blocks for `tmp_authorship`, `tmp_sentances`, `users`, `user_prefs`, and `social_queue`, plus any table the web app never queries. Before deleting `user_prefs`, run `grep -rn user_prefs apps/web/src legacy/php | head` and keep it if the web app reads it.
+**Step 2: Remove tables not carried forward**: delete the `CREATE TABLE` blocks for `tmp_authorship`, `tmp_sentances`, `users`, `user_prefs`, and `social_queue`, plus any table the web app never queries. Before deleting `user_prefs`, run `grep -rn user_prefs apps/web/src ~/Documents/GitHub/scripture-guide-legacy/php | head` and keep it if the web app reads it.
 
 **Step 3: Verify it loads**
 

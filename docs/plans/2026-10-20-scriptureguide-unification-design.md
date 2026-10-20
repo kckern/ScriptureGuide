@@ -41,7 +41,6 @@ ScriptureGuide/
 ├── data/seeds/                 public-domain texts, schema DDL, loader
 ├── scripts/editorial/          CLI replacements for PHP editorial tools
 ├── infra/                      Dockerfiles, compose, sphinx.conf, deploy scripts
-├── legacy/php/                 live PHP snapshot (reference only; removed after cutover)
 └── package.json                npm workspaces root
 ```
 
@@ -52,7 +51,7 @@ Steps:
 3. Move current contents into `packages/scripture-guide/` in one `git mv` commit.
 4. `git subtree add --prefix=apps/chrome-extension` from the extension repo (full history).
 5. `git filter-repo --subdirectory-filter www/scripture.guide/scripture-guide-js` on a PHPBox clone, then `git subtree add --prefix=apps/web`.
-6. Snapshot the live PHP from `bom` (not PHPBox) into `legacy/php/` as one commit, after diffing against PHPBox and scrubbing secrets.
+6. Snapshot the live PHP from `bom` (not PHPBox) into the private repo `kckern/scripture-guide-legacy` (reference only; it is not published because it includes editorial tools and private-schema details).
 7. Archive `ScriptureGuideChromeExtention`, `ScriptureGuideSearch`, `ScriptureGuideApp`, each with a README pointing to the new repo. Remove the AWS account ID from the archived `buildspec.yml`.
 
 Cleanups during the move: fix `npm test` (points at a missing `test/test.mjs`); move `mysql2` and `dotenv` to devDependencies; set the package `repository` to the new URL with `"directory": "packages/scripture-guide"`; publish 1.0.98.
@@ -122,7 +121,7 @@ Operations: exclude the container from Watchtower (deploys come from tagged rele
 4. Optional: mirror sampled production traffic to Node for a week and log diffs.
 5. Switch `scripture.guide` and `*.scripture.guide` to the Node container in nginx-proxy-manager. PHP stays up but unrouted.
 6. Rollback is one proxy change.
-7. After 30 days without rollback: delete `legacy/php/`, the PHPBox scripture.guide directory, and its vhost. Shut down the ECS search service after confirming it gets no traffic.
+7. After 30 days without rollback: archive `kckern/scripture-guide-legacy`, delete the PHPBox scripture.guide directory, and its vhost. Shut down the ECS search service after confirming it gets no traffic.
 
 ## 7. Testing
 
