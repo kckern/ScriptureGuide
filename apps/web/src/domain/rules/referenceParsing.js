@@ -44,6 +44,24 @@ export function bookKey(name) {
     .trim();
 }
 
+// Reference for titles and headings, in the PHP style: en dashes in ranges and verses of
+// the same chapter joined by commas ("John 3:16; 3:18" → "John 3:16,18").
+export function displayReference(normalized) {
+  const parts = String(normalized || '').split(/;\s*/).filter(Boolean);
+  const out = [];
+  let chapter = null;
+  for (const part of parts) {
+    const own = part.match(/^(.*?\s)?(\d+):(.+)$/);
+    if (own && !own[1] && own[2] === chapter && out.length) {
+      out[out.length - 1] += `,${own[3]}`;
+      continue;
+    }
+    out.push(part);
+    chapter = own ? own[2] : null;
+  }
+  return out.join('; ').replace(/(\d)-(\d)/g, '$1–$2');
+}
+
 // Display reference for rows { chapter, verse } of one book, in order.
 // wholeChapters: the rows cover whole chapters, so verses are omitted.
 export function formatReference(bookTitle, rows, wholeChapters) {

@@ -1,4 +1,5 @@
 import VerseSerializer from '../serializers/VerseSerializer.js';
+import { displayReference } from '../../domain/rules/referenceParsing.js';
 
 // Mirrors PHP scriptutil::versionIMG($ver, $verses)
 function versionIMG(version, volume) {
@@ -385,7 +386,7 @@ export class HtmlPresenter {
     return {
       reference: result.reference.normalized,
       // Page title: the reference with en dashes for ranges (PHP referenceFromVerseIds)
-      title: (result.reference.normalized || '').replace(/(\d)-(\d)/g, '$1\u2013$2'),
+      title: displayReference(result.reference.normalized),
       startsSection: (result.verses[0]?.text || '').startsWith('§'),
       faxIds: result.config._faxIds || [],
       typesByVerse,

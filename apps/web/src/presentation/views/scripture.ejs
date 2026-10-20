@@ -41,6 +41,7 @@ if (chapterH3Data && ch) {
 // Collect paragraph groups: each group is { fmt, spans[], h3, inlineItems[] }
 const paraGroups = [];
 let currentGroup = null;
+let prevVerseNum = null;
 
 data.verses.forEach(verse => {
   // h3 attaches to the segment that triggers the new section (isSection), not segment 0
@@ -50,12 +51,16 @@ data.verses.forEach(verse => {
     : null;
   // inlineItems only attach to first segment of each verse
   const inlineItems = (verse.segIndex === 0) ? (data.inlineByVerse[verse.id] || []) : [];
-  const hasBreak = h3 || verse.paraBreak || !currentGroup || (inlineItems.length > 0);
+  // Skipped verses (e.g. "John 3:16,18") get an hr.versebreak and a new paragraph
+  const firstPart = verse.segIndex === 0 && verse.lbIndex === 0;
+  const versebreak = firstPart && prevVerseNum != null && verse.num - prevVerseNum > 1;
+  if (firstPart) prevVerseNum = verse.num;
+  const hasBreak = h3 || verse.paraBreak || !currentGroup || (inlineItems.length > 0) || versebreak;
   const fmt = verse.format || 'prose';
   const fmtChange = currentGroup && fmt !== currentGroup.fmt;
 
   if (hasBreak || fmtChange) {
-    currentGroup = { fmt, spans: [], h3, inlineItems, ids: [] };
+    currentGroup = { fmt, spans: [], h3, inlineItems, ids: [], versebreak };
     paraGroups.push(currentGroup);
   }
 
@@ -130,6 +135,7 @@ if (data.prePassageH3) {
 
 const headerTypes = new Set(['headnote', 'summary', 'background', 'headnote_sub']);
 paraGroups.forEach(group => {
+  if (group.versebreak && current) current.body += `\n\t\t<hr class="versebreak"/>`;
   if (group.h3 || !current) {
     const id = group.h3 ? group.h3.verse_id : null;
     const t = group.h3 ? (id === ch?.verse_id ? { ...types(id), ...ch } : types(id)) : {};
