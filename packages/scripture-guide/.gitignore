@@ -1,0 +1,8 @@
+src/data/
+dist/*.cjs
+dist/*.mjs
+dist/*.map
+coverage/
+test_results/
+test-results.md
+_archive/

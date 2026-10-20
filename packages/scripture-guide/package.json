@@ -1,0 +1,68 @@
+{
+  "name": "scripture-guide",
+  "version": "1.0.98",
+  "description": "A utility for biblical and scripture reference parsing that enables structured queries based on strings of traditional scripture references (e.g. John 3:16).  ",
+  "main": "dist/scriptures.cjs",
+  "module": "dist/scriptures.mjs",
+  "types": "dist/scriptures.d.ts",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/scriptures.d.ts",
+      "import": "./dist/scriptures.mjs",
+      "require": "./dist/scriptures.cjs"
+    }
+  },
+  "scripts": {
+    "test": "npm run test:jest",
+    "build": "node build/build.mjs",
+    "embed": "node build/build.mjs",
+    "generate-coc-mapping": "node build/generate-coc-mapping.cjs",
+    "prepublishOnly": "npm run build",
+    "test:jest": "NODE_OPTIONS=--experimental-vm-modules jest",
+    "test:critical": "NODE_OPTIONS=--experimental-vm-modules jest --testPathPatterns='critical\\.test\\.js$'",
+    "test:edge": "NODE_OPTIONS=--experimental-vm-modules jest --testPathPatterns='edge-cases\\.test\\.js$'",
+    "test:known-issues": "NODE_OPTIONS=--experimental-vm-modules jest --testPathPatterns='known-issues\\.test\\.js$'",
+    "test:coverage": "NODE_OPTIONS=--experimental-vm-modules jest --coverage"
+  },
+  "author": "",
+  "license": "ISC",
+  "homepage": "https://scripture.guide",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/kckern/ScriptureGuide.git",
+    "directory": "packages/scripture-guide"
+  },
+  "keywords": [
+    "bible",
+    "old testament",
+    "new testament",
+    "scripture",
+    "reference",
+    "parsing",
+    "query",
+    "search",
+    "structured",
+    "string",
+    "lds",
+    "book of mormon",
+    "doctrine and covenants",
+    "pearl of great price"
+  ],
+  "files": [
+    "dist/scriptures.mjs",
+    "dist/scriptures.cjs",
+    "dist/scriptures.d.ts"
+  ],
+  "devDependencies": {
+    "dotenv": "^17.2.3",
+    "esbuild": "^0.27.2",
+    "glob": "^13.0.0",
+    "jest": "^30.2.0",
+    "js-yaml": "^4.1.1",
+    "mysql2": "^3.16.0"
+  },
+  "bugs": {
+    "url": "https://github.com/kckern/ScriptureGuide/issues"
+  }
+}
