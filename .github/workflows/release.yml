@@ -48,8 +48,8 @@ jobs:
           fi
           echo "tags=$tags" >> "$GITHUB_OUTPUT"
       - uses: docker/setup-qemu-action@v4
-      - uses: docker/setup-buildx-action@v3
-      - uses: docker/login-action@v3
+      - uses: docker/setup-buildx-action@v4
+      - uses: docker/login-action@v4
         with: { registry: ghcr.io, username: '${{ github.actor }}', password: '${{ secrets.GITHUB_TOKEN }}' }
       - id: build
         uses: docker/build-push-action@v6
@@ -96,7 +96,7 @@ jobs:
           CLIENT_SECRET: ${{ secrets.CWS_CLIENT_SECRET }}
           REFRESH_TOKEN: ${{ secrets.CWS_REFRESH_TOKEN }}
       - if: steps.v.outputs.release == 'true'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: chrome-extension-zip
           path: apps/chrome-extension/extension.zip
@@ -116,9 +116,9 @@ jobs:
       - if: steps.c.outputs.changed == 'true'
         uses: docker/setup-qemu-action@v4
       - if: steps.c.outputs.changed == 'true'
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@v4
       - if: steps.c.outputs.changed == 'true'
-        uses: docker/login-action@v3
+        uses: docker/login-action@v4
         with: { registry: ghcr.io, username: '${{ github.actor }}', password: '${{ secrets.GITHUB_TOKEN }}' }
       - if: steps.c.outputs.changed == 'true'
         uses: docker/build-push-action@v6
