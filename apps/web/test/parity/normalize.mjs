@@ -1,5 +1,6 @@
 // Canonical forms for comparing PHP and Node responses: differences in quoting,
 // attribute order, indentation and JSON key order are not parity failures.
+import { createHash } from 'node:crypto';
 import * as cheerio from 'cheerio';
 
 const collapse = s => s.replace(/\s+/g, ' ').trim();
@@ -51,4 +52,13 @@ export function compare(expected, actual) {
     if (e[i] !== a[i]) return { equal: false, line: i + 1, expected: e[i], actual: a[i] };
   }
   return { equal: false, line: 0 };
+}
+
+const TEXTUAL = /^(text\/|application\/(javascript|json|xml))/;
+export const isTextual = type => TEXTUAL.test(type);
+
+// CSS/JS are compared as text (line endings and trailing spaces ignored); fonts and images by hash.
+export function canonicalAsset(type, buf) {
+  if (isTextual(type)) return buf.toString('utf8').replace(/\r\n/g, '\n').replace(/[ \t]+$/gm, '').trimEnd();
+  return `sha256 ${createHash('sha256').update(buf).digest('hex')} ${buf.length} bytes`;
 }

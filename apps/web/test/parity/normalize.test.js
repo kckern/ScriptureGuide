@@ -1,5 +1,5 @@
 import { describe, test, expect } from 'vitest';
-import { canonicalHtml, canonicalJson, compare } from './normalize.mjs';
+import { canonicalHtml, canonicalJson, compare, canonicalAsset } from './normalize.mjs';
 
 describe('canonicalHtml', () => {
   test('ignores quote style, attribute order and whitespace between tags', () => {
@@ -32,5 +32,14 @@ describe('compare', () => {
   test('reports equal and the first differing line', () => {
     expect(compare('a\nb\nc', 'a\nb\nc')).toEqual({ equal: true });
     expect(compare('a\nb\nc', 'a\nX\nc')).toEqual({ equal: false, line: 2, expected: 'b', actual: 'X' });
+  });
+});
+
+describe('canonicalAsset', () => {
+  test('text assets ignore CRLF and trailing whitespace', () => {
+    expect(canonicalAsset('text/css', Buffer.from('a {}\r\nb {}  \r\n'))).toBe(canonicalAsset('text/css', Buffer.from('a {}\nb {}\n')));
+  });
+  test('binary assets compare by sha256', () => {
+    expect(canonicalAsset('font/woff', Buffer.from([1, 2, 3]))).toMatch(/^sha256 [0-9a-f]{64} 3 bytes$/);
   });
 });

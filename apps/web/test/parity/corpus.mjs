@@ -27,9 +27,25 @@ const EXTRA = [
   ['vbox', '/vbox?verse_id=26137&ver=LDS&seq=1'],
 ];
 
+// Static files the live pages reference (src=/href= in the cached pages), plus the fonts and
+// images the live CSS pulls in with url(). Off-site URLs (fonts.gstatic.com) are left out.
+const ASSETS = [
+  '/favicon.ico',
+  '/css/fax.css', '/css/featherlight.css', '/css/parallel.css', '/css/style.css', '/css/ui.css', '/css/versions.css',
+  '/js/audio.js', '/js/cookie.js', '/js/diff.js', '/js/diff_match_patch.js', '/js/fax.js', '/js/featherlight.js',
+  '/js/jplayer.js', '/js/main.js', '/js/parallel.js', '/js/scroll.js', '/js/tipsy.js',
+  '/img/audiooff.png', '/img/back.jpg', '/img/check.svg', '/img/chrome.png', '/img/copy.svg', '/img/diff.png',
+  '/img/green.png', '/img/numbers.png', '/img/paper.jpg', '/img/red.png', '/img/xref.png', '/img/yellow.png',
+  ...['Goudy-Bold', 'Goudy-Italic', 'Goudy-Regular'].flatMap(f => ['eot', 'svg', 'ttf', 'woff'].map(ext => `/css/webfont/${f}.${ext}`)),
+  '/css/webfont/ShadowsIntoLight.woff2',
+  '/css/webfont/SortsMillGoudy-Italic.woff', '/css/webfont/SortsMillGoudy-Regular.woff',
+  '/css/webfont/YanoneKaffeesatz-Bold.woff', '/css/webfont/YanoneKaffeesatz-Light.woff', '/css/webfont/YanoneKaffeesatz-Regular.woff',
+];
+
 export const corpus = [
   ...REFS.flatMap(ref => PER_REF_FORMATS.map(format => [format, '/' + ref])),
   ...EXTRA,
+  ...ASSETS.map(p => ['asset', p]),
 ];
 
 // Where each format lives on the live site, and the Host header the Node app should see.

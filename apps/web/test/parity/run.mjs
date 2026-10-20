@@ -11,7 +11,7 @@ import { mkdirSync, readFileSync, writeFileSync, existsSync, rmSync } from 'node
 import { fileURLToPath } from 'node:url';
 import * as cheerio from 'cheerio';
 import { corpus, hostFor } from './corpus.mjs';
-import { canonicalHtml, canonicalJson, compare } from './normalize.mjs';
+import { canonicalHtml, canonicalJson, canonicalAsset, isTextual, compare } from './normalize.mjs';
 
 const DIR = fileURLToPath(new URL('.', import.meta.url));
 // PARITY_CACHE lets several worktrees share one cache of live responses.
@@ -38,7 +38,10 @@ function get(url, headers = {}) {
       mod.get(url, { headers, timeout: 30000 }, res => {
         const chunks = [];
         res.on('data', c => chunks.push(c));
-        res.on('end', () => resolve({ status: res.statusCode, type: res.headers['content-type'] || '', body: Buffer.concat(chunks).toString('utf8') }));
+        res.on('end', () => {
+          const buf = Buffer.concat(chunks);
+          resolve({ status: res.statusCode, type: res.headers['content-type'] || '', buf, body: buf.toString('utf8') });
+        });
       }).on('error', reject).on('timeout', function () { this.destroy(new Error('timeout')); }));
     req.catch(reject);
   });
@@ -47,10 +50,16 @@ function get(url, headers = {}) {
 async function live(format, path) {
   const url = `${LIVE_SCHEME}://${hostFor(format)}${path}`;
   const file = CACHE + createHash('sha1').update(url).digest('hex') + '.json';
-  if (!refresh && existsSync(file)) return JSON.parse(readFileSync(file, 'utf8'));
+  if (!refresh && existsSync(file)) {
+    // Text bodies are cached as utf8 `body`; binary ones (fonts, images) as `bodyBase64`.
+    const c = JSON.parse(readFileSync(file, 'utf8'));
+    const buf = c.bodyBase64 !== undefined ? Buffer.from(c.bodyBase64, 'base64') : Buffer.from(c.body, 'utf8');
+    return { status: c.status, type: c.type, buf, body: buf.toString('utf8') };
+  }
   await new Promise(r => setTimeout(r, 250));
   const res = await get(url, { 'User-Agent': 'scripture-guide-parity/1 (Chrome)' });
-  writeFileSync(file, JSON.stringify(res));
+  const { status, type, buf, body } = res;
+  writeFileSync(file, JSON.stringify(isTextual(type.split(';')[0]) ? { status, type, body } : { status, type, bodyBase64: buf.toString('base64') }));
   return res;
 }
 
@@ -78,6 +87,7 @@ function canonical(format, res) {
     case 'versionselect':
     case 'vbox':
     case 'notes': return canonicalHtml(body);
+    case 'asset': return canonicalAsset(res.type.split(';')[0], res.buf);
     default: return body.replace(/[ \t]+$/gm, '');
   }
 }
