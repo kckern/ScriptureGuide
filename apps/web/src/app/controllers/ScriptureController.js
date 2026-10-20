@@ -1,5 +1,5 @@
 import scriptureLookupService from '../../services/ScriptureLookupService.js';
-import searchRepository from '../../data/repositories/SearchRepository.js';
+import searchParallelController from './SearchParallelController.js';
 import outputMiddleware from '../middleware/output.js';
 
 export class ScriptureController {
@@ -9,19 +9,14 @@ export class ScriptureController {
 
   async show(req, res, next) {
     try {
+      // Parallel (a~b) and search pages
+      if (await searchParallelController.dispatch(req, res)) return;
+
       const config = req.config || {};
-      // req.config.reference is parsed from the whole path (version spec, shortcuts, =/, random);
-      // parallel requests keep the raw route parameter until the parallel view handles them.
+      // req.config.reference is parsed from the whole path (version spec, shortcuts, =/, random).
       const reference = config.parallel ? req.params.reference : (config.reference ?? req.params.reference);
 
       if (!reference && !config.parallel) return this.home(req, res);
-
-      if (config.search && !config.parallel) {
-        const query = reference.replace(/\./g, ' ').trim();
-        const version = config.version || 'LDS';
-        const { results, totals, total, terms } = await searchRepository.search(query, version);
-        return res.render('search', { query, results, totals, total, terms, config });
-      }
 
       const result = await this.lookupService.lookup(reference, config);
 
