@@ -5,7 +5,7 @@ import referenceService from './ReferenceService.js';
 import { ScriptureLookupService } from './ScriptureLookupService.js';
 import verseRepository from '../data/repositories/VerseRepository.js';
 import parallelRepository from '../data/repositories/ParallelRepository.js';
-import { arrayText, verseLines } from './text/flattenText.js';
+import { arrayText, splitVerseLines } from '../domain/rules/legacyText.js';
 import { formatReference, slugifyRef, versionImg } from '../domain/rules/legacyReference.js';
 
 // A left side with no verses, or one of these years, is an edition: "1830~msg/john1"
@@ -259,7 +259,7 @@ export class ParallelService {
       let lastId = null, gap = [];
       for (const r of rows) {
         const id = Number(r.verse_id);
-        const lines = verseLines(r.text);
+        const lines = splitVerseLines(r.text);
         if (lines.length && lines.every(l => l === '*')) {
           if (lastId == null) continue;
           gap.push(id);

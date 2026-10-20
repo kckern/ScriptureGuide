@@ -5,10 +5,9 @@
 import rawRepository from '../../../data/repositories/RawRepository.js';
 import { legacyRequest } from '../../legacy/request.js';
 import { resolveBlock } from '../../legacy/passages.js';
-import { flattenText, plainPassage } from '../../legacy/flattenText.js';
+import { plainLine, plainPassage } from '../../../domain/rules/legacyText.js';
 import { blocksFor } from './meta.js';
 
-const plainLine = s => (flattenText(s) + ' ').replace(/\s+/g, ' ');
 
 async function blockText(block, versions, repo) {
   if (!block.verse_ids.length) {

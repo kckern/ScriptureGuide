@@ -1,23 +1,71 @@
 import { describe, it, expect } from 'vitest';
 import {
-  flattenText, stemText, transposeRef, baseVersion, highlightSearchTerm, escapeHtml,
+  flattenText, splitVerseLines, arrayText, plainText, plainPassage,
+  stemText, transposeRef, baseVersion, highlightSearchTerm, escapeHtml,
 } from '../../src/domain/rules/legacyText.js';
 
 // Fixtures are KJV (public domain) or hand-written.
 describe('flattenText (scriptutil::flattenText)', () => {
-  it('drops paragraph/section markers and smallcaps brackets', () => {
+  it('drops section and paragraph markers and smallcaps brackets', () => {
+    expect(flattenText('§¶｟In｠ the beginning God created the heaven and the earth.'))
+      .toBe('In the beginning God created the heaven and the earth.');
     expect(flattenText('§¶｟And｠ it came to pass after these things')).toBe('And it came to pass after these things');
   });
-  it('turns linebreak markers and repeated spaces into one space', () => {
+  it('drops footnote markers and tags, keeps <br/> as a newline', () => {
+    expect(flattenText('the <i>Word</i>｢12｣ was God')).toBe('the Word was God');
+    expect(flattenText('<span class="smallcaps">Lord</span> said')).toBe('Lord said');
+    expect(flattenText('word｢12｣ next<br/>line')).toBe('word next\nline');
+  });
+  it('turns line and verse separators and repeated spaces into one space', () => {
+    expect(flattenText('The Lord is my shepherd;/I shall not want.')).toBe('The Lord is my shepherd; I shall not want.');
+    expect(flattenText('a || b')).toBe('a b');
     expect(flattenText('/Blessed are the meek:/_for they shall inherit the earth.')).toBe(' Blessed are the meek: for they shall inherit the earth.');
     expect(flattenText('in  him')).toBe('in him');
+    expect(flattenText('｟The｠ word_ of｢12｣ God|said')).toBe('The word of God said');
   });
-  it('strips tags and keeps curly quotes', () => {
+  it('removes underscores and struck-out text', () => {
+    expect(flattenText('_indented ~~gone~~text')).toBe('indented text');
+    expect(flattenText('a ~~b~~ c')).toBe('a c');
+  });
+  it('adds a space after punctuation run together between letters', () => {
+    expect(flattenText('first,second.third')).toBe('first, second. third');
+    expect(flattenText('end.Next')).toBe('end. Next');
+  });
+  it('drops digits that follow Korean letters, or any non-ASCII character (PHP byte regex)', () => {
+    expect(flattenText('안녕하세요1 세계')).toBe('안녕하세요 세계');
+    expect(flattenText('people—200,000 men')).toBe('people—,000 men');
+  });
+  it('keeps typographic quotes and dashes', () => {
+    expect(flattenText('the Lord’s house—“yea”')).toBe('the Lord’s house—“yea”');
     expect(flattenText('<span class="smallcaps">Lord</span> said, “Behold”')).toBe('Lord said, “Behold”');
   });
-  it('removes ~~struck~~ text and adds a space after punctuation between letters', () => {
-    expect(flattenText('a ~~b~~ c')).toBe('a c');
-    expect(flattenText('one,two')).toBe('one, two');
+});
+
+describe('verse lines (scriptures::formattedData)', () => {
+  it('splitVerseLines splits on paragraph meta and line breaks, skipping empties', () => {
+    expect(splitVerseLines('§¶A Psalm of David.¶▼The Lord is my shepherd,/I shall not want.'))
+      .toEqual(['A Psalm of David.', 'The Lord is my shepherd,', 'I shall not want.']);
+    expect(splitVerseLines('§¶In the beginning/God created¶▼the heaven')).toEqual(['In the beginning', 'God created', 'the heaven']);
+  });
+  it('arrayText prefixes each line with a space, as renderArray does', () => {
+    expect(arrayText('§¶｟The｠ word that Isaiah saw.')).toBe(' The word that Isaiah saw.');
+    expect(arrayText('¶one/two')).toBe(' one two');
+  });
+  it('plainText joins lines with single spaces and trims', () => {
+    expect(plainText('§¶In the beginning/ God created  the heaven.')).toBe('In the beginning God created the heaven.');
+  });
+});
+
+describe('plainPassage (renderText for one passage)', () => {
+  it('joins verse lines with single spaces and keeps a trailing space', () => {
+    const verses = [
+      { text: '§¶｟In｠ the beginning God created the heaven and the earth.' },
+      { text: 'And the earth was without form, and void.' },
+    ];
+    expect(plainPassage(verses)).toBe('In the beginning God created the heaven and the earth. And the earth was without form, and void. ');
+  });
+  it('skips gap verses marked with an asterisk', () => {
+    expect(plainPassage([{ text: 'a' }, { text: '*' }, { text: 'b' }])).toBe('a b ');
   });
 });
 

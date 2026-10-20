@@ -1,21 +1,7 @@
 // Version format override ("/kjv*niv/..." = KJV text in NIV paragraphing and line
 // format), from scriptures::scriptureData and scriptutil::flattenText in the PHP site.
 
-const KEEP = 'a-z0-9가-힣àèìòùÀÈÌÒÙáéíóúýÁÉÍÓÚÝâêîôûÂÊÎÔÛãñõÃÑÕäëïöüÿÄËÏÖÜŸçÇßØøÅåÆæœ ‘’“”––—−‐!-~\\n';
-const STRIP = new RegExp(`[^${KEEP}]|_`, 'gu');
-
-// Plain text without markup characters, tags or footnote markers
-export function flattenText(text) {
-  let t = String(text ?? '').replace(/\n/g, '');
-  t = t.replace(/<br\/>/g, '\n').replace(/<[^>]*>/g, '');
-  t = t.replace(/｢\d+｣/gu, '');
-  t = t.replace(STRIP, '');
-  t = t.replace(/~~(.*?)~~/g, '');
-  t = t.replace(/([| /])+/g, ' ');
-  t = t.replace(/([가-힣])\d+/gu, '$1');
-  t = t.replace(/([a-z])([.,;])([a-z])/giu, '$1$2 $3');
-  return t;
-}
+import { flattenText } from './legacyText.js';
 
 /**
  * Re-format text rows with the paragraphing/format of another version.

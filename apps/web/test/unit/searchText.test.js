@@ -1,7 +1,6 @@
 import { describe, test, expect } from 'vitest';
 import { stem } from '../../src/services/search/porterStemmer.js';
 import { tokenize, queryStems, matchesAll, stemPrefix } from '../../src/services/search/matcher.js';
-import { flattenText, plainText, arrayText, verseLines } from '../../src/services/text/flattenText.js';
 
 describe('porter stemmer', () => {
   test.each([
@@ -34,22 +33,5 @@ describe('Sphinx-style matcher', () => {
   test('stem prefixes cover the words that share the stem', () => {
     expect('happy'.startsWith(stemPrefix(stem('happiness')))).toBe(true);
     expect('charity'.startsWith(stemPrefix(stem('charities')))).toBe(true);
-  });
-});
-
-describe('verse text flattening', () => {
-  test('flattenText drops markup characters and keeps letters and punctuation', () => {
-    expect(flattenText('｟The｠ word_ of｢12｣ God|said')).toBe('The word of God said');
-    expect(flattenText('end.Next')).toBe('end. Next');
-  });
-  test('splits lines at paragraph markers and line breaks', () => {
-    expect(verseLines('§¶In the beginning/God created¶▼the heaven')).toEqual(['In the beginning', 'God created', 'the heaven']);
-  });
-  test('arrayText prefixes each line with a space, as renderArray does', () => {
-    expect(arrayText('§¶｟The｠ word that Isaiah saw.')).toBe(' The word that Isaiah saw.');
-    expect(arrayText('¶one/two')).toBe(' one two');
-  });
-  test('plainText joins lines with single spaces and trims', () => {
-    expect(plainText('§¶In the beginning/ God created  the heaven.')).toBe('In the beginning God created the heaven.');
   });
 });
