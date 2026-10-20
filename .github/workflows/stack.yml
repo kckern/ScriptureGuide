@@ -9,7 +9,7 @@ jobs:
   compose:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Start seeded stack with Sphinx
         run: docker compose -f infra/docker-compose.yml --profile search up -d --build --wait --wait-timeout 300 db web
       - name: Start Sphinx (indexes the seeded verses)

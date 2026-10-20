@@ -16,7 +16,7 @@ jobs:
   changesets:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: actions/setup-node@v4
         with: { node-version: '20', cache: 'npm', registry-url: 'https://registry.npmjs.org' }
       - run: npm ci
@@ -37,7 +37,7 @@ jobs:
   web-image:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with: { fetch-depth: 2 }
       - id: v
         run: |
@@ -71,7 +71,7 @@ jobs:
     env:
       HAS_CWS: ${{ secrets.CWS_CLIENT_ID != '' }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with: { fetch-depth: 2 }
       - id: v
         run: |
@@ -105,7 +105,7 @@ jobs:
   seed-image:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with: { fetch-depth: 0 }
       - id: c
         env: { BEFORE: '${{ github.event.before }}' }
