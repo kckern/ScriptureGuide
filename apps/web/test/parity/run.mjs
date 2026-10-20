@@ -2,7 +2,7 @@
 // Parity harness: fetch each corpus request from the live PHP site and from the Node app,
 // normalize both, and report per format.
 //
-//   NODE_BASE=http://127.0.0.1:3101 node test/parity/run.mjs [--format api,meta] [--only john] [--refresh] [--verbose]
+//   NODE_BASE=http://127.0.0.1:3101 node test/parity/run.mjs [--corpus traffic] [--format api,meta] [--only john] [--refresh] [--verbose]
 //
 // The Node app must run against a full copy of the database (see test/parity/README.md).
 import http from 'node:http';
@@ -15,7 +15,8 @@ import { canonicalHtml, canonicalJson, canonicalAsset, mediaType, encodeCacheEnt
 
 const DIR = fileURLToPath(new URL('.', import.meta.url));
 // PARITY_CACHE lets several worktrees share one cache of live responses.
-const CACHE = (process.env.PARITY_CACHE || DIR + '.cache') + '/live/';
+const CACHE_ROOT = process.env.PARITY_CACHE || DIR + '.cache';
+const CACHE = CACHE_ROOT + '/live/';
 const DIFFS = DIR + '.cache/diffs/';
 const NODE_BASE = process.env.NODE_BASE || 'http://127.0.0.1:3101';
 const LIVE_SCHEME = process.env.LIVE_SCHEME || 'https';
@@ -26,7 +27,21 @@ const formats = opt('--format')?.split(',');
 const only = opt('--only');
 const refresh = args.includes('--refresh');
 const verbose = args.includes('--verbose');
+// --corpus traffic: requests sampled from access logs by traffic.mjs, instead of the built-in list.
+const corpusName = opt('--corpus') ?? 'builtin';
+const requests = loadCorpus(corpusName);
 const allow = existsSync(DIR + 'allow.json') ? JSON.parse(readFileSync(DIR + 'allow.json', 'utf8')) : {};
+
+function loadCorpus(name) {
+  if (name === 'builtin') return corpus;
+  if (name !== 'traffic') { console.error(`unknown --corpus ${name} (builtin, traffic)`); process.exit(2); }
+  const file = CACHE_ROOT + '/traffic.json';
+  if (!existsSync(file)) {
+    console.error(`${file} is missing. Build it from access logs first:\n  node test/parity/traffic.mjs <access.log…> > ${file}`);
+    process.exit(2);
+  }
+  return JSON.parse(readFileSync(file, 'utf8'));
+}
 
 mkdirSync(CACHE, { recursive: true });
 rmSync(DIFFS, { recursive: true, force: true }); // stale diffs look like current failures
@@ -95,7 +110,7 @@ function safe(format, res) {
 }
 
 const results = [];
-for (const [format, path] of corpus) {
+for (const [format, path] of requests) {
   if (formats && !formats.includes(format)) continue;
   if (only && !path.includes(only)) continue;
   const key = `${format} ${path}`;
@@ -107,7 +122,9 @@ for (const [format, path] of corpus) {
     const c = compare(expected, actual);
     verdict = c.equal ? 'pass' : allow[key] ? 'allowed' : 'fail';
     if (!c.equal) {
-      const name = `${format}__${path.replace(/[^a-z0-9]+/gi, '_')}`;
+      // long traffic paths would overflow the filename limit: truncate and add a hash
+      let name = `${format}__${path.replace(/[^a-z0-9]+/gi, '_')}`;
+      if (name.length > 120) name = name.slice(0, 100) + '_' + createHash('sha1').update(key).digest('hex').slice(0, 12);
       writeFileSync(DIFFS + name + '.live.txt', expected);
       writeFileSync(DIFFS + name + '.node.txt', actual);
     }
