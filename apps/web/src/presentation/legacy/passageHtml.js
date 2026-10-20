@@ -6,21 +6,32 @@ import HtmlPresenter from '../presenters/HtmlPresenter.js';
 
 const presenter = new HtmlPresenter();
 
-// Inner HTML of the first <div class="passage ver_{version}">, balancing nested divs.
-export function passageInner(html, version) {
-  const open = new RegExp(`<div\\s+class=["']passage ver_${version.replace(/[^\w*]/g, '\\$&')}["'][^>]*>`);
-  const m = open.exec(html);
-  if (!m) return null;
-  const start = m.index + m[0].length;
-  const tag = /<(\/?)div\b[^>]*>/gi;
-  tag.lastIndex = start;
-  let depth = 1;
-  let t;
-  while ((t = tag.exec(html))) {
-    depth += t[1] ? -1 : 1;
-    if (depth === 0) return html.slice(start, t.index);
+// Inner HTML of every <div class="passage ver_{version}">, in page order, balancing nested divs.
+// A passage spanning several headings renders one such div per heading.
+export function passageInners(html, version) {
+  const open = new RegExp(`<div\\s+class=["']passage ver_${version.replace(/[^\w*]/g, '\\$&')}["'][^>]*>`, 'g');
+  const found = [];
+  let m;
+  while ((m = open.exec(html))) {
+    const start = m.index + m[0].length;
+    const tag = /<(\/?)div\b[^>]*>/gi;
+    tag.lastIndex = start;
+    let depth = 1;
+    let t;
+    while ((t = tag.exec(html))) {
+      depth += t[1] ? -1 : 1;
+      if (depth === 0) break;
+    }
+    if (!t) break;
+    found.push(html.slice(start, t.index));
+    open.lastIndex = tag.lastIndex;
   }
-  return null;
+  return found;
+}
+
+// Inner HTML of the first passage div for the version.
+export function passageInner(html, version) {
+  return passageInners(html, version)[0] ?? null;
 }
 
 // Render the page for one result the way the html format would, capturing the output.
@@ -50,5 +61,5 @@ export async function passageHtml(req, res, reference, version) {
   const config = { ...(req.config || {}), version };
   const result = await scriptureLookupService.lookup(reference, config);
   const page = await renderPage(req, res, result);
-  return passageInner(page, version) ?? '';
+  return passageInners(page, version);
 }

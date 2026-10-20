@@ -1,5 +1,5 @@
 import { describe, test, expect } from 'vitest';
-import { passageInner } from '../../src/presentation/legacy/passageHtml.js';
+import { passageInner, passageInners } from '../../src/presentation/legacy/passageHtml.js';
 
 describe('passageInner', () => {
   const page = `<html><body><div id="container"><div class="scriptures"><div class="section">
@@ -25,5 +25,19 @@ describe('passageInner', () => {
 
   test('null when there is no passage div', () => {
     expect(passageInner('<div>nothing</div>', 'KJV')).toBeNull();
+  });
+});
+
+describe('passageInners', () => {
+  test('returns every passage div for the version, in order, skipping other versions', () => {
+    const page = `<div class="section">
+      <div class="passage ver_KJV"><h3>A</h3><div><p>1</p></div></div>
+      <div class="passage ver_">nav</div>
+      <div class="passage ver_KJV"><h3>B</h3><p>2</p></div></div>`;
+    expect(passageInners(page, 'KJV')).toEqual(['<h3>A</h3><div><p>1</p></div>', '<h3>B</h3><p>2</p>']);
+  });
+
+  test('empty when there is no passage div', () => {
+    expect(passageInners('<div>nothing</div>', 'KJV')).toEqual([]);
   });
 });

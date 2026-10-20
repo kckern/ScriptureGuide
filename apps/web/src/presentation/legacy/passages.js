@@ -29,9 +29,11 @@ export async function scripturesHtml(req, res, blocks, versions) {
       html += `\n\t\t<div class='passage ver_'>\n\t\t\t<h3>\n\t\t\t${block.orig}\n\t\t\t</h3>` +
         "\n\t\t\t<p>\n\t\t\t<span class='verse'>No scripture verses found.</span>\n\t\t\t</p>\n\t\t</div>";
     } else {
-      html += `\n\t\t<div class='passage ver_${resolved.version}'>`;
-      html += (await passageHtml(req, res, blockReference(block), resolved.version)).replace(/\s+$/, '');
-      html += '\n\t\t</div>';
+      for (const inner of await passageHtml(req, res, blockReference(block), resolved.version)) {
+        html += `\n\t\t<div class='passage ver_${resolved.version}'>`;
+        html += inner.replace(/\s+$/, '');
+        html += '\n\t\t</div>';
+      }
     }
     html += '\n\t</div>';
   }

@@ -7,7 +7,7 @@
 // The Node app must run against a full copy of the database (see test/parity/README.md).
 import http from 'node:http';
 import { createHash } from 'node:crypto';
-import { mkdirSync, readFileSync, writeFileSync, existsSync } from 'node:fs';
+import { mkdirSync, readFileSync, writeFileSync, existsSync, rmSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import * as cheerio from 'cheerio';
 import { corpus, hostFor } from './corpus.mjs';
@@ -29,6 +29,7 @@ const verbose = args.includes('--verbose');
 const allow = existsSync(DIR + 'allow.json') ? JSON.parse(readFileSync(DIR + 'allow.json', 'utf8')) : {};
 
 mkdirSync(CACHE, { recursive: true });
+rmSync(DIFFS, { recursive: true, force: true }); // stale diffs look like current failures
 mkdirSync(DIFFS, { recursive: true });
 
 function get(url, headers = {}) {
@@ -66,7 +67,11 @@ function canonical(format, res) {
       const container = $('#container').length ? canonicalHtml(body, '#container') : canonicalHtml(body, 'body');
       return `TITLE ${title}\n${container}`;
     }
-    case 'api': return canonicalJson(body, ['output']);
+    case 'api': {
+      // ?output_only returns the HTML as a bare JSON string.
+      const parsed = JSON.parse(body);
+      return typeof parsed === 'string' ? canonicalHtml(parsed) : canonicalJson(body, ['output']);
+    }
     case 'meta':
     case 'raw': return canonicalJson(body);
     case 'passage':

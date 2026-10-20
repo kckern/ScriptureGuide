@@ -1,5 +1,4 @@
 {
-  "api /john.3.16?output_only": "Body is a bare JSON string of HTML, which run.mjs compares byte for byte (canonicalJson only canonicalizes HTML under object keys), so PHP's tab/newline layout would have to match exactly. The same HTML is compared canonically as the output key of api /john.3.16; remove this entry if the harness learns to canonicalize a top-level api string.",
   "html /": "Home page cleanups kept: no leftover value=\"Test\" in the search box (JS replaces it on load), no fbclid tracking parameter on the Chrome Web Store link, line-height typo fixed",
   "passage /passage?ref=Matthew%205&version=NIV": "PHP single_heading bug: passage_script.php drops the first verse (or verse part) of every section after the first, e.g. Matthew 5:2b, 13, 17, 21. Node keeps all verses and shows only the first heading."
 }
