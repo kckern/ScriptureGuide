@@ -8,6 +8,14 @@
 
 **Design:** `docs/plans/2026-10-20-scriptureguide-unification-design.md`
 
+## Status (2026-10-20)
+
+Phase 5 complete for every live format. Parity harness against the live site: **165 pass, 2 allowed, 0 fail** of 167 requests (html 26+1, api 25, meta 22, raw 22, plain 23, latex 22, passage 1+1, versionselect 1, vbox 1). Beyond the corpus, each stream spot-checked roughly 30 more live URLs (search, parallel, notes, LaTeX one-offs, AJAX). Web unit tests: 276.
+
+Allowed differences (`apps/web/test/parity/allow.json`): the home page keeps three markup cleanups; the NIV Matthew 5 passage keeps verses PHP's `single_heading` mode drops.
+
+Not ported, waiting on the owner: audio, img/imgc, fax (asset location), saving preferences (no login model). Staging (Phase 6 step 1) is prepared in the private infrastructure repo.
+
 ## What the live site actually serves (surveyed 2026-10-20)
 
 | Format | Live state | Phase 5 target |
