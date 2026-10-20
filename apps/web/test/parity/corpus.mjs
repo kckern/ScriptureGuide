@@ -27,15 +27,18 @@ const EXTRA = [
   ['vbox', '/vbox?verse_id=26137&ver=LDS&seq=1'],
 ];
 
-// Static files the live pages reference (src=/href= in the cached pages), plus the fonts and
-// images the live CSS pulls in with url(). Off-site URLs (fonts.gstatic.com) are left out.
+// Static files the live pages reference (src=/href= in the cached pages and the parallel page's
+// book_open.png), plus the fonts and images the live CSS pulls in with url() and the images the
+// live JS inserts (main.js: ref/ver.png; audio.js: audio.gif, audioplay.png). Off-site URLs
+// (fonts.gstatic.com) are left out.
 const ASSETS = [
   '/favicon.ico',
   '/css/fax.css', '/css/featherlight.css', '/css/parallel.css', '/css/style.css', '/css/ui.css', '/css/versions.css',
   '/js/audio.js', '/js/cookie.js', '/js/diff.js', '/js/diff_match_patch.js', '/js/fax.js', '/js/featherlight.js',
   '/js/jplayer.js', '/js/main.js', '/js/parallel.js', '/js/scroll.js', '/js/tipsy.js',
-  '/img/audiooff.png', '/img/back.jpg', '/img/check.svg', '/img/chrome.png', '/img/copy.svg', '/img/diff.png',
-  '/img/green.png', '/img/numbers.png', '/img/paper.jpg', '/img/red.png', '/img/xref.png', '/img/yellow.png',
+  '/img/audio.gif', '/img/audiooff.png', '/img/audioplay.png', '/img/back.jpg', '/img/book_open.png', '/img/check.svg',
+  '/img/chrome.png', '/img/copy.svg', '/img/diff.png', '/img/green.png', '/img/numbers.png', '/img/paper.jpg',
+  '/img/red.png', '/img/ref.png', '/img/ver.png', '/img/xref.png', '/img/yellow.png',
   ...['Goudy-Bold', 'Goudy-Italic', 'Goudy-Regular'].flatMap(f => ['eot', 'svg', 'ttf', 'woff'].map(ext => `/css/webfont/${f}.${ext}`)),
   '/css/webfont/ShadowsIntoLight.woff2',
   '/css/webfont/SortsMillGoudy-Italic.woff', '/css/webfont/SortsMillGoudy-Regular.woff',

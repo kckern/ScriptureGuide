@@ -11,7 +11,7 @@ import { mkdirSync, readFileSync, writeFileSync, existsSync, rmSync } from 'node
 import { fileURLToPath } from 'node:url';
 import * as cheerio from 'cheerio';
 import { corpus, hostFor } from './corpus.mjs';
-import { canonicalHtml, canonicalJson, canonicalAsset, isTextual, compare } from './normalize.mjs';
+import { canonicalHtml, canonicalJson, canonicalAsset, mediaType, encodeCacheEntry, decodeCacheEntry, compare } from './normalize.mjs';
 
 const DIR = fileURLToPath(new URL('.', import.meta.url));
 // PARITY_CACHE lets several worktrees share one cache of live responses.
@@ -50,16 +50,10 @@ function get(url, headers = {}) {
 async function live(format, path) {
   const url = `${LIVE_SCHEME}://${hostFor(format)}${path}`;
   const file = CACHE + createHash('sha1').update(url).digest('hex') + '.json';
-  if (!refresh && existsSync(file)) {
-    // Text bodies are cached as utf8 `body`; binary ones (fonts, images) as `bodyBase64`.
-    const c = JSON.parse(readFileSync(file, 'utf8'));
-    const buf = c.bodyBase64 !== undefined ? Buffer.from(c.bodyBase64, 'base64') : Buffer.from(c.body, 'utf8');
-    return { status: c.status, type: c.type, buf, body: buf.toString('utf8') };
-  }
+  if (!refresh && existsSync(file)) return decodeCacheEntry(JSON.parse(readFileSync(file, 'utf8')));
   await new Promise(r => setTimeout(r, 250));
   const res = await get(url, { 'User-Agent': 'scripture-guide-parity/1 (Chrome)' });
-  const { status, type, buf, body } = res;
-  writeFileSync(file, JSON.stringify(isTextual(type.split(';')[0]) ? { status, type, body } : { status, type, bodyBase64: buf.toString('base64') }));
+  writeFileSync(file, JSON.stringify(encodeCacheEntry(res)));
   return res;
 }
 
@@ -87,7 +81,10 @@ function canonical(format, res) {
     case 'versionselect':
     case 'vbox':
     case 'notes': return canonicalHtml(body);
-    case 'asset': return canonicalAsset(res.type.split(';')[0], res.buf);
+    case 'asset': {
+      const type = mediaType(res.type);
+      return `TYPE ${type}\n` + canonicalAsset(type, res.buf);
+    }
     default: return body.replace(/[ \t]+$/gm, '');
   }
 }

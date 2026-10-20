@@ -1,5 +1,5 @@
 import { describe, test, expect } from 'vitest';
-import { canonicalHtml, canonicalJson, compare, canonicalAsset } from './normalize.mjs';
+import { canonicalHtml, canonicalJson, compare, canonicalAsset, encodeCacheEntry, decodeCacheEntry } from './normalize.mjs';
 
 describe('canonicalHtml', () => {
   test('ignores quote style, attribute order and whitespace between tags', () => {
@@ -41,5 +41,28 @@ describe('canonicalAsset', () => {
   });
   test('binary assets compare by sha256', () => {
     expect(canonicalAsset('font/woff', Buffer.from([1, 2, 3]))).toMatch(/^sha256 [0-9a-f]{64} 3 bytes$/);
+  });
+  test('SVG is compared as text', () => {
+    expect(canonicalAsset('image/svg+xml', Buffer.from('<svg/>  \r\n'))).toBe('<svg/>');
+  });
+});
+
+describe('cache entries', () => {
+  test('an old entry with a string body decodes to the same bytes', () => {
+    const body = 'héllo <b>world</b>';
+    const res = decodeCacheEntry({ status: 200, type: 'text/html', body });
+    expect(res.buf.equals(Buffer.from(body, 'utf8'))).toBe(true);
+    expect(res.body).toBe(body);
+  });
+  test('binary bodies round-trip through base64', () => {
+    const buf = Buffer.from([0, 255, 128, 10, 13]);
+    const entry = encodeCacheEntry({ status: 200, type: 'font/woff', buf });
+    expect(entry.body).toBeUndefined();
+    expect(typeof entry.bodyBase64).toBe('string');
+    expect(decodeCacheEntry(JSON.parse(JSON.stringify(entry))).buf.equals(buf)).toBe(true);
+  });
+  test('textual bodies stay a utf8 string body', () => {
+    const entry = encodeCacheEntry({ status: 200, type: 'text/css; charset=UTF-8', buf: Buffer.from('a {}') });
+    expect(entry).toEqual({ status: 200, type: 'text/css; charset=UTF-8', body: 'a {}' });
   });
 });

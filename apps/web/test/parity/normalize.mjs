@@ -54,11 +54,24 @@ export function compare(expected, actual) {
   return { equal: false, line: 0 };
 }
 
-const TEXTUAL = /^(text\/|application\/(javascript|json|xml))/;
-export const isTextual = type => TEXTUAL.test(type);
+const TEXTUAL = /^(text\/|application\/(javascript|json|xml))|\+xml$/;
+// "Text/CSS; charset=UTF-8" -> "text/css"
+export const mediaType = type => (type || '').split(';')[0].trim().toLowerCase();
+export const isTextual = type => TEXTUAL.test(mediaType(type));
 
-// CSS/JS are compared as text (line endings and trailing spaces ignored); fonts and images by hash.
+// CSS/JS/SVG are compared as text (line endings and trailing spaces ignored); fonts and images by hash.
 export function canonicalAsset(type, buf) {
   if (isTextual(type)) return buf.toString('utf8').replace(/\r\n/g, '\n').replace(/[ \t]+$/gm, '').trimEnd();
   return `sha256 ${createHash('sha256').update(buf).digest('hex')} ${buf.length} bytes`;
+}
+
+// Cached live responses: text bodies as a utf8 `body` string (the original format, so older
+// cache files still read), binary bodies (fonts, images) as `bodyBase64`.
+export function encodeCacheEntry({ status, type, buf }) {
+  return isTextual(type) ? { status, type, body: buf.toString('utf8') } : { status, type, bodyBase64: buf.toString('base64') };
+}
+
+export function decodeCacheEntry({ status, type, body, bodyBase64 }) {
+  const buf = bodyBase64 !== undefined ? Buffer.from(bodyBase64, 'base64') : Buffer.from(body, 'utf8');
+  return { status, type, buf, body: buf.toString('utf8') };
 }
