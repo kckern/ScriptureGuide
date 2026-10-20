@@ -1,59 +1,21 @@
-import { OutputFormat } from '../../domain/enums/OutputFormat.js';
+import { parseHost, formatForSubdomain } from '../../domain/rules/requestParsing.js';
 import { coverRequest } from '../../presentation/presenters/formats/cover.js';
 
 // Retired subdomains (empty or one-off PHP pages).
 const GONE = new Set(['hub', 'slide']);
 
-// Map subdomains to output formats
-const SUBDOMAIN_FORMATS = {
-  api: OutputFormat.API,
-  json: OutputFormat.API,
-  meta: OutputFormat.META,
-  raw: OutputFormat.RAW,
-  plain: OutputFormat.PLAIN,
-  markdown: OutputFormat.MARKDOWN,
-  xml: OutputFormat.XML,
-  latex: OutputFormat.LATEX,
-  notes: OutputFormat.NOTES,
-  audio: OutputFormat.AUDIO,
-  cover: OutputFormat.COVER,
-};
-
-// Known version prefixes (sample - expand as needed)
-const VERSION_PREFIXES = new Set([
-  'kjv', 'esv', 'niv', 'nasb', 'nlt', 'msg', 'nkjv', 'rsv', 'asv',
-  'bom', 'dc', 'pogp'
-]);
-
+// Host-level parsing: the first label is the subdomain (output format); extra labels
+// between it and the domain are flags (api.plain.scripture.guide → plain=1).
+// Path shortcuts (/api/..., /img/...) are applied later by configMiddleware.
 export function subdomainMiddleware(req, res, next) {
-  const host = req.hostname || '';
-  const parts = host.split('.');
-
-  // Default values
-  req.outputFormat = OutputFormat.HTML;
-  req.defaultVersion = null;
-
-  if (parts.length > 2) {
-    const subdomain = parts[0].toLowerCase();
-
-    if (GONE.has(subdomain)) {
-      return res.status(410).type('text/plain').send(`${subdomain}.scripture.guide is no longer available.\n`);
-    }
-    if (subdomain === 'cover') {
-      req.outputFormat = OutputFormat.COVER;
-      return coverRequest(req, res, next);
-    }
-
-    // Check if subdomain is an output format
-    if (SUBDOMAIN_FORMATS[subdomain]) {
-      req.outputFormat = SUBDOMAIN_FORMATS[subdomain];
-    }
-    // Check if subdomain is a version prefix
-    else if (VERSION_PREFIXES.has(subdomain)) {
-      req.defaultVersion = subdomain.toUpperCase();
-    }
+  const { subdomain, flags } = parseHost(req.headers.host || req.hostname || '');
+  if (GONE.has(subdomain)) {
+    return res.status(410).type('text/plain').send(`${subdomain}.scripture.guide is no longer available.\n`);
   }
-
+  req.subdomain = subdomain;
+  req.hostFlags = flags;
+  req.outputFormat = formatForSubdomain(subdomain);
+  if (subdomain === 'cover') return coverRequest(req, res, next);
   next();
 }
 

@@ -1,4 +1,5 @@
 import VerseSerializer from '../serializers/VerseSerializer.js';
+import { displayReference, blankHeading } from '../../domain/rules/referenceParsing.js';
 
 // Mirrors PHP scriptutil::versionIMG($ver, $verses)
 function versionIMG(version, volume) {
@@ -14,10 +15,13 @@ function versionIMG(version, volume) {
 export class HtmlPresenter {
   present(result, req, res) {
     const data = this.serialize(result);
-    const title = result.reference.normalized || 'Scripture Guide';
+    // No verses: the title is the reference as requested (index.php)
+    const title = data.title || req?.config?.reference || result.reference.query || '';
     const ogMeta = this._buildOgMeta(result, data, title, req);
+    const sections = result.sections ? result.sections.map(r => this.serialize(r)) : null;
     res.render('scripture', {
       data,
+      sections,
       config: result.config,
       title,
       ogMeta
@@ -173,7 +177,8 @@ export class HtmlPresenter {
             h.slug = `${version}/${bookSlugForH3}.${h3Chapter}`;
             h.ref = `${bookName} ${h3Chapter}`;
           }
-        } else if (crossChapterMatch && h.verse_id <= (result.verses[0]?.id ?? 0) + 1) {
+        } else if (crossChapterMatch && h.verse_id <= (result.verses[0]?.id ?? 0) + 1 &&
+            (vChapterMap[Math.min(h.last, passageLastVerseId)] ?? h3Chapter) !== h3Chapter) {
           // Cross-chapter range (e.g. "Genesis 1:1-2:3"): format as chapter-range slug
           // This applies to the heading at the start of the passage that spans multiple chapters.
           const startVerse = parseInt(crossChapterMatch[1]);
@@ -243,6 +248,18 @@ export class HtmlPresenter {
         }
       }
     });
+
+    // Format override ("/niv*kjv/..."): headings loaded from the format version link as TEXT*FORMAT
+    const headingVersion = result.config.headingVersion;
+    const mixVer = headingVersion && headingVersion !== version ? `${version}*${headingVersion}` : null;
+    if (mixVer) {
+      for (const h of h3Headings) {
+        if (h.synthetic || h.preSectionSynthetic || !h.text) continue;
+        h.ver = mixVer;
+        h.headVersion = headingVersion;
+        if (h.slug) h.slug = h.slug.replace(/^[^/]+\//, `${mixVer}/`);
+      }
+    }
 
     // Index h3 headings by verse_id for EJS lookup
     const h3ByVerse = {};
@@ -321,6 +338,7 @@ export class HtmlPresenter {
           preH3Slug = bookSlugForH3 && chToUse ? `${version}/${bookSlugForH3}.${chToUse}` : '';
         }
       }
+      if (mixVer && preH3Slug) preH3Slug = preH3Slug.replace(/^[^/]+\//, `${mixVer}/`);
       prePassageH3 = {
         verse_id: ch.verse_id,
         text: ch.heading || '',
@@ -333,7 +351,8 @@ export class HtmlPresenter {
         ellipsisLast: chLast,
         headless: false,
         img,
-        ver: version,
+        ver: mixVer || version,
+        headVersion: mixVer ? headingVersion : undefined,
         tver: version,
         audio: ch.audio > 0 ? 1 : 0,
         parallel: ch._prePassageParallel || null
@@ -358,8 +377,22 @@ export class HtmlPresenter {
       inlineByVerse[h.verse_id].push(h);
     }
 
+    // Heading types (title, summary, headnote, ...) by verse_id, for the header rows of each passage
+    const typesByVerse = {};
+    for (const h of result.headings) {
+      if (h.synthetic || h.preSectionSynthetic || !h.type || h.text == null) continue;
+      (typesByVerse[h.verse_id] ??= {})[h.type] = h.text;
+    }
+
     return {
       reference: result.reference.normalized,
+      // Page title: the reference with en dashes for ranges (PHP referenceFromVerseIds)
+      title: displayReference(result.reference.normalized),
+      // Heading for a reference block that matched no verses (scriptures::blankData)
+      blank: result.verses.length ? null : blankHeading(result.reference.query),
+      startsSection: (result.verses[0]?.text || '').startsWith('§'),
+      faxIds: result.config._faxIds || [],
+      typesByVerse,
       query: result.reference.query,
       volume: result.reference.volume,
       version,
@@ -388,6 +421,8 @@ export class HtmlPresenter {
           return lbParts.map((part, lbIdx) => ({
             id: v.id,
             num: v.verseNum,
+            chapter: v.chapter,
+            mixmatch: v.mixmatch,
             text: VerseSerializer.formatHtml(part.text),
             format: segFormat,
             lbClass: part.lbClass,

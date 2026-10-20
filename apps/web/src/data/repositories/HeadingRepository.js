@@ -171,28 +171,28 @@ export class HeadingRepository {
     return heading;
   }
 
-  // Chapter nav: get first verse of prev and next chapters
-  async findChapterNav(firstVerseId, lastVerseId) {
-    const [prev] = await db.query(
-      `SELECT v.verse_id, v.chapter, b.book_title_short as book, b.lds_org as slug
+  // Verse-index rows around a passage, for chapter nav: the first verse, the verse
+  // before it, and the verse after the last one.
+  async findChapterNavRows(firstVerseId, lastVerseId) {
+    const rows = await db.query(
+      `SELECT v.verse_id, v.volume_id, v.chapter, b.book_title, b.book_title_short
        FROM lds_scriptures_verses v
        JOIN lds_scriptures_books b ON v.book_id = b.book_id
-       WHERE v.verse_id < ? ORDER BY v.verse_id DESC LIMIT 1`,
-      [firstVerseId]
+       WHERE v.verse_id IN (?)`,
+      [[firstVerseId - 1, firstVerseId, lastVerseId + 1]]
     );
+    const by = id => rows.find(r => r.verse_id === id) || null;
+    return { prev: by(firstVerseId - 1), current: by(firstVerseId), next: by(lastVerseId + 1) };
+  }
 
-    const [next] = await db.query(
-      `SELECT v.verse_id, v.chapter, b.book_title_short as book, b.lds_org as slug
-       FROM lds_scriptures_verses v
-       JOIN lds_scriptures_books b ON v.book_id = b.book_id
-       WHERE v.verse_id > ? ORDER BY v.verse_id ASC LIMIT 1`,
-      [lastVerseId]
+  // Verse ids (of those given) that have a facsimile image for this version
+  async findFaxVerseIds(verseIds, version) {
+    if (!verseIds || !verseIds.length || !version) return [];
+    const rows = await db.query(
+      'SELECT DISTINCT verse_id FROM scripture_faxindex WHERE version = ? AND verse_id IN (?)',
+      [version, verseIds]
     );
-
-    return {
-      prev: prev ? { verseId: prev.verse_id, label: `${prev.book} ${prev.chapter}`, slug: `${prev.slug}.${prev.chapter}` } : null,
-      next: next ? { verseId: next.verse_id, label: `${next.book} ${next.chapter}`, slug: `${next.slug}.${next.chapter}` } : null
-    };
+    return rows.map(r => Number(r.verse_id));
   }
 
   // Book info for a verse — used for slug/heading computation
@@ -310,6 +310,15 @@ export class HeadingRepository {
     const rows = await db.query(
       'SELECT MIN(verse_id) AS first, MAX(verse_id) AS last FROM lds_scriptures_verses WHERE book_id = ? AND chapter = ?',
       [bookId, chapter]
+    );
+    return rows[0]?.first ? { first: rows[0].first, last: rows[0].last } : null;
+  }
+
+  // First and last verse_id of a book
+  async findBookBounds(bookId) {
+    const rows = await db.query(
+      'SELECT MIN(verse_id) AS first, MAX(verse_id) AS last FROM lds_scriptures_verses WHERE book_id = ?',
+      [bookId]
     );
     return rows[0]?.first ? { first: rows[0].first, last: rows[0].last } : null;
   }

@@ -1,5 +1,5 @@
 export class ScriptureResult {
-  constructor({ reference, verses, headings = [], chapterHeading = null, chapterNav = null, annotations = [], config = {} }) {
+  constructor({ reference, verses, headings = [], chapterHeading = null, chapterNav = null, annotations = [], config = {}, sections = null }) {
     this.reference = reference;
     this.verses = verses;
     this.headings = headings;
@@ -7,6 +7,9 @@ export class ScriptureResult {
     this.chapterNav = chapterNav;
     this.annotations = annotations;
     this.config = config;
+    // For several references separated by ";": one ScriptureResult per reference, in order.
+    // The top-level fields then hold the combined reference, verses and headings.
+    this.sections = sections;
   }
 
   get isEmpty() {
