@@ -13,7 +13,7 @@
     "scripture-guide": "^1.0.98"
   },
   "devDependencies": {
-    "@babel/core": "^7.22.0",
+    "@babel/core": "^8.0.7",
     "@babel/preset-env": "^7.22.0",
     "babel-jest": "^30.5.2",
     "babel-loader": "^9.1.0",
