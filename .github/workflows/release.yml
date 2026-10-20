@@ -2,6 +2,7 @@ name: release
 on:
   push:
     branches: [master]
+  workflow_dispatch:
 concurrency: release-${{ github.ref }}
 permissions:
   contents: write
@@ -105,10 +106,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-        with: { fetch-depth: 2 }
+        with: { fetch-depth: 0 }
       - id: c
+        env: { BEFORE: '${{ github.event.before }}' }
         run: |
-          if git diff --name-only HEAD^1 HEAD | grep -qE '^(data/seeds/|infra/seed/)'; then echo "changed=true" >> "$GITHUB_OUTPUT"; fi
+          # Compare the whole push, not just its last commit. A new branch has an all-zero "before".
+          if [ "${{ github.event_name }}" = workflow_dispatch ] || ! git cat-file -e "$BEFORE^{commit}" 2>/dev/null; then echo "changed=true" >> "$GITHUB_OUTPUT"; exit 0; fi
+          if git diff --name-only "$BEFORE" HEAD | grep -qE '^(data/seeds/|infra/seed/)'; then echo "changed=true" >> "$GITHUB_OUTPUT"; fi
       - if: steps.c.outputs.changed == 'true'
         uses: docker/setup-qemu-action@v3
       - if: steps.c.outputs.changed == 'true'
