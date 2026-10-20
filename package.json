@@ -10,6 +10,14 @@
   },
   "scripts": {
     "build": "npm run build --workspaces --if-present",
-    "test": "npm run build -w scripture-guide && npm test --workspaces --if-present"
+    "test": "npm run build -w scripture-guide && npm test --workspaces --if-present",
+    "version-packages": "changeset version && npm run sync-manifest -w scripture-guide-chrome-extension && npm install --package-lock-only",
+    "release": "changeset publish"
+  },
+  "devDependencies": {
+    "@changesets/cli": "^2.31.1"
+  },
+  "overrides": {
+    "human-id": "4.0.0"
   }
 }
