@@ -169,7 +169,7 @@ describe('traffic corpus', () => {
 - `parseLine`: NPM log_format is `[$time_local] $upstream_cache_status $upstream_status $status - $request_method $scheme $host "$request_uri" …`; regex `^\[[^\]]+\] .*? (\d{3}) - ([A-Z]+) \S+ (\S+) "([^"]*)"` takes the client `$status` (so `HIT - 200` is kept, `BYPASS 502, 200 200` parses, `BYPASS 200 499` is dropped); keep GET with status 200; drop paths matching `^/(js|css|img|fonts?)/|\.(js|css|png|jpe?g|gif|svg|ico|woff2?|ttf|eot)$`.
 - `format` from host via `formatForSubdomain` (`src/domain/rules/requestParsing.js`).
 - `shapeOf(path)`: replace version prefixes `/[a-z0-9*.]+/` with `/V/`, digits runs with `9`, letters runs with `a`, so `/kjv/john.3.16` → `/V/a.9.9`.
-- `sample(reqs, n)`: group by `format + shapeOf(path)`, sort each group by path, take the first n.
+- `sample(reqs, n)`: group by `format + shapeOf(path)`; probes collapse into one `probe` group per format (at most 2 samples); rank groups and the paths inside them by distinct client IPs, then hits, then path; take the first n per group.
 - CLI: `node test/parity/traffic.mjs <access.log> [more…] > test/parity/.cache/traffic.json` (gunzip `.gz` inputs).
 
 **Step 3:** vitest → PASS.
