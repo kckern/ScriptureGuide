@@ -1,6 +1,9 @@
 <%
 const version = data.version || 'KJV';
-const showNums = config.includeVerseNumbers !== false;
+
+// Renders one reference block (a "section"): its passages and chapter nav.
+function renderSection(data) {
+const version = data.version || 'KJV';
 const ch = data.chapterHeading;
 const nav = data.chapterNav;
 
@@ -56,12 +59,13 @@ data.verses.forEach(verse => {
     paraGroups.push(currentGroup);
   }
 
-  const ref = `${data.book || ''} ${data.chapter || ''}:${verse.num}`.trim();
+  const vChapter = verse.chapter ?? data.chapter;
+  const ref = `${data.book || ''} ${vChapter || ''}:${verse.num}`.trim();
   const bookSlug = (data.book || '').toLowerCase().replace(/\s+/g, '-');
-  const verseClass = `${bookSlug}-${data.chapter}-${verse.num}`;
+  const verseClass = `${bookSlug}-${vChapter}-${verse.num}`;
   // verse_label only on first segment and first linebreak part; second+ get no attr
   // Note: <sup class="vnum"> is NOT rendered server-side — JS adds it from verse_label attr
-  const verseLabel = (verse.segIndex === 0 && verse.lbIndex === 0) ? (verse.num === 1 ? `${data.chapter}:${verse.num}` : verse.num) : null;
+  const verseLabel = (verse.segIndex === 0 && verse.lbIndex === 0) ? (verse.num === 1 ? `${vChapter}:${verse.num}` : verse.num) : null;
   const verseLabelAttr = verseLabel !== null ? ` verse_label="${verseLabel}"` : '';
   const lbClassStr = verse.lbClass ? ` ${verse.lbClass}` : '';
   const span = `<span class="verse v_${verse.id} ${fmt}${lbClassStr} ${verseClass}" verse_id="${verse.id}" ref="${ref}" version="${version}"${verseLabelAttr}>${verse.text}</span>`;
@@ -168,6 +172,14 @@ if (nav) {
   if (nav.next) links += `<a href="${nav.next.href}" class="next">${nav.next.label} ▶</a>`;
   passagesHtml += `\n      <div class="passage ver_">\n\t\t<div class="chapterNav">${links}</div>\n      </div>`;
 }
+return passagesHtml;
+}
+
+// Several references separated by ";" render as sections divided by an hr.
+const sectionList = (typeof sections !== 'undefined' && sections) ? sections : [data];
+const sectionsHtml = sectionList
+  .map(d => `\n    <div class="section">${renderSection(d)}\n    </div>`)
+  .join(`\n    <hr class="sectionbreak"/>`);
 %>
 <%- include('layouts/main', {
   title: data.title,
@@ -177,9 +189,7 @@ if (nav) {
   body: `
 <div id="container">
   <div class="scriptures">
-    <div class="section">
-${passagesHtml}
-    </div>
+${sectionsHtml}
   </div>
 </div>
 <div class="containerCopy">

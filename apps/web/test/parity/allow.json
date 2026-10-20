@@ -1,1 +1,3 @@
-{}
+{
+  "html /": "Home page cleanups kept: no leftover value=\"Test\" in the search box (JS replaces it on load), no fbclid tracking parameter on the Chrome Web Store link, line-height typo fixed"
+}

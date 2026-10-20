@@ -16,8 +16,10 @@ export class HtmlPresenter {
     const data = this.serialize(result);
     const title = data.title || 'Scripture Guide';
     const ogMeta = this._buildOgMeta(result, data, title, req);
+    const sections = result.sections ? result.sections.map(r => this.serialize(r)) : null;
     res.render('scripture', {
       data,
+      sections,
       config: result.config,
       title,
       ogMeta
@@ -173,7 +175,8 @@ export class HtmlPresenter {
             h.slug = `${version}/${bookSlugForH3}.${h3Chapter}`;
             h.ref = `${bookName} ${h3Chapter}`;
           }
-        } else if (crossChapterMatch && h.verse_id <= (result.verses[0]?.id ?? 0) + 1) {
+        } else if (crossChapterMatch && h.verse_id <= (result.verses[0]?.id ?? 0) + 1 &&
+            (vChapterMap[Math.min(h.last, passageLastVerseId)] ?? h3Chapter) !== h3Chapter) {
           // Cross-chapter range (e.g. "Genesis 1:1-2:3"): format as chapter-range slug
           // This applies to the heading at the start of the passage that spans multiple chapters.
           const startVerse = parseInt(crossChapterMatch[1]);
@@ -400,6 +403,7 @@ export class HtmlPresenter {
           return lbParts.map((part, lbIdx) => ({
             id: v.id,
             num: v.verseNum,
+            chapter: v.chapter,
             text: VerseSerializer.formatHtml(part.text),
             format: segFormat,
             lbClass: part.lbClass,

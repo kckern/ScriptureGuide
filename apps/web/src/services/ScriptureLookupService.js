@@ -23,7 +23,50 @@ export class ScriptureLookupService {
     return { bookSlug: m[1].toLowerCase(), chapter: parseInt(m[2]), verseStart: m[3] ? parseInt(m[3]) : null, verseEnd: m[4] ? parseInt(m[4]) : null };
   }
 
+  // Split "john.3.16; gen.1.1" into blocks; a block without a book takes the previous one's.
+  splitBlocks(referenceString) {
+    const pieces = String(referenceString || '').split(';').map(p => p.trim()).filter(Boolean);
+    if (pieces.length < 2) return null;
+    const blocks = [];
+    let prevBook = null;
+    for (const piece of pieces) {
+      let text = piece;
+      let ref = this.referenceService.parse(text);
+      if (ref.isEmpty && prevBook) {
+        text = `${prevBook} ${piece}`;
+        ref = this.referenceService.parse(text);
+      }
+      if (!ref.isEmpty) prevBook = ref.book;
+      blocks.push(text);
+    }
+    return blocks;
+  }
+
   async lookup(referenceString, config = {}) {
+    const blocks = config._block ? null : this.splitBlocks(referenceString);
+    if (blocks) {
+      const sections = [];
+      for (const block of blocks) {
+        sections.push(await this.lookup(block, { ...config, _block: true, _multiBlock: true }));
+      }
+      const found = sections.filter(r => !r.reference.isEmpty);
+      const first = found[0] || sections[0];
+      return new ScriptureResult({
+        reference: new Reference({
+          query: referenceString,
+          normalized: found.map(r => r.reference.normalized).join('; '),
+          verseIds: found.flatMap(r => r.reference.verseIds),
+        }),
+        verses: found.flatMap(r => r.verses),
+        headings: found.flatMap(r => r.headings),
+        chapterHeading: first.chapterHeading,
+        chapterNav: null,
+        annotations: [],
+        config: first.config,
+        sections,
+      });
+    }
+
     let reference = this.referenceService.parse(referenceString);
 
     // Fallback: if the package doesn't know the book, try DB slug lookup
@@ -96,7 +139,7 @@ export class ScriptureLookupService {
         const firstVerseText = verseRows[0]?.text || '';
         const isNewSection = firstVerseText.startsWith('§¶');
         chapterHeading = await this.headingRepository.findChapterHeading(firstVerseId, bookId, version, isNewSection);
-        if (wantsChapterNav(reference.normalized) && !/[,;:]/.test(referenceString)) {
+        if (!config._multiBlock && wantsChapterNav(reference.normalized) && !/[,;:]/.test(referenceString)) {
           chapterNav = chapterNavLinks({
             ...(await this.headingRepository.findChapterNavRows(firstVerseId, lastVerseId)),
             versionSpec: config.versionSpec || null,
@@ -178,6 +221,30 @@ export class ScriptureLookupService {
                 synthetic: true,
                 _wholeChapter: true,
                 _chapterNum: chNum
+              });
+            }
+          } else if (verseRows.slice(1).some(r => (r.text || '').startsWith('§'))) {
+            // A verse range that crosses into a new section (e.g. Gen 1:30-2:3 in LDS):
+            // PHP starts a new headless heading at every verse that begins with §.
+            const groups = [];
+            verseRows.forEach((r, i) => {
+              if (i === 0 || (r.text || '').startsWith('§')) groups.push([]);
+              groups[groups.length - 1].push(r);
+            });
+            for (const g of groups) {
+              const chNum = g[0].chapter;
+              const bounds = await this.headingRepository.findChapterBounds(bookId, chNum);
+              headings.push({
+                verse_id: g[0].verse_id,
+                type: 'heading',
+                text: `${reference.book} ${chNum}`,
+                last_verse_id: g[g.length - 1].verse_id,
+                version,
+                book_id: bookId,
+                synthetic: true,
+                _chapterNum: chNum,
+                _chapterVerseId: bounds?.first ?? g[0].verse_id,
+                _chapterLast: bounds?.last ?? g[g.length - 1].verse_id
               });
             }
           } else {
@@ -280,7 +347,7 @@ export class ScriptureLookupService {
             const verseNums = actualIds.map(id => vNumMap[id]).filter(v => v != null);
             // endChapter: chapter of the last verse in the range (for cross-chapter DST slug detection)
             const endChapter = vChapterMap[extendedEnd] ?? hChapter;
-            return { from: h.verse_id, to: queryTo, ids: actualIds, verseNums, bookSlug: bookPart, chapter: hChapter, endChapter, firstVerse: fv, lastVerse: lv, rangeLastVerse, zeroLength: isZeroLength, synthetic: !!h.synthetic, wholeChapter: isWholeChapter, dstSlugOverride };
+            return { from: h.verse_id, to: queryTo, ids: actualIds, verseNums, bookSlug: bookPart, chapter: hChapter, endChapter, firstVerse: fv, lastVerse: lv, rangeLastVerse, zeroLength: isZeroLength, synthetic: !!h.synthetic, wholeChapter: isWholeChapter, dstSlugOverride: endChapter !== hChapter ? dstSlugOverride : null };
           });
 
           const parallelMap = await this.headingRepository.findParallels(ranges, version);
