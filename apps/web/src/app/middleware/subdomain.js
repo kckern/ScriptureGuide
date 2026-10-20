@@ -2,14 +2,17 @@ import { OutputFormat } from '../../domain/enums/OutputFormat.js';
 
 // Map subdomains to output formats
 const SUBDOMAIN_FORMATS = {
-  api: OutputFormat.JSON,
-  json: OutputFormat.JSON,
-  xml: OutputFormat.XML,
-  latex: OutputFormat.LATEX,
+  api: OutputFormat.API,
+  json: OutputFormat.API,
+  meta: OutputFormat.META,
+  raw: OutputFormat.RAW,
   plain: OutputFormat.PLAIN,
   markdown: OutputFormat.MARKDOWN,
+  xml: OutputFormat.XML,
+  latex: OutputFormat.LATEX,
+  notes: OutputFormat.NOTES,
   audio: OutputFormat.AUDIO,
-  raw: OutputFormat.RAW
+  cover: OutputFormat.COVER,
 };
 
 // Known version prefixes (sample - expand as needed)

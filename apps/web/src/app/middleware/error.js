@@ -15,7 +15,7 @@ export function errorHandler(err, req, res, next) {
     : err.message;
 
   // Check if request wants JSON
-  if (req.config?.outputFormat === 'json' || req.accepts('json')) {
+  if (req.config?.outputFormat === 'api' || req.accepts('json')) {
     return res.status(status).json({
       error: message,
       status

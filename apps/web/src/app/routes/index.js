@@ -58,10 +58,10 @@ router.get('/health', (req, res) => {
 });
 
 // Path-based format prefixes: /api/John3:16, /xml/John3:16, etc.
-const FORMAT_PREFIXES = ['api', 'json', 'xml', 'plain', 'markdown', 'latex', 'raw', 'audio'];
+const FORMAT_PREFIXES = ['api', 'json', 'meta', 'raw', 'plain', 'markdown', 'xml', 'latex', 'notes', 'audio', 'cover'];
 FORMAT_PREFIXES.forEach(fmt => {
   router.get(`/${fmt}/:reference(*)`,
-    (req, res, next) => { req.outputFormat = fmt === 'api' ? 'json' : fmt; next(); },
+    (req, res, next) => { req.outputFormat = fmt === 'json' ? 'api' : fmt; next(); },
     configMiddleware,
     (req, res, next) => scriptureController.show(req, res, next),
     outputMiddleware

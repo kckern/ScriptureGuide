@@ -13,7 +13,8 @@
     "dev": "node --watch src/app.js",
     "test": "vitest run --passWithNoTests",
     "test:watch": "vitest --watch",
-    "lint": "eslint src/"
+    "lint": "eslint src/",
+    "parity": "node test/parity/run.mjs"
   },
   "keywords": [
     "bible",
@@ -39,6 +40,7 @@
     "scripture-guide": "^1.0.98"
   },
   "devDependencies": {
+    "cheerio": "^1.1.0",
     "eslint": "^8.56.0",
     "supertest": "^6.3.3",
     "vitest": "^4.1.12"

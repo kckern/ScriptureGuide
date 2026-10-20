@@ -1,16 +1,26 @@
 import { OutputFormat } from '../../domain/enums/OutputFormat.js';
 import HtmlPresenter from '../../presentation/presenters/HtmlPresenter.js';
-import JsonPresenter from '../../presentation/presenters/JsonPresenter.js';
 
-const presenters = {
-  [OutputFormat.HTML]: new HtmlPresenter(),
-  [OutputFormat.JSON]: new JsonPresenter()
-  // TODO: Add other presenters as implemented
-};
+// Format registry: a format is implemented by src/presentation/presenters/formats/<format>.js,
+// whose default export has present(result, req, res). Formats without a module render HTML.
+const html = new HtmlPresenter();
+const loaded = new Map();
+
+async function presenterFor(format) {
+  if (format === OutputFormat.HTML) return html;
+  if (!loaded.has(format)) {
+    loaded.set(format, import(`../../presentation/presenters/formats/${format}.js`)
+      .then(m => m.default)
+      .catch(err => {
+        if (err.code !== 'ERR_MODULE_NOT_FOUND') throw err;
+        return html;
+      }));
+  }
+  return loaded.get(format);
+}
 
 export function outputMiddleware(req, res) {
   const format = req.config?.outputFormat || OutputFormat.HTML;
-  const presenter = presenters[format] || presenters[OutputFormat.HTML];
 
   if (!req.scriptureResult) {
     return res.status(404).render('error', {
@@ -19,7 +29,12 @@ export function outputMiddleware(req, res) {
     });
   }
 
-  presenter.present(req.scriptureResult, req, res);
+  presenterFor(format)
+    .then(presenter => presenter.present(req.scriptureResult, req, res))
+    .catch(err => {
+      console.error('Presenter error:', err);
+      if (!res.headersSent) res.status(500).send('Internal error');
+    });
 }
 
 export default outputMiddleware;

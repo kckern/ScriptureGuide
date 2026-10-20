@@ -1,6 +1,6 @@
-import VerseSerializer from '../serializers/VerseSerializer.js';
+import VerseSerializer from '../../serializers/VerseSerializer.js';
 
-export class JsonPresenter {
+export class ApiPresenter {
   present(result, req, res) {
     const data = this.serialize(result);
     res.json(data);
@@ -21,4 +21,4 @@ export class JsonPresenter {
   }
 }
 
-export default JsonPresenter;
+export default new ApiPresenter();
