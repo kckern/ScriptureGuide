@@ -1,26 +1,69 @@
-// Text helpers ported from the PHP site's scriptutil.php.inc and versebox.php.
+// Text helpers ported from the PHP site's scriptutil.php.inc, scriptures.php.inc and versebox.php.
 // They reproduce the PHP output exactly; comments name the PHP function each one mirrors.
 
 // Characters flattenText keeps: ASCII printable, Latin accents, Hangul, curly quotes, dashes, newline.
-const FLATTEN_DROP = /[^a-z0-9가-힣àèìòùÀÈÌÒÙáéíóúýÁÉÍÓÚÝâêîôûÂÊÎÔÛãñõÃÑÕäëïöüÿÄËÏÖÜŸçÇßØøÅåÆæœ ‘’“”––—−‐!-~\n]|_/gu;
+const FLATTEN_DROP = /[^a-z0-9가-힣àèìòùÀÈÌÒÙáéíóúýÁÉÍÓÚÝâêîôûÂÊÎÔÛãñõÃÑÕäëïöüÿÄËÏÖÜŸçÇßØøÅåÆæœ ‘’“”–—−‐!-~\n]|_/gu;
+
+// PHP strip_tags for the simple markup stored in verse text: "<" followed by whitespace is not a tag.
+export function stripTags(text) {
+  return String(text).replace(/<[^\s>][^>]*>/g, '');
+}
 
 // scriptutil::flattenText — strip markup and scripture markers down to plain words.
 export function flattenText(text) {
-  if (text == null) return '';
-  let t = String(text).replace(/\n/g, '');
+  let t = String(text ?? '').replace(/\n/g, '');
   t = stripTags(t.replace(/<br\/>/g, '\n'));
   t = t.replace(/｢\d+｣/gu, '');
   t = t.replace(FLATTEN_DROP, '');
   t = t.replace(/~~(.*?)~~/g, '');
-  t = t.replace(/[| /]+/g, ' ');
-  t = t.replace(/([가-힣])\d+/gu, '$1');
-  t = t.replace(/([a-z])([.,;])([a-z])/giu, '$1$2 $3');
+  t = t.replace(/([| /])+/g, ' ');
+  // PHP ran /([가-힣])\d+/ without the u flag, so it matched the last byte of any
+  // multibyte character: digits after any non-ASCII character are dropped ("—200" → "—").
+  t = t.replace(/([^\x00-\x7f])\d+/gu, '$1');
+  t = t.replace(/([a-z])([.,;])([a-z])/gi, '$1$2 $3');
   return t;
 }
 
-// PHP strip_tags for the simple markup stored in verse text.
-export function stripTags(html) {
-  return String(html).replace(/<\/?[a-z!][^>]*>/gi, '');
+// scriptures::formattedData splits a verse into lines at paragraph/section markers and "/" line
+// breaks; each non-empty line becomes one span. A line of exactly "*" folds the verse into the
+// previous one (a gap verse).
+const LINE_SPLIT = /(?:[§‾▲]*¶[▲▼◤►◄↪]*|\/|\\)/u;
+
+export function splitVerseLines(text) {
+  return String(text ?? '').split(LINE_SPLIT).filter(line => line !== '' && line !== '0');
+}
+
+// renderArray (output=array, the parallel view): each line's flattened text after a space.
+export function arrayText(text) {
+  return splitVerseLines(text).filter(l => l !== '*').map(l => ' ' + flattenText(l)).join('');
+}
+
+// renderTextElement for one span: flattened content plus a space, whitespace collapsed.
+export function plainLine(line) {
+  return (flattenText(line) + ' ').replace(/\s+/g, ' ');
+}
+
+// renderText for one passage (one meta block, plain.scripture.guide): verses in order, "*" gap
+// lines skipped, each line collapsed on its own.
+export function plainPassage(verses) {
+  let text = '';
+  for (const v of verses) {
+    for (const line of splitVerseLines(v.text)) {
+      if (line === '*') continue;
+      text += plainLine(line);
+    }
+  }
+  return text;
+}
+
+// renderText for one verse as the search page shows it: whitespace collapsed across lines, trimmed.
+export function plainText(text) {
+  let out = '';
+  for (const line of splitVerseLines(text)) {
+    if (line === '*') continue;
+    out = (out + flattenText(line) + ' ').replace(/\s+/g, ' ');
+  }
+  return out.trim();
 }
 
 // versebox.php stemText/callb — wrap each word in <span stem='…'> for the client-side diff.
@@ -32,28 +75,12 @@ export function stemText(text) {
   });
 }
 
-// scriptutil::slufigyRef — "Gen. 22:1–14" → "gen.22.1-14".
-export function slugifyRef(ref) {
-  return String(ref)
-    .toLowerCase()
-    .replace(/[\s.:]+/g, '.')
-    .replace(/([;,])\./g, '$1')
-    .replace(/–/g, '-');
-}
-
 // scriptutil::transposeRef — "Mark 5" read as JST becomes "JST Mark 5", and the reverse.
 export function transposeRef(ref, ver) {
   const r = ref == null ? '' : String(ref);
   if (ver === 'JST' && !/jst/i.test(r)) return `JST ${r}`;
   if (ver !== 'JST' && /jst/i.test(r)) return r.replace(/jst/gi, '');
   return r;
-}
-
-// scriptutil::versionIMG — cover image name for a version; LDS covers depend on the volume.
-const LDS_COVERS = { 1: 'ldskjv', 2: 'ldskjv', 3: 'lds-bom2', 4: 'lds-dc2', 5: 'lds-pgp2' };
-export function versionImg(ver, volumeId) {
-  if (ver === 'LDS' && LDS_COVERS[volumeId]) return LDS_COVERS[volumeId];
-  return String(ver).replace(/\*.*$/, '').toLowerCase();
 }
 
 // Strip a "*FMT" suffix: "NIV*KJV" → "NIV".

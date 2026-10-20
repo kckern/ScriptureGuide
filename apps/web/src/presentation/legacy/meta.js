@@ -1,6 +1,7 @@
 // Reference blocks ("meta") as the PHP site built them in scriptures::loadMetaFromRef, and the
 // version fallback order from scriptures::defaultVersions.
 import { lookupReference } from 'scripture-guide';
+import { defaultVersions as defaultVersionList, versionOrder } from '../../domain/rules/defaultVersions.js';
 
 function lookupIds(ref) {
   try {
@@ -54,28 +55,11 @@ export function blockReference(block) {
   return block.orig.startsWith(doubled) ? block.orig.slice(block.book.length + 1) : block.orig;
 }
 
-const RANGES = [
-  [1, 31103, 'LDS'], [31103, 37707, 'LDS'], [37707, 41361, 'LDS'],
-  [41996, 42600, 'LEC'], [42600, 73912, 'JST'], [73912, 82863, 'TSP'], [82863, 83195, 'LAW'],
-  [83195, 89431, 'YALI'], [91463, 91885, 'GFRONSDAL'], [91886, 92585, 'ASITIS'],
-  [89431, 90773, '1833'], [90773, 99999, '1835'], [92587, 92667, 'MITCHELL'], [92668, 93382, 'ULOLD'],
-];
-
-// Versions to try, in order: the requested ones (LDS moved last, as setConfigs did), then the
-// default for the verse range. PGP (41361–41995) forces LDS into the requested list.
+// domain/rules/defaultVersions.js in the { VERSION: FORMAT } form the legacy formats use:
+// the requested versions (LDS moved last, as setConfigs did), then the default for the range.
 export function defaultVersions(versions, verseIds) {
-  const out = { ...(versions || {}) };
-  if ('LDS' in out) {
-    const lds = out.LDS;
-    delete out.LDS;
-    out.LDS = lds;
-  }
-  if (!verseIds?.length) return out;
-  const min = Math.min(...verseIds);
-  const max = Math.max(...verseIds);
-  if (min >= 41361 && max < 41996 && !('LDS' in out)) out.LDS = 'LDS';
-  for (const [lo, hi, v] of RANGES) {
-    if (min >= lo && max < hi && !(v in out)) out[v] = v;
-  }
+  const list = Object.entries(versions || {}).map(([version, format]) => ({ version, format }));
+  const out = {};
+  for (const v of defaultVersionList(versionOrder(list), verseIds || [])) out[v.version] = v.format;
   return out;
 }

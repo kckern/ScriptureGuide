@@ -6,9 +6,9 @@ import { renderVersebox } from '../../presentation/ajax/versebox.js';
 import { renderVersionSelect } from '../../presentation/ajax/versionSelect.js';
 import { renderSettings, SETTINGS_VOLUMES } from '../../presentation/ajax/settings.js';
 import {
-  flattenText, slugifyRef, transposeRef, versionImg, baseVersion, highlightSearchTerm,
+  flattenText, transposeRef, baseVersion, highlightSearchTerm,
 } from '../../domain/rules/legacyText.js';
-import { formatReference, chapterRef } from '../../domain/rules/legacyReference.js';
+import { rowsReference, chapterRef, slugifyRef, versionImg } from '../../domain/rules/legacyReference.js';
 
 // The PHP site's AJAX endpoints: vbox (versebox.php), passage (passage_script.php),
 // versionselect (version_select.php), settings (settings.php) and save_prefs (save.php).
@@ -70,7 +70,7 @@ export class AjaxController {
       if (Number.isFinite(start) && Number.isFinite(end) && end >= start && end - start < 2000) {
         const ids = [];
         for (let i = start; i <= end; i++) ids.push(i);
-        ref = formatReference(await this.repo.findVerseMeta(ids), 'book_title');
+        ref = rowsReference(await this.repo.findVerseMeta(ids), 'book_title');
       }
       ref = transposeRef(ref, version);
       // hversion (heading/format version) is not separate in the Node lookup yet; text version wins.
@@ -123,7 +123,7 @@ export class AjaxController {
         const first = group[0];
         const last = group[group.length - 1];
         const ids = rangeIds(first.verse_id, last.verse_id);
-        const ref = formatReference(ids.map(id => metaById.get(id)).filter(Boolean), 'book_title_short');
+        const ref = rowsReference(ids.map(id => metaById.get(id)).filter(Boolean), 'book_title_short');
         const version = String(textById.get(first.verse_id)?.version || '');
         let text;
         if (group.length > 1) {
@@ -156,7 +156,7 @@ export class AjaxController {
           text: flattenText(ownText[0]?.text || '').trim(),
         },
         refs,
-        refslug: verse ? slugifyRef(formatReference([metaById.get(verseId)].filter(Boolean), 'book_title')) : '',
+        refslug: verse ? slugifyRef(rowsReference([metaById.get(verseId)].filter(Boolean), 'book_title')) : '',
         versions: versions.map(v => ({
           version: v.version,
           verseId: v.verse_id,

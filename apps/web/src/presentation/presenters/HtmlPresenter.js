@@ -1,16 +1,12 @@
 import VerseSerializer from '../serializers/VerseSerializer.js';
 import { displayReference, blankHeading } from '../../domain/rules/referenceParsing.js';
 
-// Mirrors PHP scriptutil::versionIMG($ver, $verses)
-function versionIMG(version, volume) {
-  if (version === 'LDS') {
-    if (volume === 'OT' || volume === 'NT') return 'ldskjv';
-    if (volume === 'BOM') return 'lds-bom2';
-    if (volume === 'DC') return 'lds-dc2';
-    if (volume === 'POGP') return 'lds-pgp2';
-  }
-  return version.replace(/\*.*$/, '').toLowerCase();
-}
+import { versionImg } from '../../domain/rules/legacyReference.js';
+
+// versionImg takes lds_scriptures_volumes.volume_id; Reference.volume is a volume code.
+// Verses outside the five volumes (null) have no LDS cover: 0 gives "lds".
+const VOLUME_IDS = { OT: 1, NT: 2, BOM: 3, DC: 4, POGP: 5 };
+const volumeId = volume => VOLUME_IDS[volume] ?? 0;
 
 export class HtmlPresenter {
   present(result, req, res) {
@@ -61,7 +57,7 @@ export class HtmlPresenter {
 
   serialize(result) {
     const version = result.config.version || 'KJV';
-    const img = versionIMG(version, result.reference.volume);
+    const img = versionImg(version, volumeId(result.reference.volume));
     const chapterHeadVerseId = result.chapterHeading?.verse_id;
 
     // Build verse_id → verse_num map for range computation

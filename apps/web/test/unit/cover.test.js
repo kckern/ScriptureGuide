@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { versionIMG, coverUrl } from '../../src/presentation/coverImage.js';
+import { coverUrl } from '../../src/presentation/coverImage.js';
 import { CoverPresenter, coverRequest, coverName } from '../../src/presentation/presenters/formats/cover.js';
 
 function fakeRes() {
@@ -7,15 +7,8 @@ function fakeRes() {
   return res;
 }
 
-describe('versionIMG', () => {
-  it('picks the LDS cover by volume and lowercases other versions', () => {
-    expect(versionIMG('LDS', 1)).toBe('ldskjv');
-    expect(versionIMG('LDS', 2)).toBe('ldskjv');
-    expect(versionIMG('LDS', 3)).toBe('lds-bom2');
-    expect(versionIMG('LDS', 4)).toBe('lds-dc2');
-    expect(versionIMG('LDS', 5)).toBe('lds-pgp2');
-    expect(versionIMG('LDS', null)).toBe('lds-bom2');
-    expect(versionIMG('KJV*MEV', 1)).toBe('kjv');
+describe('coverUrl', () => {
+  it('points at the media host', () => {
     expect(coverUrl('kjv')).toBe('https://media.scripture.guide/covers/kjv.jpg');
   });
 });

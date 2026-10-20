@@ -1,5 +1,5 @@
 import { describe, test, expect } from 'vitest';
-import { slugifyRef, wantsChapterNav, chapterNavLinks, sectionRef, sectionNavLinks } from '../../src/domain/rules/chapterNav.js';
+import { wantsChapterNav, chapterNavLinks, sectionRef, sectionNavLinks } from '../../src/domain/rules/chapterNav.js';
 
 describe('sectionRef', () => {
   const r = (chapter, verse) => ({ chapter, verse });
@@ -30,16 +30,6 @@ describe('sectionNavLinks', () => {
   });
   test('no link without a neighbouring section', () => {
     expect(sectionNavLinks({ prev: null, next: null }).prev).toBeNull();
-  });
-});
-
-describe('slugifyRef', () => {
-  test('lowercases and joins with dots like scriptutil::slufigyRef', () => {
-    expect(slugifyRef('Isa. 1')).toBe('isa.1');
-    expect(slugifyRef('D&C 3')).toBe('d&c.3');
-    expect(slugifyRef('1 Ne. 3')).toBe('1.ne.3');
-    expect(slugifyRef('Gen. 1:1–5')).toBe('gen.1.1-5');
-    expect(slugifyRef('John 3:16, 18')).toBe('john.3.16,18');
   });
 });
 

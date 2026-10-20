@@ -3,7 +3,6 @@
 // The version is the first one named in the path, else LDS (no range default). ?red_letter[] had no
 // effect on the PHP site (scriptutil::loadWords returned [] before querying), so it is ignored.
 import rawRepository from '../../../data/repositories/RawRepository.js';
-import { legacyRequest } from '../../legacy/request.js';
 import { phpJson } from '../../legacy/phpJson.js';
 import { blocksFor } from './meta.js';
 
@@ -35,7 +34,7 @@ export async function rawData(lr, result, repo = rawRepository) {
 
 export class RawPresenter {
   async present(result, req, res) {
-    const data = await rawData(legacyRequest(req), result);
+    const data = await rawData(req.config.legacy, result);
     res.type('text/plain').send(phpJson(data));
   }
 }

@@ -1,13 +1,5 @@
 // Chapter navigation below a passage (scriptures::renderChapterNav in the PHP site).
-
-// scriptutil::slufigyRef: "Gen. 1:1–5" → "gen.1.1-5"
-export function slugifyRef(ref) {
-  return String(ref || '')
-    .toLowerCase()
-    .replace(/[\s.:]+/g, '.')
-    .replace(/([;,])\./g, '$1')
-    .replace(/–/g, '-');
-}
+import { slugifyRef } from './legacyReference.js';
 
 // Chapter nav is shown only for a single block whose reference names no verses.
 export function wantsChapterNav(normalizedRef) {

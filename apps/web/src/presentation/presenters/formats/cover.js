@@ -1,12 +1,13 @@
 import volumeRepository from '../../../data/repositories/VolumeRepository.js';
-import { versionIMG, coverUrl } from '../../coverImage.js';
+import { coverUrl } from '../../coverImage.js';
+import { versionImg } from '../../../domain/rules/legacyReference.js';
 
 // cover.scripture.guide. The PHP inc_cov.php was empty; the covers are static images at
 // media.scripture.guide/covers/<name>.jpg. Requests redirect (302) there:
 //   /<reference> or /<version>/<reference>  → the cover of the passage's version
 //                                             (LDS: one cover per volume)
 //   /<name>[.jpg|.png]                       → that cover by name (the HTML page's og:image
-//                                             links use cover.scripture.guide/<versionIMG>)
+//                                             links use cover.scripture.guide/<versionImg>)
 //   /logo.png                                → served from public/ by the static middleware
 
 export function coverName(path) {
@@ -40,7 +41,7 @@ export class CoverPresenter {
     if (!verseIds.length) return null;
     const version = String(result.config?.version || result.version || 'LDS').split(/[.,;]/)[0].toUpperCase();
     const volumeId = version === 'LDS' ? await this.repo.volumeIdOf(verseIds) : null;
-    return versionIMG(version, volumeId ?? 3);
+    return versionImg(version, volumeId ?? 3);
   }
 
   async present(result, req, res) {

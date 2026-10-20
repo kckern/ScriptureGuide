@@ -27,6 +27,8 @@ function rawQuery(req) {
  *   versions       ordered [{ version, format }] from the URL (/kjv.1830*rebom/...) or ?version=
  *   versionSpec    the version segment as typed (PHP $url_version), or null
  *   version        first requested version, or undefined (the lookup picks a default by verse range)
+ *   legacy         { q, ref, versions, config }: the request exactly as PHP saw it ($ref, $cfig),
+ *                  for the api/meta/raw/plain formats ("&flag" path keys, "d&c" → "dc", "16a" → "1")
  *   includeHeadings, includeVerseNumbers   rendering switches (?headings=0, ?versenums=0)
  */
 export function configMiddleware(req, res, next) {

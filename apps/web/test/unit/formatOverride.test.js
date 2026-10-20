@@ -1,16 +1,5 @@
 import { describe, test, expect } from 'vitest';
-import { flattenText, applyFormatOverride } from '../../src/domain/rules/formatOverride.js';
-
-describe('flattenText', () => {
-  test('strips markup characters, tags and footnote markers', () => {
-    expect(flattenText('§¶｟In｠ the beginning')).toBe('In the beginning');
-    expect(flattenText('word｢12｣ next<br/>line')).toBe('word next\nline');
-    expect(flattenText('a/b|c  d')).toBe('a b c d');
-    expect(flattenText('_indent')).toBe('indent');
-    expect(flattenText('end.Next,word')).toBe('end. Next, word');
-    expect(flattenText('keep ~~struck~~ out')).toBe('keep out');
-  });
-});
+import { applyFormatOverride } from '../../src/domain/rules/formatOverride.js';
 
 describe('applyFormatOverride', () => {
   const text = [

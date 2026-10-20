@@ -5,8 +5,8 @@ import config from '../config/index.js';
 import searchRepository from '../data/repositories/SearchRepository.js';
 import { createSphinxClient } from '../data/external/sphinx.js';
 import { queryStems, matchesAll, stemPrefix } from './search/matcher.js';
-import { plainText, flattenText } from './text/flattenText.js';
-import { formatReference, slugifyRef, versionImg } from './legacyReference.js';
+import { plainText, flattenText } from '../domain/rules/legacyText.js';
+import { formatReference, slugifyRef, versionImg } from '../domain/rules/legacyReference.js';
 
 const REQUERY_OVER = 300;
 const TOP = 5000;
