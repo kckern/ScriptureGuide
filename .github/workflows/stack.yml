@@ -1,0 +1,30 @@
+name: stack
+on:
+  pull_request:
+    paths: ['infra/**', 'data/seeds/**', 'apps/web/**', 'packages/scripture-guide/**', '.github/workflows/stack.yml']
+  push:
+    branches: [master]
+    paths: ['infra/**', 'data/seeds/**', 'apps/web/**', 'packages/scripture-guide/**', '.github/workflows/stack.yml']
+jobs:
+  compose:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Start seeded stack with Sphinx
+        run: docker compose -f infra/docker-compose.yml --profile search up -d --build --wait --wait-timeout 300 db web
+      - name: Start Sphinx (indexes the seeded verses)
+        run: |
+          docker compose -f infra/docker-compose.yml --profile search up -d sphinx
+          for _ in $(seq 1 60); do mysql -h127.0.0.1 -P9306 -e "SHOW TABLES" >/dev/null 2>&1 && break; sleep 3; done
+      - name: Web serves seeded text
+        run: |
+          curl -fsS http://localhost:3000/health
+          curl -fsS http://localhost:3000/kjv/John.3.16 | grep -q "For God so loved the world"
+          curl -fsS http://localhost:3000/asv/gen.1.1 | grep -q "In the beginning God created"
+      - name: Sphinx finds seeded verses
+        run: |
+          n=$(mysql -h127.0.0.1 -P9306 -N -e "SELECT COUNT(*) FROM sgindex WHERE MATCH('loved')")
+          echo "sphinx matches for 'loved': $n"
+          test "$n" -gt 0
+      - if: failure()
+        run: docker compose -f infra/docker-compose.yml --profile search logs --tail 80

@@ -99,3 +99,29 @@ jobs:
         with:
           name: chrome-extension-zip
           path: apps/chrome-extension/extension.zip
+
+  # Rebuilds the public seed image when data/seeds changes.
+  seed-image:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 2 }
+      - id: c
+        run: |
+          if git diff --name-only HEAD^1 HEAD | grep -qE '^(data/seeds/|infra/seed/)'; then echo "changed=true" >> "$GITHUB_OUTPUT"; fi
+      - if: steps.c.outputs.changed == 'true'
+        uses: docker/setup-qemu-action@v3
+      - if: steps.c.outputs.changed == 'true'
+        uses: docker/setup-buildx-action@v3
+      - if: steps.c.outputs.changed == 'true'
+        uses: docker/login-action@v3
+        with: { registry: ghcr.io, username: '${{ github.actor }}', password: '${{ secrets.GITHUB_TOKEN }}' }
+      - if: steps.c.outputs.changed == 'true'
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: infra/seed/Dockerfile
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ghcr.io/kckern/scripture-guide-seed:latest,ghcr.io/kckern/scripture-guide-seed:sha-${{ github.sha }}
+          labels: org.opencontainers.image.source=https://github.com/kckern/ScriptureGuide
