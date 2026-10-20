@@ -6,6 +6,7 @@ import { ScriptureResult } from '../domain/entities/ScriptureResult.js';
 import { Reference } from '../domain/entities/Reference.js';
 import VerseSerializer from '../presentation/serializers/VerseSerializer.js';
 import { defaultVersions, versionOrder } from '../domain/rules/defaultVersions.js';
+import { wantsChapterNav, chapterNavLinks } from '../domain/rules/chapterNav.js';
 
 export class ScriptureLookupService {
   constructor(refService, verseRepo, headingRepo) {
@@ -95,7 +96,12 @@ export class ScriptureLookupService {
         const firstVerseText = verseRows[0]?.text || '';
         const isNewSection = firstVerseText.startsWith('§¶');
         chapterHeading = await this.headingRepository.findChapterHeading(firstVerseId, bookId, version, isNewSection);
-        chapterNav = await this.headingRepository.findChapterNav(firstVerseId, lastVerseId);
+        if (wantsChapterNav(reference.normalized) && !/[,;:]/.test(referenceString)) {
+          chapterNav = chapterNavLinks({
+            ...(await this.headingRepository.findChapterNavRows(firstVerseId, lastVerseId)),
+            versionSpec: config.versionSpec || null,
+          });
+        }
 
         // Attach book slug and version audio to chapter heading for h3 attrs
         const audioFlag = await this.headingRepository.hasAudio(verseIds, version);
@@ -349,6 +355,8 @@ export class ScriptureLookupService {
         }
       }
     }
+
+    config._faxIds = verseIds.length ? await this.headingRepository.findFaxVerseIds(verseIds, version) : [];
 
     return new ScriptureResult({
       reference,

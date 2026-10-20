@@ -14,7 +14,7 @@ function versionIMG(version, volume) {
 export class HtmlPresenter {
   present(result, req, res) {
     const data = this.serialize(result);
-    const title = result.reference.normalized || 'Scripture Guide';
+    const title = data.title || 'Scripture Guide';
     const ogMeta = this._buildOgMeta(result, data, title, req);
     res.render('scripture', {
       data,
@@ -358,8 +358,20 @@ export class HtmlPresenter {
       inlineByVerse[h.verse_id].push(h);
     }
 
+    // Heading types (title, summary, headnote, ...) by verse_id, for the header rows of each passage
+    const typesByVerse = {};
+    for (const h of result.headings) {
+      if (h.synthetic || h.preSectionSynthetic || !h.type || h.text == null) continue;
+      (typesByVerse[h.verse_id] ??= {})[h.type] = h.text;
+    }
+
     return {
       reference: result.reference.normalized,
+      // Page title: the reference with en dashes for ranges (PHP referenceFromVerseIds)
+      title: (result.reference.normalized || '').replace(/(\d)-(\d)/g, '$1\u2013$2'),
+      startsSection: (result.verses[0]?.text || '').startsWith('§'),
+      faxIds: result.config._faxIds || [],
+      typesByVerse,
       query: result.reference.query,
       volume: result.reference.volume,
       version,
