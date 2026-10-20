@@ -1,0 +1,6 @@
+# False positives, reviewed 2026-10-20
+# Book identifiers ("key:") in RLDS canon data, not credentials
+5621086a350dbef7eea749414edb5876c7fa8e04:data/canons/rlds/_rlds.yml:generic-api-key:68
+5621086a350dbef7eea749414edb5876c7fa8e04:data/canons/rlds/_rlds.yml:generic-api-key:73
+# Public reCAPTCHA site keys in a saved web page used as an extension test fixture
+1cb191c0b38a20430f202baa3a05576c4c8ab4b5:test.html:generic-api-key:2
