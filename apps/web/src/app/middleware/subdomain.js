@@ -8,7 +8,7 @@ const GONE = new Set(['hub', 'slide']);
 // between it and the domain are flags (api.plain.scripture.guide → plain=1).
 // Path shortcuts (/api/..., /img/...) are applied later by configMiddleware.
 export function subdomainMiddleware(req, res, next) {
-  const { subdomain, flags } = parseHost(req.headers.host || req.hostname || '');
+  const { subdomain, flags } = parseHost(req.headers?.host || req.hostname || '');
   if (GONE.has(subdomain)) {
     return res.status(410).type('text/plain').send(`${subdomain}.scripture.guide is no longer available.\n`);
   }
