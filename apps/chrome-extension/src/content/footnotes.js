@@ -3,7 +3,7 @@
 // reference on scripture.guide. This avoids nesting anchors or hijacking the
 // page's own links.
 
-import { refToSlug } from '../shared/slug.js';
+import { toSlug } from 'scripture-guide';
 
 export const MARK = 'data-sg-reflinked';
 
@@ -103,7 +103,7 @@ export function annotateAnchor(anchor, matches) {
   const doc = anchor.ownerDocument;
   const link = doc.createElement('a');
   link.className = 'sg_reflink';
-  link.setAttribute('href', 'https://scripture.guide/' + refToSlug(ref));
+  link.setAttribute('href', 'https://scripture.guide/' + toSlug(ref));
   link.setAttribute('target', '_blank');
   link.setAttribute('rel', 'noopener noreferrer');
   link.setAttribute('title', 'Open ' + ref + ' in Scripture Guide');

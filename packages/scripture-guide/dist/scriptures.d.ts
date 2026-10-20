@@ -58,6 +58,13 @@ export function setLanguage(language: LanguageCode): void;
  */
 export function detectReferences(content: string, callback?: DetectionCallback, language?: LanguageCode): string;
 
+/**
+ * Converts a reference string into a scripture.guide URL slug
+ * @param ref - Reference string, e.g. "John 3:16-18"
+ * @returns URL slug, e.g. "john.3.16-18"
+ */
+export function toSlug(ref: string): string;
+
 // Aliases for convenience
 export { setLanguage as lang };
 export { setLanguage as language };

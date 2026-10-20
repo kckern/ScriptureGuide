@@ -3,7 +3,7 @@
 // between/around spans stays as plain text nodes. Never touches innerHTML, so
 // sibling nodes, event listeners, and HTML-special characters are preserved.
 
-import { refToSlug } from '../shared/slug.js';
+import { toSlug } from 'scripture-guide';
 
 // matches: [{ start, end, text, ref, verse_ids }] with offsets into
 // textNode.nodeValue. `processed` (a WeakSet) records the plain text nodes we
@@ -31,7 +31,7 @@ export function annotateTextNode(textNode, matches, processed) {
     const a = doc.createElement('a');
     a.className = 'sg_autolink';
     a.textContent = text.slice(m.start, m.end);
-    a.setAttribute('href', 'https://scripture.guide/' + refToSlug(m.ref || a.textContent));
+    a.setAttribute('href', 'https://scripture.guide/' + toSlug(m.ref || a.textContent));
     a.setAttribute('target', '_blank');
     a.setAttribute('rel', 'noopener noreferrer');
     frag.appendChild(a);

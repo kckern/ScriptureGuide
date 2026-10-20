@@ -7,6 +7,7 @@ const raw_lang = langData;
 import { processReferenceDetection, collectReferences } from './scriptdetect.mjs';
 import { detectReferencesWithContext, collectReferencesWithContext } from './scriptdetectcontext.mjs';
 import { detectCanon, formatId, parseId, convertCanon, registerCanon, registerMapping } from './scriptcanon.mjs';
+import { toSlug } from './slug.mjs';
 
 import {
   MAX_RANGE_SIZE,
@@ -1130,6 +1131,7 @@ export {
     detectReferences,
     findReferences,
     convertCanon,
+    toSlug,
 
     //Aliases for convenience
     setLanguage as lang,

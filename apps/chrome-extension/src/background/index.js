@@ -1,8 +1,7 @@
 // Background service worker: omnibox lookups, a selection context menu, and the
 // toolbar action (which opens the popup, configured in the manifest).
 
-import { lookupReference } from 'scripture-guide';
-import { refToSlug } from '../shared/slug.js';
+import { lookupReference, toSlug } from 'scripture-guide';
 
 const SG_BASE = 'https://scripture.guide/';
 
@@ -26,7 +25,7 @@ chrome.runtime.onInstalled.addListener(() => {
 
 chrome.contextMenus.onClicked.addListener((info, tab) => {
   if (info.menuItemId === 'lookup-selection' && info.selectionText) {
-    chrome.tabs.create({ url: SG_BASE + refToSlug(info.selectionText) });
+    chrome.tabs.create({ url: SG_BASE + toSlug(info.selectionText) });
   } else if (info.menuItemId === 'scan-references' && tab && tab.id != null) {
     // Ask the content script to re-scan (catches lazy/infinite-scroll content).
     chrome.tabs.sendMessage(tab.id, { type: 'sg-rescan' }, () => void chrome.runtime.lastError);
@@ -46,5 +45,5 @@ chrome.omnibox.onInputChanged.addListener((text, suggest) => {
 });
 
 chrome.omnibox.onInputEntered.addListener((text) => {
-  chrome.tabs.create({ url: SG_BASE + refToSlug(text) });
+  chrome.tabs.create({ url: SG_BASE + toSlug(text) });
 });

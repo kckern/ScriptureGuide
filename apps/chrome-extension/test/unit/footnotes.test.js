@@ -31,7 +31,7 @@ describe('annotateAnchor', () => {
     expect(anchor.nextElementSibling).toBe(link);
     expect(link.className).toBe('sg_reflink');
     expect(link.querySelector('svg')).not.toBeNull();
-    expect(link.getAttribute('href')).toBe('https://scripture.guide/' + require('../../src/shared/slug.js').refToSlug('D&C 8:11'));
+    expect(link.getAttribute('href')).toBe('https://scripture.guide/' + require('scripture-guide').toSlug('D&C 8:11'));
     expect(anchor.hasAttribute('data-sg-reflinked')).toBe(true);
   });
 
