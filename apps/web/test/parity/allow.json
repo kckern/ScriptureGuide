@@ -1,1 +1,3 @@
-{}
+{
+  "passage /passage?ref=Matthew%205&version=NIV": "PHP single_heading bug: passage_script.php drops the first verse (or verse part) of every section after the first, e.g. Matthew 5:2b, 13, 17, 21. Node keeps all verses and shows only the first heading."
+}
