@@ -27,7 +27,7 @@ services:
     depends_on: { db: { condition: service_healthy } }
   sphinx:
     profiles: [search]
-    image: macbre/sphinxsearch:3.4.1
+    image: macbre/sphinxsearch:latest  # same tag as production; 3.4.1 lacks field_string
     environment: { MYSQL_HOST: db, MYSQL_USER: sg, MYSQL_PASSWORD: dev, MYSQL_DATABASE: scripture_guide }
     volumes: ["./sphinx/sphinx.conf:/opt/sphinx/conf/sphinx.conf:ro"]
     command: sh -c "mkdir -p /opt/sphinx/index /opt/sphinx/log && indexer --all --config /opt/sphinx/conf/sphinx.conf && searchd --nodetach --config /opt/sphinx/conf/sphinx.conf"

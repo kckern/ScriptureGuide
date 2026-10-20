@@ -12,7 +12,7 @@ docker compose -f infra/docker-compose.yml down -v                        # stop
 |---|---|---|
 | `db` | `ghcr.io/kckern/scripture-guide-seed` (built from `infra/seed/Dockerfile`) | MySQL 8 with `data/seeds` loaded on first start; `127.0.0.1:3307`, user `sg` / `dev` |
 | `web` | `ghcr.io/kckern/scripture-guide` (built from `apps/web/Dockerfile`) | `127.0.0.1:3000` |
-| `sphinx` | `macbre/sphinxsearch:3.4.1` | Profile `search`. `sphinx.conf` is a shell script so credentials come from the environment at start-up |
+| `sphinx` | `macbre/sphinxsearch:latest` (matches production) | Profile `search`. `sphinx.conf` is a shell script so credentials come from the environment at start-up |
 
 Try `http://localhost:3000/kjv/John.3.16` or `http://localhost:3000/asv/gen.1.1`.
 
