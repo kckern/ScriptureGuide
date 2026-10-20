@@ -62,6 +62,18 @@ export function displayReference(normalized) {
   return out.join('; ').replace(/(\d)-(\d)/g, '$1–$2');
 }
 
+// Heading for a reference that matched no verses (approximates scriptutil::cleanReference):
+// "john.3.99" → "John 3:99"
+export function blankHeading(ref) {
+  return String(ref || '')
+    .trim()
+    .replace(/(\d)\.(\d)/g, '$1:$2')
+    .replace(/\./g, ' ')
+    .replace(/\s+/g, ' ')
+    .toLowerCase()
+    .replace(/(^|\s)([a-z])/g, (m, sp, c) => sp + c.toUpperCase());
+}
+
 // Display reference for rows { chapter, verse } of one book, in order.
 // wholeChapters: the rows cover whole chapters, so verses are omitted.
 export function formatReference(bookTitle, rows, wholeChapters) {

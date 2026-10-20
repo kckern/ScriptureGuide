@@ -3,6 +3,9 @@ const version = data.version || 'KJV';
 
 // Renders one reference block (a "section"): its passages and chapter nav.
 function renderSection(data) {
+if (data.blank != null) {
+  return `\n      <div class="passage ver_">\n\t\t<h3>${data.blank}</h3>\n\t\t<p><span class="verse">No scripture verses found.</span></p>\n      </div>`;
+}
 const version = data.version || 'KJV';
 const ch = data.chapterHeading;
 const nav = data.chapterNav;
@@ -190,7 +193,7 @@ const sectionsHtml = sectionList
   .join(`\n    <hr class="sectionbreak"/>`);
 %>
 <%- include('layouts/main', {
-  title: data.title,
+  title: typeof title !== 'undefined' ? title : data.title,
   config,
   slugref: data.canonicalRefSlug || '',
   slugver: version,

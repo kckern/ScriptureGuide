@@ -1,5 +1,5 @@
 import { describe, test, expect } from 'vitest';
-import { parseVerseIdList, splitBookReference, bookKey, formatReference, displayReference } from '../../src/domain/rules/referenceParsing.js';
+import { parseVerseIdList, splitBookReference, bookKey, formatReference, displayReference, blankHeading } from '../../src/domain/rules/referenceParsing.js';
 
 describe('parseVerseIdList', () => {
   test('numeric references are verse ids', () => {
@@ -46,6 +46,13 @@ describe('displayReference', () => {
   });
   test('separate books stay separate', () => {
     expect(displayReference('John 3:16; Genesis 1:1')).toBe('John 3:16; Genesis 1:1');
+  });
+});
+
+describe('blankHeading', () => {
+  test('a reference that matched nothing, cleaned up for display', () => {
+    expect(blankHeading('xyz.99')).toBe('Xyz 99');
+    expect(blankHeading('john.3.99')).toBe('John 3:99');
   });
 });
 

@@ -1,5 +1,5 @@
 import VerseSerializer from '../serializers/VerseSerializer.js';
-import { displayReference } from '../../domain/rules/referenceParsing.js';
+import { displayReference, blankHeading } from '../../domain/rules/referenceParsing.js';
 
 // Mirrors PHP scriptutil::versionIMG($ver, $verses)
 function versionIMG(version, volume) {
@@ -15,7 +15,8 @@ function versionIMG(version, volume) {
 export class HtmlPresenter {
   present(result, req, res) {
     const data = this.serialize(result);
-    const title = data.title || 'Scripture Guide';
+    // No verses: the title is the reference as requested (index.php)
+    const title = data.title || req?.config?.reference || result.reference.query || '';
     const ogMeta = this._buildOgMeta(result, data, title, req);
     const sections = result.sections ? result.sections.map(r => this.serialize(r)) : null;
     res.render('scripture', {
@@ -387,6 +388,8 @@ export class HtmlPresenter {
       reference: result.reference.normalized,
       // Page title: the reference with en dashes for ranges (PHP referenceFromVerseIds)
       title: displayReference(result.reference.normalized),
+      // Heading for a reference block that matched no verses (scriptures::blankData)
+      blank: result.verses.length ? null : blankHeading(result.reference.query),
       startsSection: (result.verses[0]?.text || '').startsWith('§'),
       faxIds: result.config._faxIds || [],
       typesByVerse,
