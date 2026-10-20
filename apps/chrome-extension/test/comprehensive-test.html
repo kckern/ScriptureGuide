@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Comprehensive Scripture Guide Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .test-section { margin: 20px 0; padding: 15px; border: 1px solid #ccc; }
+        .test-title { font-weight: bold; color: #333; margin-bottom: 10px; }
+        .comment { background: #f5f5f5; padding: 10px; margin: 10px 0; }
+        button { margin: 5px; padding: 8px 15px; }
+        #dynamic-content { border: 2px dashed #999; padding: 10px; min-height: 50px; }
+    </style>
+</head>
+<body>
+    <h1>Scripture Guide Chrome Extension - Comprehensive Test</h1>
+    
+    <div class="test-section">
+        <div class="test-title">Initial Static Content</div>
+        <p>Basic references: Romans 8:28, 1 Corinthians 13:4-8, Matthew 5:3-12</p>
+        <p>Multiple books: Genesis 1:1, Exodus 20:3-17, Leviticus 19:18, Numbers 6:24-26</p>
+        <p>Complex references: 2 Timothy 3:16-17; Ephesians 2:8-9, 10; Romans 3:23, 6:23; John 3:16</p>
+    </div>
+
+    <div class="test-section">
+        <div class="test-title">Nested Content</div>
+        <div class="comment">
+            <p><strong>User comment:</strong> I love reading <em>Psalms 23</em> and <span>Proverbs 3:5-6</span></p>
+            <blockquote>As it says in Isaiah 40:31 and Jeremiah 29:11</blockquote>
+        </div>
+    </div>
+
+    <div class="test-section">
+        <div class="test-title">Dynamic Content (Click to add)</div>
+        <button onclick="addDynamicContent()">Add Reddit-style Comment</button>
+        <button onclick="addNestedContent()">Add Deeply Nested Content</button>
+        <button onclick="addMultipleReferences()">Add Multiple References</button>
+        <div id="dynamic-content"></div>
+    </div>
+
+    <div class="test-section">
+        <div class="test-title">Edge Cases</div>
+        <p>Already processed: <a href="#" class="sg_autolink">Romans 8:28</a> should not be double-processed</p>
+        <p>Mixed content: Read Romans 8:28-30 and then check 1 John 4:7-8 for more context</p>
+        <p>Punctuation: "Romans 8:28," he said, "and also Philippians 4:13!"</p>
+    </div>
+
+    <script src="../linker.js"></script>
+    <script>
+        let commentCounter = 1;
+
+        function addDynamicContent() {
+            const container = document.getElementById('dynamic-content');
+            const newComment = document.createElement('div');
+            newComment.className = 'comment';
+            newComment.innerHTML = `
+                <p><strong>Dynamic Comment ${commentCounter}:</strong> 
+                Check out Galatians 5:22-23 and Philippians 4:6-7 for encouragement!</p>
+                <p>Also see 1 Peter 5:7 and James 1:2-4</p>
+            `;
+            container.appendChild(newComment);
+            commentCounter++;
+            console.log('Added dynamic content');
+        }
+
+        function addNestedContent() {
+            const container = document.getElementById('dynamic-content');
+            const wrapper = document.createElement('div');
+            wrapper.innerHTML = `
+                <div class="comment">
+                    <div>
+                        <span>Deeply nested: 
+                            <em>Romans 12:1-2</em> and 
+                            <strong>2 Corinthians 5:17</strong>
+                        </span>
+                        <div>
+                            <p>Even deeper: Hebrews 11:1 and 1 Thessalonians 5:16-18</p>
+                        </div>
+                    </div>
+                </div>
+            `;
+            container.appendChild(wrapper);
+            console.log('Added nested content');
+        }
+
+        function addMultipleReferences() {
+            const container = document.getElementById('dynamic-content');
+            const multi = document.createElement('p');
+            multi.textContent = 'Multiple refs: Romans 8:28, 1 Corinthians 13:4, Ephesians 2:8-9, John 3:16, Philippians 4:13, Psalm 23:1-6, Proverbs 3:5-6, Isaiah 40:31, Jeremiah 29:11, Matthew 28:19-20';
+            container.appendChild(multi);
+            console.log('Added multiple references');
+        }
+
+        // Test periodic updates
+        setInterval(() => {
+            const links = document.querySelectorAll('.sg_autolink');
+            console.log(`Current scripture links on page: ${links.length}`);
+        }, 3000);
+    </script>
+</body>
+</html>

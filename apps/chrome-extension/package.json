@@ -1,0 +1,26 @@
+{
+  "name": "scripture-guide-chrome-extension",
+  "version": "2.0.1",
+  "description": "Chrome extension for in-browser scripture reference detection and linking",
+  "scripts": {
+    "build": "webpack --mode=production",
+    "test": "jest",
+    "deploy": "./deploy.sh"
+  },
+  "dependencies": {
+    "scripture-guide": "^1.0.93"
+  },
+  "devDependencies": {
+    "@babel/core": "^7.22.0",
+    "@babel/preset-env": "^7.22.0",
+    "babel-jest": "^29.7.0",
+    "babel-loader": "^9.1.0",
+    "copy-webpack-plugin": "^11.0.0",
+    "jest": "^29.7.0",
+    "jest-environment-jsdom": "^29.7.0",
+    "webpack": "^5.88.0",
+    "webpack-cli": "^5.1.0"
+  },
+  "author": "Scripture Guide",
+  "license": "MIT"
+}

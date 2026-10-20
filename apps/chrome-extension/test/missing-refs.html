@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Missing References Debug</title>
+    <style>
+        body { 
+            font-family: Arial, sans-serif; 
+            padding: 20px;
+        }
+        .test-case {
+            margin: 15px 0;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            background: #f9f9f9;
+        }
+        .processed { 
+            border-color: green; 
+            background: #f0fff0; 
+        }
+        .missed { 
+            border-color: red; 
+            background: #fff0f0; 
+        }
+    </style>
+</head>
+<body>
+    <h1>Missing References Debug Test</h1>
+    <p>Testing references that should be detected but are being missed:</p>
+    
+    <div class="test-case">
+        <strong>Test 1:</strong> Hebrews 11:1
+    </div>
+    
+    <div class="test-case">
+        <strong>Test 2:</strong> Psalm 46:10: be still and know that I am God
+    </div>
+    
+    <div class="test-case">
+        <strong>Test 3:</strong> Proverbs 3:6 in all thy ways acknowledge me, and i will direct your path
+    </div>
+    
+    <div class="test-case">
+        <strong>Test 4:</strong> Psalms 23 is good, I love this song:
+    </div>
+    
+    <div class="test-case">
+        <strong>Test 5:</strong> Romans 5:19 For as by one man's disobedience many were made sinners
+    </div>
+    
+    <div class="test-case">
+        <strong>Test 6:</strong> 2 Corinthians 5:21 For he hath made him to be sin for us, who knew no sin
+    </div>
+    
+    <div class="test-case">
+        <strong>Test 7 (Working):</strong> Romans 8:38-39 For I am sure that neither death, nor life, nor angels
+    </div>
+
+    <script>
+        window.addEventListener('load', function() {
+            console.log('=== Missing References Debug ===');
+            
+            // Check initial state
+            setTimeout(function() {
+                console.log('Checking at 2 seconds...');
+                checkAllElements();
+            }, 2000);
+            
+            // Check again later
+            setTimeout(function() {
+                console.log('Final check at 5 seconds...');
+                checkAllElements();
+                updateVisualStatus();
+            }, 5000);
+            
+            // Also check at 10 seconds in case processing is slow
+            setTimeout(function() {
+                console.log('Extended check at 10 seconds...');
+                checkAllElements();
+                updateVisualStatus();
+            }, 10000);
+        });
+        
+        function checkAllElements() {
+            var testCases = document.querySelectorAll('.test-case');
+            
+            console.log('--- Element Analysis ---');
+            testCases.forEach(function(testCase, index) {
+                var text = testCase.textContent;
+                var hasFlag = testCase.hasAttribute('sg-flag');
+                var hasLinks = testCase.querySelectorAll('.sg_autolink').length;
+                var innerHTML = testCase.innerHTML;
+                
+                console.log(`Test ${index + 1}: "${text.substring(0, 30)}..."`);
+                console.log(`  Has sg-flag: ${hasFlag}`);
+                console.log(`  Scripture links: ${hasLinks}`);
+                console.log(`  HTML length: ${innerHTML.length}, Text length: ${text.length}`);
+                console.log(`  HTML/Text ratio: ${(innerHTML.length / text.length).toFixed(2)}`);
+                
+                // Check for filtering conditions
+                var reasons = [];
+                if (text.length <= 10) reasons.push('Text too short');
+                if (innerHTML.length > text.length * 1.5) reasons.push('HTML/Text ratio > 1.5');
+                if (innerHTML.indexOf('<img') > -1) reasons.push('Contains <img');
+                if (innerHTML.indexOf('class=') > -1) reasons.push('Contains class=');
+                if (innerHTML.indexOf('src=') > -1) reasons.push('Contains src=');
+                if (innerHTML.indexOf('data-') > -1) reasons.push('Contains data-');
+                if (innerHTML.indexOf('aria-') > -1) reasons.push('Contains aria-');
+                
+                if (reasons.length > 0) {
+                    console.log(`  Would be filtered: ${reasons.join(', ')}`);
+                } else {
+                    console.log(`  Should be processed (no filter reasons)`);
+                }
+                console.log('');
+            });
+            
+            // Check total stats
+            var allLinks = document.querySelectorAll('.sg_autolink');
+            var allFlagged = document.querySelectorAll('[sg-flag]');
+            console.log(`Total scripture links found: ${allLinks.length}`);
+            console.log(`Total flagged elements: ${allFlagged.length}`);
+        }
+        
+        function updateVisualStatus() {
+            var testCases = document.querySelectorAll('.test-case');
+            
+            testCases.forEach(function(testCase) {
+                var hasLinks = testCase.querySelectorAll('.sg_autolink').length > 0;
+                
+                if (hasLinks) {
+                    testCase.classList.add('processed');
+                    testCase.classList.remove('missed');
+                } else {
+                    testCase.classList.add('missed');
+                    testCase.classList.remove('processed');
+                }
+            });
+        }
+    </script>
+</body>
+</html>

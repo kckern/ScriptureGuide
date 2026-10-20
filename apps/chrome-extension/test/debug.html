@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Scripture Detection Debug Test</title>
+    <style>
+        body { 
+            font-family: Arial, sans-serif; 
+            padding: 20px;
+            line-height: 1.6;
+        }
+        .test-case {
+            margin: 20px 0;
+            padding: 15px;
+            border: 2px solid #ccc;
+            border-radius: 5px;
+            background-color: #f9f9f9;
+        }
+        .test-case h3 {
+            margin-top: 0;
+            color: #552B1B;
+        }
+        .debug-info {
+            margin-top: 10px;
+            padding: 10px;
+            background-color: #e8e8e8;
+            border-radius: 3px;
+            font-size: 12px;
+            font-family: monospace;
+        }
+        .sg-flagged {
+            background-color: #ffeeee !important;
+            border-color: #ff0000 !important;
+        }
+    </style>
+</head>
+<body>
+    <h1>Scripture Detection Debug Tests</h1>
+    
+    <div class="test-case">
+        <h3>Test 1: Simple Reference</h3>
+        <p>John 3:16</p>
+        <div class="debug-info">Expected: Should be detected and linked</div>
+    </div>
+
+    <div class="test-case">
+        <h3>Test 2: Pre-flagged Element (Problem Case)</h3>
+        <p sg-flag="true">Hebrews 11:1</p>
+        <div class="debug-info">Problem: Has sg-flag="true" so gets skipped</div>
+    </div>
+
+    <div class="test-case">
+        <h3>Test 3: HTML Entities</h3>
+        <p>Ephesians 6:11&#x202D;-&#x202C;12</p>
+        <div class="debug-info">Expected: Should clean entities and detect range</div>
+    </div>
+
+    <div class="test-case">
+        <h3>Test 4: Multiple References</h3>
+        <p>See 1 Nephi 3:7 and also Matthew 5:14-16 for guidance.</p>
+        <div class="debug-info">Expected: Both references should be detected</div>
+    </div>
+
+    <div class="test-case">
+        <h3>Test 5: Complex HTML</h3>
+        <p>The verse <strong>Romans 8:28</strong> teaches us about <em>God's plan</em>.</p>
+        <div class="debug-info">Expected: Should detect Romans 8:28 despite HTML tags</div>
+    </div>
+
+    <div class="test-case">
+        <h3>Test 6: Already Processed Check</h3>
+        <p class="processed-check">D&C 88:63</p>
+        <div class="debug-info">Test: Element without sg-flag should be processed</div>
+    </div>
+
+    <script>
+        // Debug script to monitor extension behavior
+        window.addEventListener('load', function() {
+            console.log('=== Scripture Detection Debug Test ===');
+            
+            // Monitor initial state
+            setTimeout(function() {
+                console.log('Initial check after 1 second...');
+                checkElements();
+            }, 1000);
+            
+            // Monitor after processing should be complete
+            setTimeout(function() {
+                console.log('Final check after 3 seconds...');
+                checkElements();
+                
+                // Specifically check the problematic element
+                var problemElement = document.querySelector('p[sg-flag="true"]');
+                if (problemElement) {
+                    console.log('Problem element found:');
+                    console.log('  innerHTML:', problemElement.innerHTML);
+                    console.log('  textContent:', problemElement.textContent);
+                    console.log('  sg-flag attribute:', problemElement.getAttribute('sg-flag'));
+                    console.log('  contains .sg_autolink:', problemElement.querySelector('.sg_autolink') ? 'YES' : 'NO');
+                    
+                    // Highlight it visually
+                    problemElement.parentElement.classList.add('sg-flagged');
+                }
+            }, 3000);
+            
+            // Monitor for changes
+            var observer = new MutationObserver(function(mutations) {
+                mutations.forEach(function(mutation) {
+                    if (mutation.type === 'childList' || mutation.type === 'attributes') {
+                        console.log('DOM mutation detected:', mutation.type);
+                    }
+                });
+            });
+            
+            observer.observe(document.body, {
+                childList: true,
+                subtree: true,
+                attributes: true,
+                attributeFilter: ['sg-flag']
+            });
+        });
+        
+        function checkElements() {
+            var allPs = document.querySelectorAll('p');
+            var scriptureLinks = document.querySelectorAll('.sg_autolink');
+            var flaggedElements = document.querySelectorAll('[sg-flag]');
+            
+            console.log('--- Element Status ---');
+            console.log('Total <p> elements:', allPs.length);
+            console.log('Scripture links found:', scriptureLinks.length);
+            console.log('Flagged elements:', flaggedElements.length);
+            
+            // Check each test case
+            allPs.forEach(function(p, index) {
+                var testCase = p.closest('.test-case');
+                var testTitle = testCase ? testCase.querySelector('h3').textContent : 'Unknown';
+                
+                console.log(`${testTitle}:`);
+                console.log('  Text:', p.textContent.trim());
+                console.log('  Has sg-flag:', p.hasAttribute('sg-flag'));
+                console.log('  Contains links:', p.querySelectorAll('.sg_autolink').length);
+                console.log('  innerHTML:', p.innerHTML);
+            });
+            
+            // List all scripture links
+            if (scriptureLinks.length > 0) {
+                console.log('--- Scripture Links ---');
+                scriptureLinks.forEach(function(link, index) {
+                    console.log(`Link ${index + 1}:`, link.textContent, '→', link.href);
+                });
+            }
+        }
+    </script>
+</body>
+</html>

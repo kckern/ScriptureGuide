@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <header>
+    <img src="icons/icon_32.png" alt="" width="24" height="24">
+    <h1>Scripture Guide</h1>
+    <button id="gear" type="button" title="Settings" aria-label="Settings">⚙</button>
+  </header>
+
+  <label class="row">
+    <span id="site-label">Enable on this site</span>
+    <input type="checkbox" id="site-toggle" class="switch">
+  </label>
+
+  <label class="row">
+    <span>Enable everywhere</span>
+    <input type="checkbox" id="global-toggle" class="switch">
+  </label>
+
+  <a class="row link" id="random" href="https://scripture.guide/random" target="_blank" rel="noopener">
+    Random verse ↗
+  </a>
+
+  <script src="popup.js"></script>
+</body>
+</html>

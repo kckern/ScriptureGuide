@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Reddit-like Scripture Test</title>
+    <meta charset="UTF-8">
+    <style>
+        body { 
+            font-family: IBMPlexSans, Arial, sans-serif; 
+            background-color: #1a1a1b; 
+            color: #d7dadc; 
+            margin: 0; 
+            padding: 20px; 
+        }
+        .comment { 
+            background-color: #1a1a1b; 
+            border: 1px solid #343536; 
+            margin: 10px 0; 
+            padding: 12px; 
+            border-radius: 4px; 
+        }
+        .comment-author { 
+            color: #818384; 
+            font-size: 12px; 
+            margin-bottom: 8px; 
+        }
+        .comment-text { 
+            line-height: 1.4; 
+            color: #d7dadc; 
+        }
+        .vote-buttons { 
+            display: inline-block; 
+            margin-right: 8px; 
+            color: #818384; 
+        }
+        .comment-meta { 
+            margin-top: 8px; 
+            font-size: 12px; 
+            color: #818384; 
+        }
+        h1 { color: #d7dadc; }
+    </style>
+</head>
+<body>
+    <h1>What is your favorite Bible verse?</h1>
+    
+    <div class="comment">
+        <div class="comment-author">pac4 • 2y ago</div>
+        <div class="comment-text">
+            <span style="border: 1px dotted #552B1B; padding: 0 0.5em; background-color: #f2e5d9; color: black; border-radius: 4px;">Romans 8:38-39</span> For I am sure that neither death, nor life, nor angels, things present, nor things to come, nor might, Nor height, nor depth, no to separate us from the love of God which is in Christ Jesus our Lord.
+        </div>
+        <div class="comment-meta">
+            <span class="vote-buttons">↑ 6 ↓</span>
+            🏆 Award 🔗 Share •••
+        </div>
+    </div>
+    
+    <div class="comment">
+        <div class="comment-author">ewheck • 2y ago</div>
+        <div class="comment-text">
+            <span class="badge" style="background: green; color: white; padding: 2px 6px; border-radius: 10px; font-size: 11px;">Catholic</span><br><br>
+            Hebrews 11:1
+        </div>
+        <div class="comment-meta">
+            <span class="vote-buttons">↑ 5 ↓</span>
+            🏆 Award 🔗 Share •••
+        </div>
+    </div>
+    
+    <div class="comment">
+        <div class="comment-author">Brainiac7777777 • 2y ago</div>
+        <div class="comment-text">
+            The Proverbs verse where talks about life before creation
+        </div>
+        <div class="comment-meta">
+            <span class="vote-buttons">↑ 5 ↓</span>
+            🏆 Award 🔗 Share •••
+        </div>
+    </div>
+    
+    <div class="comment">
+        <div class="comment-author">Echoed15 • 2y ago</div>
+        <div class="comment-text">
+            Psalm 46:10: be still and know that I am God
+        </div>
+        <div class="comment-meta">
+            <span class="vote-buttons">↑ 5 ↓</span>
+            🏆 Award 🔗 Share •••
+        </div>
+    </div>
+    
+    <div class="comment">
+        <div class="comment-author">mybloodtypeisink • 2y ago</div>
+        <div class="comment-text">
+            Proverbs 3:6 in all thy ways acknowledge me, and i will direct your path
+        </div>
+        <div class="comment-meta">
+            <span class="vote-buttons">↑ 5 ↓</span>
+            🔗 Share •••
+        </div>
+    </div>
+    
+    <div class="comment">
+        <div class="comment-author">Job-1-21 • 2y ago</div>
+        <div class="comment-text">
+            Psalms 23 is good, I love this song:<br><br>
+            <a href="https://youtu.be/ITHr9UcvWko" style="color: #4fbcff;">https://youtu.be/ITHr9UcvWko</a>
+        </div>
+        <div class="comment-meta">
+            <span class="vote-buttons">↑ 4 ↓</span>
+            🏆 Award 🔗 Share •••
+        </div>
+    </div>
+    
+    <div class="comment">
+        <div class="comment-author">Daniel1Caskey • 2y ago</div>
+        <div class="comment-text">
+            <span style="border: 1px dotted #552B1B; padding: 0 0.5em; background-color: #f2e5d9; color: black; border-radius: 4px;">Romans 5:19</span> For as by one man's disobedience many were made sinners, so shall many be made righteous.<br><br>
+            <span style="border: 1px dotted #552B1B; padding: 0 0.5em; background-color: #f2e5d9; color: black; border-radius: 4px;">2 Corinthians 5:21</span> For he hath made him to be sin for us, who knew no
+        </div>
+    </div>
+    
+    <!-- Test cases for missed references -->
+    <div class="comment">
+        <div class="comment-author">TestUser1 • now</div>
+        <div class="comment-text">
+            I love 1 Corinthians 7:25 and also 1 Corinthians 9:8 which are great verses.
+        </div>
+    </div>
+    
+    <div class="comment">
+        <div class="comment-author">TestUser2 • now</div>
+        <div class="comment-text">
+            Check out Matthew 5:16 and John 3:16 for inspiration.
+        </div>
+    </div>
+    
+    <div class="comment">
+        <div class="comment-author">TestUser3 • now</div>
+        <div class="comment-text">
+            The verse in Ephesians 2:8-9 is my favorite, along with Romans 6:23.
+        </div>
+    </div>
+    
+    <button onclick="enableDebug()" style="position: fixed; top: 10px; right: 10px; z-index: 9999; background: #ff4500; color: white; border: none; padding: 10px; border-radius: 4px;">Enable Debug</button>
+    <button onclick="clearLinks()" style="position: fixed; top: 10px; right: 150px; z-index: 9999; background: #008000; color: white; border: none; padding: 10px; border-radius: 4px;">Clear Links</button>
+    
+    <div id="debug-info" style="position: fixed; bottom: 10px; right: 10px; background: rgba(0,0,0,0.8); color: white; padding: 10px; border-radius: 4px; max-width: 400px; font-family: monospace; font-size: 12px; display: none;"></div>
+    
+    <script>
+        function enableDebug() {
+            window.sgDebug = true;
+            document.getElementById('debug-info').style.display = 'block';
+            document.getElementById('debug-info').innerHTML = 'Debug mode enabled. Check console for details.';
+            console.log('Scripture Guide debug mode enabled');
+        }
+        
+        function clearLinks() {
+            // Remove all sg_autolink elements and replace with text
+            document.querySelectorAll('.sg_autolink').forEach(link => {
+                link.outerHTML = link.textContent;
+            });
+            // Remove sg-flag attributes
+            document.querySelectorAll('[sg-flag]').forEach(el => {
+                el.removeAttribute('sg-flag');
+            });
+            console.log('All scripture links cleared');
+        }
+        
+        // Monitor for extension activity
+        let linkCount = 0;
+        setInterval(() => {
+            const currentLinks = document.querySelectorAll('.sg_autolink').length;
+            if (currentLinks !== linkCount) {
+                linkCount = currentLinks;
+                const debugDiv = document.getElementById('debug-info');
+                if (debugDiv.style.display !== 'none') {
+                    debugDiv.innerHTML = `Debug mode enabled.<br>Scripture links found: ${linkCount}<br>Check console for details.`;
+                }
+            }
+        }, 1000);
+    </script>
+</body>
+</html>
