@@ -1,0 +1,140 @@
+<%
+const version = data.version || 'KJV';
+const showNums = config.includeVerseNumbers !== false;
+const ch = data.chapterHeading;
+const nav = data.chapterNav;
+
+// Helper: build a full <h3 class="heading"> with all production attrs
+function buildH3(h, version) {
+  const headless = (h.headless || !h.text) ? ' headless="1"' : '';
+  const slug = h.slug ? ` slug="${h.slug}"` : '';
+  const ref = h.ref ? ` ref="${h.ref}"` : '';
+  const dispVc = h._displayVerseCount ?? h.verse_count;
+  const dispLast = h._displayLast ?? h.last;
+  const vc = (dispVc != null && dispVc > 0) ? ` verse_count="${dispVc}"` : '';
+  const lv = dispLast ? ` last_verse_id="${dispLast}"` : '';
+  const img = h.img ? ` img="${h.img}"` : '';
+  const ver = h.ver ? ` tver="${h.tver || h.ver}" ver="${h.ver}"` : '';
+  const audioAttr = h.audio > 0 ? ` audio="1"` : '';
+  const parallelAttr = h.parallel ? ` parallel="${h.parallel}"` : '';
+  let html = `<h3 class="heading" version="${version}" heading_verse_id="${h.displayVerseId || h.verse_id}"${vc}${lv}${headless}${ref}${slug}${ver}${img}${parallelAttr}${audioAttr}>${h.text || ''}</h3>`;
+  return html;
+}
+
+// Build passage HTML — group verses into paragraphs based on paraBreak flag
+// Mirrors PHP: multiple verse spans share one <p> unless separated by a ¶ marker
+let passageHtml = '';
+const lastVerseId = data.verses.length ? data.verses[data.verses.length - 1].id : null;
+
+// Attach summary/headnote from chapterHeading to the chapter heading h3
+const chapterH3Data = ch && data.h3ByVerse[ch.verse_id] ? data.h3ByVerse[ch.verse_id] : null;
+if (chapterH3Data && ch) {
+  chapterH3Data.audio = data.audio || 0;
+}
+
+// Collect paragraph groups: each group is { fmt, spans[], h3, inlineItems[] }
+const paraGroups = [];
+let currentGroup = null;
+
+data.verses.forEach(verse => {
+  // h3 attaches to the segment that triggers the new section (isSection), not segment 0
+  // For multi-segment verses (§¶ mid-text), h3 attaches only at the isSection segment (not segIndex===0)
+  const h3 = (verse.isSection || (verse.segIndex === 0 && verse.segCount === 1 && verse.lbIndex === 0)) && data.h3ByVerse[verse.id]
+    ? data.h3ByVerse[verse.id]
+    : null;
+  // inlineItems only attach to first segment of each verse
+  const inlineItems = (verse.segIndex === 0) ? (data.inlineByVerse[verse.id] || []) : [];
+  const hasBreak = h3 || verse.paraBreak || !currentGroup || (inlineItems.length > 0);
+  const fmt = verse.format || 'prose';
+  const fmtChange = currentGroup && fmt !== currentGroup.fmt;
+
+  if (hasBreak || fmtChange) {
+    currentGroup = { fmt, spans: [], h3, inlineItems };
+    paraGroups.push(currentGroup);
+  }
+
+  const ref = `${data.book || ''} ${data.chapter || ''}:${verse.num}`.trim();
+  const bookSlug = (data.book || '').toLowerCase().replace(/\s+/g, '-');
+  const verseClass = `${bookSlug}-${data.chapter}-${verse.num}`;
+  // verse_label only on first segment and first linebreak part; second+ get no attr
+  // Note: <sup class="vnum"> is NOT rendered server-side — JS adds it from verse_label attr
+  const verseLabel = (verse.segIndex === 0 && verse.lbIndex === 0) ? (verse.num === 1 ? `${data.chapter}:${verse.num}` : verse.num) : null;
+  const verseLabelAttr = verseLabel !== null ? ` verse_label="${verseLabel}"` : '';
+  const lbClassStr = verse.lbClass ? ` ${verse.lbClass}` : '';
+  const span = `<span class="verse v_${verse.id} ${fmt}${lbClassStr} ${verseClass}" verse_id="${verse.id}" ref="${ref}" version="${version}"${verseLabelAttr}>${verse.text}</span>`;
+  currentGroup.spans.push(span);
+});
+
+// Pre-passage heading: chapter-level heading from a prior section (e.g. NRSV Psalms spanning chapters)
+// Renders before the verse loop with an ellipsis paragraph to indicate omitted verses
+if (data.prePassageH3) {
+  const pph = data.prePassageH3;
+  passageHtml += `\n\t\t${buildH3(pph, version)}`;
+  if (ch?.summary) passageHtml += `\n\t\t<div class="summary" version="${version}">${ch.summary}</div>`;
+  if (ch?.headnote) passageHtml += `\n\t\t<div class="headnote" version="${version}">${ch.headnote}</div>`;
+  passageHtml += `\n\t\t<p class="ellipses" heading_verse_id="${pph.verse_id}" verse_count="${pph.ellipsisVerseCount}" last_verse_id="${pph.ellipsisLast}">...</p>`;
+}
+
+paraGroups.forEach(group => {
+  // Full h3 with all attrs (covers chapter heading AND inline section headings)
+  if (group.h3) {
+    passageHtml += `\n\t\t${buildH3(group.h3, version)}`;
+    // summary/headnote after chapter heading
+    if (group.h3.verse_id === ch?.verse_id) {
+      if (ch.summary) passageHtml += `\n\t\t<div class="summary" version="${version}">${ch.summary}</div>`;
+      if (ch.headnote) passageHtml += `\n\t\t<div class="headnote" version="${version}">${ch.headnote}</div>`;
+    }
+  }
+
+  // Non-heading inline items (verse_head etc.)
+  group.inlineItems.forEach(h => {
+    if (h.type === 'verse_head' && h.text) {
+      passageHtml += `\n\t\t<div class="verse_head">${h.text}</div>`;
+    } else if (['headnote','summary','background'].includes(h.type) && h.text) {
+      passageHtml += `\n\t\t<div class="${h.type}" version="${version}">${h.text}</div>`;
+    }
+  });
+
+  const content = group.spans.join(' ');
+  if (group.fmt === 'poetry') {
+    passageHtml += `\n\t\t<blockquote class="poetry">${content}</blockquote>`;
+  } else if (group.fmt === 'indent') {
+    passageHtml += `\n\t\t<blockquote class="indent">${content}</blockquote>`;
+  } else {
+    passageHtml += `\n\t\t<p class="${group.fmt}">${content}</p>`;
+  }
+});
+
+// Chapter nav
+let chapterNavHtml = '';
+if (nav) {
+  chapterNavHtml = `\n\t\t<div class="chapterNav">`;
+  const verPath = version.toLowerCase();
+  if (nav.prev) chapterNavHtml += `<a href="/${verPath}/${nav.prev.slug}" class="prev">◀ ${nav.prev.label}</a>`;
+  if (nav.next) chapterNavHtml += `<a href="/${verPath}/${nav.next.slug}" class="next">${nav.next.label} ▶</a>`;
+  chapterNavHtml += `</div>`;
+}
+%>
+<%- include('layouts/main', {
+  title: data.reference,
+  config,
+  slugref: data.canonicalRefSlug || '',
+  slugver: version,
+  body: `
+<div id="container">
+  <div class="scriptures">
+    <div class="section">
+      <div class="passage ver_${version}">
+        ${passageHtml}
+      </div>
+      <div class="passage ver_">
+        ${chapterNavHtml}
+      </div>
+    </div>
+  </div>
+</div>
+<div class="containerCopy">
+  <div onclick="copyContainerToClipbord(this)"><img src="/img/copy.svg">Copy</div>
+</div>
+`
+}) %>

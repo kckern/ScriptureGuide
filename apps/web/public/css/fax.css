@@ -1,0 +1,114 @@
+#faxbox
+{
+	border-collapse:collapse;
+	width:100%;
+}
+
+#faxbox td
+{
+	border:1px solid black;
+	padding:0px;
+	width:50%;
+}
+
+#faxbox .textrow td > div.scrollbox
+{
+	height:200px;
+	max-width: 100%;
+	overflow:auto;
+	padding:5px;
+  overflow-y: scroll;
+  position:relative;
+}
+#faxbox .imgrow td > div.scrollbox
+{
+	height:500px;
+	width:100%;
+	overflow:auto;
+  overflow-y: scroll;
+  position:relative;
+  background-color:#000
+}
+
+#faxbox .imgrow td > div.scrollbox>div
+{
+	width:inherit;
+	position:relative;
+}
+#faxbox .imgrow td > div.scrollbox div img
+{
+	width:inherit;
+}
+
+#faxbox .thumbrow td > div.scrollbox
+{
+	height:150px;
+	width:100%;
+  overflow-x: scroll;
+  overflow-y:none;
+  position:relative;
+}
+
+#faxbox .thumbrow td > div.scrollbox img
+{
+	height:inherit;
+	display:inline;
+}
+
+
+ div.scrollbox p
+ {
+ 	line-height:14px;
+ 	font-size:14px;
+ 	margin:0;
+ 	margin-bottom:5px;
+ 	 text-indent: 15px;
+ 	 text-align:justify;
+ }
+ 
+ .verse.highlight
+ {
+ 	background-color:white;
+ }
+ 
+ #faxbox .highlighter
+ {
+ 	position:absolute;
+ 	top:0;
+ 	left:0;
+ 	width:100%;
+ 	
+ }
+ 
+ 
+ #faxbox .highlighter div
+ {
+ 	border:1px solid red;
+ }
+ 
+ #faxbox .verse
+ {
+ 	cursor:pointer;
+ }
+ 
+ 
+ 
+ #faxbox .imgrow .spotlight_main_l, 
+ #faxbox .imgrow .spotlight_main_r
+ {
+ 	max-width: 100%;
+ 	position:absolute;
+ 	z-index:999;
+ 	
+ 	
+ 	top:100px;
+ 	left:100px;
+ 	
+ 	
+ 	width:100px;
+ 	height:100px;
+ 	border:1px solid blue;
+ 	
+ 	
+ 	
+ }

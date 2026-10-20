@@ -1,0 +1,6 @@
+<div class="verse" data-verse-id="<%= verse.id %>">
+  <% if (config.includeVerseNumbers !== false) { %>
+    <span class="verse-num"><%= verse.num %></span>
+  <% } %>
+  <span class="verse-text"><%- verse.text %></span>
+</div>
