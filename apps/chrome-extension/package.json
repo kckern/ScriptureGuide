@@ -6,7 +6,8 @@
   "scripts": {
     "build": "webpack --mode=production",
     "test": "jest",
-    "deploy": "./deploy.sh"
+    "deploy": "./deploy.sh",
+    "sync-manifest": "node scripts/sync-manifest-version.mjs"
   },
   "dependencies": {
     "scripture-guide": "^1.0.98"
