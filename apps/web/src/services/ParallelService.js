@@ -6,7 +6,7 @@ import { ScriptureLookupService } from './ScriptureLookupService.js';
 import verseRepository from '../data/repositories/VerseRepository.js';
 import parallelRepository from '../data/repositories/ParallelRepository.js';
 import { arrayText, verseLines } from './text/flattenText.js';
-import { formatReference, slugifyRef, versionImg } from './legacyReference.js';
+import { formatReference, slugifyRef, versionImg } from '../domain/rules/legacyReference.js';
 
 // A left side with no verses, or one of these years, is an edition: "1830~msg/john1"
 const EDITION_YEARS = ['1830', '1829', '1833', '1853', '1837', '1840', '1841', '1879', '1920', '1981', '2013'];

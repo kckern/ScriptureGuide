@@ -32,28 +32,12 @@ export function stemText(text) {
   });
 }
 
-// scriptutil::slufigyRef — "Gen. 22:1–14" → "gen.22.1-14".
-export function slugifyRef(ref) {
-  return String(ref)
-    .toLowerCase()
-    .replace(/[\s.:]+/g, '.')
-    .replace(/([;,])\./g, '$1')
-    .replace(/–/g, '-');
-}
-
 // scriptutil::transposeRef — "Mark 5" read as JST becomes "JST Mark 5", and the reverse.
 export function transposeRef(ref, ver) {
   const r = ref == null ? '' : String(ref);
   if (ver === 'JST' && !/jst/i.test(r)) return `JST ${r}`;
   if (ver !== 'JST' && /jst/i.test(r)) return r.replace(/jst/gi, '');
   return r;
-}
-
-// scriptutil::versionIMG — cover image name for a version; LDS covers depend on the volume.
-const LDS_COVERS = { 1: 'ldskjv', 2: 'ldskjv', 3: 'lds-bom2', 4: 'lds-dc2', 5: 'lds-pgp2' };
-export function versionImg(ver, volumeId) {
-  if (ver === 'LDS' && LDS_COVERS[volumeId]) return LDS_COVERS[volumeId];
-  return String(ver).replace(/\*.*$/, '').toLowerCase();
 }
 
 // Strip a "*FMT" suffix: "NIV*KJV" → "NIV".

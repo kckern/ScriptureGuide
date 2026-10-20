@@ -1,6 +1,6 @@
 import parallelService from '../../services/ParallelService.js';
 import searchService from '../../services/SearchService.js';
-import { slugifyRef } from '../../services/legacyReference.js';
+import { slugifyRef } from '../../domain/rules/legacyReference.js';
 import { OutputFormat } from '../../domain/enums/OutputFormat.js';
 
 // Routes the PHP front controller (lib.php.inc) sends to parallel.php and search.php:

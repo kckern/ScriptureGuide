@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import {
-  flattenText, stemText, slugifyRef, transposeRef, versionImg, baseVersion, highlightSearchTerm, escapeHtml,
+  flattenText, stemText, transposeRef, baseVersion, highlightSearchTerm, escapeHtml,
 } from '../../src/domain/rules/legacyText.js';
 
 // Fixtures are KJV (public domain) or hand-written.
@@ -28,15 +28,6 @@ describe('stemText (versebox.php callb)', () => {
   });
 });
 
-describe('slugifyRef', () => {
-  it('matches PHP slufigyRef', () => {
-    expect(slugifyRef('Gen. 22:1–14')).toBe('gen.22.1-14');
-    expect(slugifyRef('D&C 45:5')).toBe('d&c.45.5');
-    expect(slugifyRef('1 Jn. 4:9')).toBe('1.jn.4.9');
-    expect(slugifyRef('JST John 3:16')).toBe('jst.john.3.16');
-  });
-});
-
 describe('transposeRef', () => {
   it('prefixes JST when reading in JST and removes it otherwise', () => {
     expect(transposeRef('Mark 5', 'JST')).toBe('JST Mark 5');
@@ -46,12 +37,8 @@ describe('transposeRef', () => {
   });
 });
 
-describe('versionImg / baseVersion', () => {
-  it('maps LDS covers by volume and lowercases the rest', () => {
-    expect(versionImg('LDS', 2)).toBe('ldskjv');
-    expect(versionImg('LDS', 3)).toBe('lds-bom2');
-    expect(versionImg('LDS', 8)).toBe('lds');
-    expect(versionImg('KJV*NIV', 2)).toBe('kjv');
+describe('baseVersion', () => {
+  it('drops a format suffix', () => {
     expect(baseVersion('NIV*KJV')).toBe('NIV');
   });
 });
