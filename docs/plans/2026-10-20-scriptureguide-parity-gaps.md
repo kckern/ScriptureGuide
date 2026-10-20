@@ -117,7 +117,7 @@ g=lambda i: (n.getDebugName(i) or '')[:80]; print(sys.argv[1], '|', g(4), '|', g
 
 (name IDs: 4 full name, 0 copyright, 13 license).
 
-**Step 2: Decide per font** and record in `apps/web/public/css/webfont/LICENSES.md`:
+**Step 2: Decide per font** and record in `apps/web/docs/fonts.md` (license text beside the fonts in `apps/web/public/css/webfont/OFL.txt`):
 - SIL OFL, GPL-with-font-exception, or an explicit free-redistribution license → commit the file.
 - Anything else → do not commit. Serve it from `FONT_BASE` (default `https://media.scripture.guide/fonts`) by rewriting its `url()` in the served CSS, and list it for the owner to upload.
 
