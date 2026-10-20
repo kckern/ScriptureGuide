@@ -1,5 +1,6 @@
 import scriptureLookupService from '../../services/ScriptureLookupService.js';
 import searchRepository from '../../data/repositories/SearchRepository.js';
+import outputMiddleware from '../middleware/output.js';
 
 export class ScriptureController {
   constructor(lookupService) {
@@ -33,6 +34,10 @@ export class ScriptureController {
   }
 
   async home(req, res) {
+    // "/?q=john.3.16" (index.php?q=...) is a lookup, not the home page
+    if (req.config?.reference && !req.params?.reference) {
+      return this.show(req, res, err => (err ? res.status(500).send('Internal error') : outputMiddleware(req, res)));
+    }
     res.render('home', {
       config: req.config || {}
     });

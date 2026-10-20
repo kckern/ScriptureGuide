@@ -114,6 +114,10 @@ describe('q normalization', () => {
     expect(r.parallel).toBe(true);
     expect(r.reference).toBe('kjv/isa.2.1~2ne.12.1');
   });
+  test('?q= on the bare path is the request (index.php?q=...)', () => {
+    expect(req('/', { q: 'kjv/john.3.16' }).reference).toBe('john.3.16');
+    expect(req('/john.3.16', { q: 'gen.1.1' }).reference).toBe('john.3.16');
+  });
   test('empty path is home', () => {
     const r = req('/');
     expect(r.reference).toBe('');

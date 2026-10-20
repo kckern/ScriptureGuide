@@ -82,6 +82,8 @@ export function parseVersionSpec(spec) {
 export function parseRequest({ host = '', path = '/', query = {}, random = Math.random } = {}) {
   let { subdomain, flags: hostFlags } = parseHost(host);
   let q = decode(String(path || '/')).replace(/^\/+/, '');
+  // index.php?q=... reaches the front controller without a rewritten path
+  if (!q && typeof query?.q === 'string') q = query.q.replace(/^\/+/, '');
 
   for (const shortcut of PHP_PATH_SHORTCUTS) {
     const re = new RegExp(`^${shortcut}/`, 'i');
