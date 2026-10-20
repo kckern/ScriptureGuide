@@ -31,6 +31,43 @@ export class VerseRepository {
     );
   }
 
+  // All books of the verse index (cached; the table is static)
+  async findAllBooks() {
+    if (!this._books) {
+      this._books = db.query(
+        'SELECT book_id, volume_id, book_title, book_title_short, lds_org FROM lds_scriptures_books ORDER BY book_id'
+      ).catch(err => { this._books = null; throw err; });
+    }
+    return this._books;
+  }
+
+  // Verse-index rows (verse_id, book, chapter, verse) for verse ids
+  async findIndexRows(verseIds) {
+    if (!verseIds || verseIds.length === 0) return [];
+    return db.query(
+      `SELECT v.verse_id, v.book_id, v.chapter, v.verse, b.book_title
+       FROM lds_scriptures_verses v JOIN lds_scriptures_books b ON b.book_id = v.book_id
+       WHERE v.verse_id IN (?) ORDER BY v.verse_id`,
+      [verseIds]
+    );
+  }
+
+  // Verse-index rows for a book, chapter range and optional verse range
+  async findIndexRowsByBook(bookId, chapter, chapterEnd = null, verseStart = null, verseEnd = null) {
+    if (verseStart != null) {
+      return db.query(
+        `SELECT verse_id, book_id, chapter, verse FROM lds_scriptures_verses
+         WHERE book_id = ? AND chapter = ? AND verse BETWEEN ? AND ? ORDER BY verse_id`,
+        [bookId, chapter, verseStart, verseEnd ?? verseStart]
+      );
+    }
+    return db.query(
+      `SELECT verse_id, book_id, chapter, verse FROM lds_scriptures_verses
+       WHERE book_id = ? AND chapter BETWEEN ? AND ? ORDER BY verse_id`,
+      [bookId, chapter, chapterEnd ?? chapter]
+    );
+  }
+
   async findByRange(startId, endId, version = 'KJV') {
     const rows = await db.query(
       `SELECT verse_id, verse, text, version, format

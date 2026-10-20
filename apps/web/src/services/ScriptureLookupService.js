@@ -87,6 +87,11 @@ export class ScriptureLookupService {
       }
     }
 
+    // Verse ids, JST books and collections the package does not know: the verse index
+    if (reference.isEmpty) {
+      reference = await this.referenceService.resolve(referenceString);
+    }
+
     if (reference.isEmpty) {
       return new ScriptureResult({ reference, verses: [], headings: [], config });
     }
