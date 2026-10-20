@@ -206,7 +206,7 @@ function activateVersionIMGs(el,time)
 		
 		
 		var imgHTML = '';
-		imgHTML = "<img class='cover' title='"+ver_names[tver]+"' src='https://img.scripture.guide/covers/"+img.toLowerCase()+".jpg'/>";
+		imgHTML = "<img class='cover' title='"+ver_names[tver]+"' src='https://media.scripture.guide/covers/"+img.toLowerCase()+".jpg'/>";
 		
 		var txt = $(this).html();
 		var searchcount = '';
@@ -269,7 +269,7 @@ function activateVersionIMGs(el,time)
  		$("span.fax_button").unbind("click").click(function(e){
  			
 
-		 	windows[$(this).parent().attr("slug")] = PopupCenter("https://fax.scripture.guide/"+$(this).parent().attr("slug"),$(this).parent().attr("slug"),1200,800);
+		 	windows[$(this).parent().attr("slug")] = PopupCenter("http://img.scripture.guide/"+$(this).parent().attr("slug"),$(this).parent().attr("slug"),1200,800);
  				return false;
  		});
  		
@@ -293,8 +293,8 @@ function activateVersionIMGs(el,time)
  		});
  		
  	
- 		
  		$("h4 img.cover").unbind("click").click(function(){
+
  			
  			$this = $(this);
  			
@@ -668,8 +668,11 @@ function activateVerses(time)
  		
 		 		
 		}).on('click', 'h4', function(e) {
-		    // clicked on descendant div
-		    e.stopPropagation();
+
+			//ignore if img
+			if($(e.target).is('img')) return false;
+			// Handle h4 click, but not when img within h4 is clicked
+			e.stopPropagation();
 		});
 
  	
@@ -717,7 +720,7 @@ function activateVerses(time)
   	{
   		var vers = base64_decode($(this).attr("extra"));
   		var verse_id = $(this).parent().attr("verse_id");
-		PopupCenter("https://fax.scripture.guide/"+vers+"/"+verse_id,"Scripture Guide Facsimile View",1200,800);
+		PopupCenter("http://img.scripture.guide/"+vers+"/"+verse_id,"Scripture Guide Facsimile View",1200,800);
   	}
   	
     e.stopPropagation();
@@ -1045,21 +1048,6 @@ function saveSettings()
 }
 
 var googleUser = {};
-function attachSignin(element) {
-
-auth2.attachClickHandler(element, {},
-    function(googleUser) {
-          Cookies.set('sg_user', googleUser.getBasicProfile().getName(), { expires: 365, 		domain: 'scripture.guide' });
-          Cookies.set('sg_mail', googleUser.getBasicProfile().getEmail(), { expires: 365, 		domain: 'scripture.guide' });
-          Cookies.set('sg_face', googleUser.getBasicProfile().getImageUrl(), { expires: 365, 	domain: 'scripture.guide' });
-          $('#settings_button')[0].click();
-          
-    }, function(error) {
-      //alert(JSON.stringify(error, undefined, 2));
-      console.log("Authentication Incomplete");
-      console.log(error);
-    });
-}
 
 var signedIn = false;
 $(document).ready(function(){
@@ -1082,18 +1070,6 @@ $(document).ready(function(){
 		  
 		});
 		
-		gapi.load('auth2', function(){
-		  // Retrieve the singleton for the GoogleAuth library and set up the client.
-		  auth2 = gapi.auth2.init({
-		    client_id: '456499961968-hs8jbu3rvruluu853non4qhobuke6eve.apps.googleusercontent.com',
-		    cookiepolicy: 'single_host_origin',
-		    // Request scopes in addition to 'profile' and 'email'
-		    //scope: 'additional_scope'
-		  });
-		  attachSignin(document.getElementById('login_button'));
-		  $.featherlight.close()
-		$('#settings_button').featherlight( '/settings',{beforeOpen:function(){return loginCheck()}});
-		});
 
 
 	$('#logout_button').click(function(){auth2.signOut()});

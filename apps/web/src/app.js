@@ -10,6 +10,7 @@ import { fileURLToPath } from 'url';
 import config from './config/index.js';
 import routes from './app/routes/index.js';
 import subdomainMiddleware from './app/middleware/subdomain.js';
+import { publicStatic } from './app/middleware/static.js';
 import { notFoundHandler, errorHandler } from './app/middleware/error.js';
 import db from './data/db/connection.js';
 
@@ -40,7 +41,7 @@ app.use(cookieParser());
 app.use(session(config.session));
 
 // Static files
-app.use(express.static(path.join(__dirname, '../public')));
+app.use(publicStatic());
 
 // View engine
 app.set('view engine', 'ejs');

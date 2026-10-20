@@ -7,29 +7,29 @@
      font-family: 'Sorts Mill Goudy';
      font-style: normal;
      font-weight: 400;
-     src: url('/webfont/SortsMillGoudy-Regular.woff') format('woff');
+     src: url('/css/webfont/SortsMillGoudy-Regular.woff') format('woff');
 }
  @font-face {
      font-family: 'Sorts Mill Goudy';
      font-style: italic;
      font-weight: 400;
-     src: url('/webfont/SortsMillGoudy-Italic.woff') format('woff');
+     src: url('/css/webfont/SortsMillGoudy-Italic.woff') format('woff');
 }
  @font-face {
      font-family: 'Goudy';
-     src: url('/webfont/Goudy-Regular.eot?#iefix') format('embedded-opentype'), url('/webfont/Goudy-Regular.woff') format('woff'), url('/webfont/Goudy-Regular.ttf') format('truetype'), url('/webfont/Goudy-Regular.svg#Goudy-Regular') format('svg');
+     src: url('/css/webfont/Goudy-Regular.eot?#iefix') format('embedded-opentype'), url('/css/webfont/Goudy-Regular.woff') format('woff'), url('/css/webfont/Goudy-Regular.ttf') format('truetype'), url('/css/webfont/Goudy-Regular.svg#Goudy-Regular') format('svg');
      font-weight: 400;
      font-style: normal;
 }
  @font-face {
      font-family: 'Goudy';
-     src: url('/webfont/Goudy-Bold.eot?#iefix') format('embedded-opentype'), url('/webfont/Goudy-Bold.woff') format('woff'), url('/webfont/Goudy-Bold.ttf') format('truetype'), url('/webfont/Goudy-Bold.svg#Goudy-Bold') format('svg');
+     src: url('/css/webfont/Goudy-Bold.eot?#iefix') format('embedded-opentype'), url('/css/webfont/Goudy-Bold.woff') format('woff'), url('/css/webfont/Goudy-Bold.ttf') format('truetype'), url('/css/webfont/Goudy-Bold.svg#Goudy-Bold') format('svg');
      font-weight: 700;
      font-style: normal;
 }
  @font-face {
      font-family: 'Goudy';
-     src: url('/webfont/Goudy-Italic.eot?#iefix') format('embedded-opentype'), url('/webfont/Goudy-Italic.woff') format('woff'), url('/webfont/Goudy-Italic.ttf') format('truetype'), url('/webfont/Goudy-Italic.svg#Goudy-Italic') format('svg');
+     src: url('/css/webfont/Goudy-Italic.eot?#iefix') format('embedded-opentype'), url('/css/webfont/Goudy-Italic.woff') format('woff'), url('/css/webfont/Goudy-Italic.ttf') format('truetype'), url('/css/webfont/Goudy-Italic.svg#Goudy-Italic') format('svg');
      font-weight: 400;
      font-style: italic;
 }
@@ -37,26 +37,26 @@
      font-family: 'Yanone Kaffeesatz';
      font-style: normal;
      font-weight: 300;
-     src: url('/webfont/YanoneKaffeesatz-Light.woff') format('woff');
+     src: url('/css/webfont/YanoneKaffeesatz-Light.woff') format('woff');
 }
  @font-face {
      font-family: 'Yanone Kaffeesatz';
      font-style: normal;
      font-weight: 400;
-     src: url('/webfont/YanoneKaffeesatz-Regular.woff') format('woff');
+     src: url('/css/webfont/YanoneKaffeesatz-Regular.woff') format('woff');
 }
  @font-face {
      font-family: 'Yanone Kaffeesatz';
      font-style: normal;
      font-weight: 700;
-     src: url('/webfont/YanoneKaffeesatz-Bold.woff') format('woff');
+     src: url('/css/webfont/YanoneKaffeesatz-Bold.woff') format('woff');
 }
 /* latin */
 @font-face {
   font-family: 'Shadows Into Light';
   font-style: normal;
   font-weight: 400;
-  src: local('Shadows Into Light'), local('ShadowsIntoLight'), url('/webfont/ShadowsIntoLight.woff2') format('woff2');
+  src: local('Shadows Into Light'), local('ShadowsIntoLight'), url('/css/webfont/ShadowsIntoLight.woff2') format('woff2');
   unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
 }
 
