@@ -1,7 +1,9 @@
 import { describe, it, expect } from 'vitest';
 import express from 'express';
 import request from 'supertest';
-import { readFileSync } from 'node:fs';
+import { readFileSync, mkdtempSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import path from 'node:path';
 import { publicStatic } from '../../src/app/middleware/static.js';
 
 const app = express().use(publicStatic());
@@ -21,5 +23,12 @@ describe('public static files', () => {
     const res = await request(app).get('/js/main.js');
     expect(res.status).toBe(200);
     expect(res.headers['content-type']).toMatch(/^application\/javascript/);
+  });
+  it('matches the .ico extension case-insensitively', async () => {
+    const dir = mkdtempSync(path.join(tmpdir(), 'sg-static-'));
+    writeFileSync(path.join(dir, 'ICON.ICO'), Buffer.from([0, 0, 1, 0]));
+    const res = await request(express().use(publicStatic(dir))).get('/ICON.ICO');
+    expect(res.status).toBe(200);
+    expect(res.headers['content-type']).toBe('image/vnd.microsoft.icon');
   });
 });
