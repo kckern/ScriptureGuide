@@ -40,7 +40,16 @@ function loadCorpus(name) {
     console.error(`${file} is missing. Build it from access logs first:\n  node test/parity/traffic.mjs <access.log…> > ${file}`);
     process.exit(2);
   }
-  return JSON.parse(readFileSync(file, 'utf8'));
+  let list;
+  try { list = JSON.parse(readFileSync(file, 'utf8')); } catch (e) { list = e; }
+  const valid = Array.isArray(list) &&
+    list.every(r => Array.isArray(r) && r.length === 2 && typeof r[0] === 'string' && typeof r[1] === 'string');
+  if (!valid) {
+    console.error(`${file} is not a JSON array of [format, path] string pairs` + (list instanceof Error ? ` (${list.message})` : '') +
+      '. Rebuild it with test/parity/traffic.mjs.');
+    process.exit(2);
+  }
+  return list;
 }
 
 mkdirSync(CACHE, { recursive: true });

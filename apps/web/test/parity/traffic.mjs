@@ -12,8 +12,19 @@ import { gunzipSync } from 'node:zlib';
 import { fileURLToPath } from 'node:url';
 import { formatForSubdomain } from '../../src/domain/rules/requestParsing.js';
 
-const LINE = /^\[[^\]]+\] \S+ (\d{3}) \S+ - (\S+) \S+ (\S+) "([^"]*)"/;
+// nginx-proxy-manager log_format:
+//   [$time_local] $upstream_cache_status $upstream_status $status - $request_method $scheme $host "$request_uri" [Client $remote_addr] …
+// $upstream_status may list retries ("502, 200"), so the client $status is the number right before " - METHOD".
+const LINE = /^\[[^\]]+\] (.*?) ?(\S+) (\d{3}) - ([A-Z]+) \S+ (\S+) "([^"]*)"/;
+const CLIENT = /\[Client ([^\]]+)\]/;
 const STATIC = /^\/(js|css|img|fonts?)\/|\.(js|css|png|jpe?g|gif|svg|ico|woff2?|ttf|eot)$/i;
+// Scanner probes: dot-segments (/.env, /.git/, /.well-known/), server-side scripts and config
+// files, and well-known CMS/admin paths. They are kept, but as one shape per format.
+const PROBE = new RegExp([
+  String.raw`(^|/)\.[^/]`,
+  String.raw`\.(php\d?|aspx?|jsp|cgi|env|ini|bak|old|sql|ya?ml|conf|log|txt|json|xml|zip|tar|gz|rar|7z)(\?|$|/)`,
+  String.raw`^/+(wp-|wp/|wordpress|blog/|cgi-bin|phpmyadmin|pma/|vendor/|admin|administrator|xmlrpc|owa/|ecp/|actuator|solr|console|boaform|hnap1|api/v\d|_api/)`,
+].join('|'), 'i');
 
 // Formats run.mjs can compare (see canonical() there). Others are counted and skipped.
 const COMPARABLE = new Set(['html', 'api', 'meta', 'raw', 'plain', 'latex', 'markdown', 'xml', 'notes',
@@ -22,22 +33,28 @@ const COMPARABLE = new Set(['html', 'api', 'meta', 'raw', 'plain', 'latex', 'mar
 const AJAX = { '/passage': 'passage', '/versionselect': 'versionselect', '/vbox': 'vbox' };
 // AJAX endpoints that read or write the session: not comparable request by request.
 const SESSION = new Set(['/settings', '/save_prefs']);
+// Probes get one shape per format and at most this many samples.
+const PROBE_SAMPLES = 2;
 
-// Why a log line is not kept, or the request it holds.
+// Files crawlers ask for legitimately; they keep their own shapes.
+const CRAWLER_FILES = /^\/((robots|llms|ads|humans|security)\.txt|sitemap[^/]*)$/i;
+
+export const isProbe = path => !CRAWLER_FILES.test(path.split('?')[0]) && PROBE.test(path);
+
+// Why a log line is not kept, or the request it holds (plus the client, for ranking only).
 export function classify(text) {
   const m = LINE.exec(text);
-  if (!m) {
-    // "- - 301": answered by the proxy itself (http → https redirect), no upstream status
-    const proxy = /^\[[^\]]+\] \S+ - (\d{3}) /.exec(text);
-    return { skip: proxy ? `proxy ${proxy[1]}` : 'unparsed' };
-  }
-  const [, status, method, rawHost, path] = m;
+  if (!m) return { skip: 'unparsed' };
+  const [, , upstream, status, method, rawHost, path] = m;
   const host = rawHost.toLowerCase();
   if (host !== 'scripture.guide' && !host.endsWith('.scripture.guide')) return { skip: 'other host' };
   if (method !== 'GET') return { skip: 'not GET' };
-  if (status !== '200') return { skip: `status ${status}` };
+  if (status !== '200') {
+    // "- - 301": the proxy itself redirected (http → https); PHP never saw it
+    return { skip: upstream === '-' && /^30\d$/.test(status) ? `proxy ${status}` : `status ${status}` };
+  }
   if (STATIC.test(path.split('?')[0])) return { skip: 'static file' };
-  return { req: { method, status: Number(status), host, path } };
+  return { req: { method, status: Number(status), host, path }, client: CLIENT.exec(text)?.[1] };
 }
 
 export function parseLine(text) {
@@ -56,8 +73,7 @@ export function formatOf({ host, path }) {
   const bare = path.split('?')[0].toLowerCase();
   if (SESSION.has(bare)) return { skip: 'session ajax' };
   if (format === 'html' && AJAX[bare]) format = AJAX[bare];
-  // PHP path shortcuts that pick a non-comparable format
-  if (/^\/(img|imgc)\//i.test(path)) format = 'img';
+  // PHP path shortcut to audio (/img/ never gets here: classify drops it as static)
   if (/^\/mp3\//i.test(path)) format = 'audio';
   if (!COMPARABLE.has(format)) return { skip: `format ${format}` };
   return { format };
@@ -72,7 +88,7 @@ export function shapeOf(path) {
   let prefix = '';
   const version = /^\/(?!search\/)[a-z0-9*.]+\/(?=[^/])/i.exec(p);
   if (version) { prefix = '/V'; p = p.slice(version[0].length - 1); }
-  const abstract = s => s.replace(/\d+/g, '9').replace(/[a-z]+/gi, 'a');
+  const abstract = s => s.replace(/(%[0-9a-f]{2})+/gi, '%').replace(/\d+/g, '9').replace(/[a-z]+/gi, 'a');
   let shape = prefix + abstract(p);
   if (query) {
     shape += '?' + query.split('&').map(kv => {
@@ -83,23 +99,38 @@ export function shapeOf(path) {
   return shape;
 }
 
-// At most n distinct paths per (format, shape), taken in path order. With maxGroups, only
-// the most-requested groups are kept (ties broken by key), so the corpus follows traffic.
+const groupOf = r => r.format + ' ' + (isProbe(r.path) ? 'probe' : shapeOf(r.path));
+
+// Rank by distinct clients, then hits; requests without a client count as one client each hit.
+function tally(map, key, client) {
+  const t = map.get(key) ?? { clients: new Set(), hits: 0 };
+  t.clients.add(client ?? Symbol());
+  t.hits++;
+  map.set(key, t);
+  return t;
+}
+const byPopularity = map => (a, b) =>
+  map.get(b).clients.size - map.get(a).clients.size || map.get(b).hits - map.get(a).hits || (a < b ? -1 : a > b ? 1 : 0);
+
+// Per (format, shape) group, the n paths requested by the most clients (then hits, then path
+// order); probes share one group per format and give at most PROBE_SAMPLES. With maxGroups,
+// only the groups requested by the most clients are kept.
 export function sample(reqs, n, maxGroups = Infinity) {
   const groups = new Map();
-  const hits = new Map();
+  const paths = new Map();
   for (const r of reqs) {
-    const key = r.format + ' ' + shapeOf(r.path);
-    if (!groups.has(key)) groups.set(key, new Set());
-    groups.get(key).add(r.path);
-    hits.set(key, (hits.get(key) ?? 0) + 1);
+    const key = groupOf(r);
+    tally(groups, key, r.client);
+    if (!paths.has(key)) paths.set(key, new Map());
+    tally(paths.get(key), r.path, r.client);
   }
-  const keys = [...groups.keys()].sort((a, b) => hits.get(b) - hits.get(a) || (a < b ? -1 : a > b ? 1 : 0))
-    .slice(0, maxGroups).sort();
+  const keys = [...groups.keys()].sort(byPopularity(groups)).slice(0, maxGroups).sort();
   const out = [];
   for (const key of keys) {
     const format = key.slice(0, key.indexOf(' '));
-    for (const path of [...groups.get(key)].sort().slice(0, n)) out.push({ format, path });
+    const limit = key.endsWith(' probe') ? Math.min(n, PROBE_SAMPLES) : n;
+    const inGroup = paths.get(key);
+    for (const path of [...inGroup.keys()].sort(byPopularity(inGroup)).slice(0, limit)) out.push({ format, path });
   }
   return out;
 }
@@ -122,6 +153,7 @@ function main(argv) {
   const skipped = {};
   const reqs = [];
   let lines = 0;
+  let probes = 0;
   for (const file of args) {
     const buf = readFileSync(file);
     const text = (file.endsWith('.gz') ? gunzipSync(buf) : buf).toString('utf8');
@@ -131,14 +163,19 @@ function main(argv) {
       const c = classify(line);
       const f = c.req ? formatOf(c.req) : c;
       if (f.skip) { skipped[f.skip] = (skipped[f.skip] ?? 0) + 1; continue; }
-      reqs.push({ format: f.format, path: c.req.path });
+      if (isProbe(c.req.path)) probes++;
+      reqs.push({ format: f.format, path: c.req.path, client: c.client });
     }
   }
   const sampled = sample(reqs, perShape, maxGroups);
-  const groups = new Set(reqs.map(r => r.format + ' ' + shapeOf(r.path))).size;
+  const groups = new Set(reqs.map(groupOf)).size;
   const byFormat = {};
-  for (const r of sampled) byFormat[r.format] = (byFormat[r.format] ?? 0) + 1;
-  console.error(`lines read  ${lines}\nkept        ${reqs.length}\ngroups      ${groups}\nsampled     ${sampled.length} (per shape ${perShape}, max groups ${maxGroups})`);
+  let sampledProbes = 0;
+  for (const r of sampled) {
+    byFormat[r.format] = (byFormat[r.format] ?? 0) + 1;
+    if (isProbe(r.path)) sampledProbes++;
+  }
+  console.error(`lines read  ${lines}\nkept        ${reqs.length} (probes ${probes}, one shape per format)\ngroups      ${groups}\nsampled     ${sampled.length}, probes ${sampledProbes} (per shape ${perShape}, max groups ${maxGroups})`);
   console.error('sampled by format: ' + Object.entries(byFormat).map(([k, v]) => `${k} ${v}`).join(', '));
   console.error('skipped:');
   for (const [reason, count] of Object.entries(skipped).sort((a, b) => b[1] - a[1])) {

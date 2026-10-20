@@ -31,10 +31,12 @@ npm run parity -- [--format api,meta] [--only john] [--refresh] [--verbose]
 
 ## Traffic corpus
 
-`traffic.mjs` builds a corpus from nginx-proxy-manager access logs: successful GETs to `scripture.guide` hosts, minus static files, hosts with extra labels (`api.plain.…`), unknown subdomains and formats the harness cannot compare (cover, img, audio, slide). Requests are grouped by format and *shape* (`/kjv/john.3.16` → `/V/a.9.9`); each group contributes up to `--per-shape` paths, and `--max-groups` keeps only the most-requested groups so the number of live fetches stays small.
+`traffic.mjs` builds a corpus from nginx-proxy-manager access logs: requests the client got a 200 for (the `$status` column right before ` - GET`, so cache hits count and retried upstreams parse), to `scripture.guide` hosts, minus static files, hosts with extra labels (`api.plain.…`), unknown subdomains and formats the harness cannot compare (cover, img, audio, slide). Requests are grouped by format and *shape* (`/kjv/john.3.16` → `/V/a.9.9`). Scanner probes (`/.env`, `*.php`, `/wp-…`, `/cgi-bin/` …) share one `probe` shape per format with at most 2 samples. Each group contributes up to `--per-shape` paths, those requested by the most distinct clients.
+
+Every new path costs one live fetch, so cap the corpus with `--max-groups`, which keeps the groups requested by the most distinct clients. Pick it from the `sampled` count the CLI prints, for example:
 
 ```sh
-node test/parity/traffic.mjs --per-shape 1 --max-groups 380 access.log access.log.1.gz > test/parity/.cache/traffic.json
+node test/parity/traffic.mjs --per-shape 1 --max-groups 300 access.log access.log.1.gz > test/parity/.cache/traffic.json
 npm run parity -- --corpus traffic
 ```
 
