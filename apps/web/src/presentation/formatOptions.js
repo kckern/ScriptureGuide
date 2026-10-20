@@ -16,4 +16,15 @@ export function flag(req, name) {
   return !(v === undefined || v === null || v === false || v === '' || v === '0' || v === 0);
 }
 
-export default { option, flag };
+// An api/meta flag such as ?meta_only: from the query, host labels (api.heads.scripture.guide,
+// inc_api.php), or "&flag" path fragments (req.config.legacy.config).
+export function hasFlag(req, name) {
+  const config = req?.config || {};
+  const options = config.options;
+  if (options && options[name] != null && options[name] !== false && options[name] !== 0) return true;
+  if (config.hostFlags?.[name]) return true;
+  const legacy = config.legacy?.config;
+  return !!legacy && legacy[name] != null && legacy[name] !== '' && legacy[name] !== 0 && legacy[name] !== '0';
+}
+
+export default { option, flag, hasFlag };

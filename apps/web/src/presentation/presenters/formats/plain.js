@@ -3,7 +3,6 @@
 // with one, a lookup per version (by its format name, as PHP iterated the values) joined by "\n".
 // PHP called lookup with only {versions, plain}, so ?plain_reference never added the "Ref. " prefix.
 import rawRepository from '../../../data/repositories/RawRepository.js';
-import { legacyRequest } from '../../legacy/request.js';
 import { resolveBlock } from '../../legacy/passages.js';
 import { plainLine, plainPassage } from '../../../domain/rules/legacyText.js';
 import { blocksFor } from './meta.js';
@@ -29,7 +28,7 @@ export async function plainFor(blocks, versions, repo = rawRepository) {
 
 export class PlainPresenter {
   async present(result, req, res) {
-    const lr = legacyRequest(req);
+    const lr = req.config.legacy;
     res.type('text/plain');
     if (lr.ref.includes('~')) return res.send('');
     const blocks = blocksFor(lr.ref, result);

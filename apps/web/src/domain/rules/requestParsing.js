@@ -57,11 +57,12 @@ function decode(path) {
 }
 
 // Version spec "kjv.1830*rebom" → [{ version: 'KJV', format: 'KJV' }, { version: '1830', format: 'REBOM' }]
-export function parseVersionSpec(spec) {
+// PHP kept the empty piece of "kjv." as a version ""; keepEmpty reproduces that for $cfig.
+export function parseVersionSpec(spec, { keepEmpty = false } = {}) {
   const list = [];
   const pieces = String(spec).replace(/[;, -]+/g, '.').replace(/\.+/g, '.').split('.');
   for (const piece of pieces) {
-    if (!piece) continue;
+    if (!piece && !keepEmpty) continue;
     const [text, format] = piece.split('*');
     const version = text.toUpperCase();
     const entry = { version, format: (format ?? text).toUpperCase() };
@@ -69,6 +70,86 @@ export function parseVersionSpec(spec) {
     if (existing >= 0) list[existing] = entry; else list.push(entry);
   }
   return list;
+}
+
+// Strip the /api/ /img/ /mp3/ shortcuts (they set the subdomain) and one /<format>/ prefix.
+function stripPathPrefixes(q, subdomain) {
+  let pathFormat = null;
+  for (const shortcut of PHP_PATH_SHORTCUTS) {
+    const re = new RegExp(`^${shortcut}/`, 'i');
+    if (re.test(q)) { q = q.replace(re, ''); subdomain = shortcut; }
+  }
+  const prefix = q.match(/^([a-z0-9]+)\//i);
+  if (prefix && NODE_PATH_FORMATS.includes(prefix[1].toLowerCase())) {
+    pathFormat = prefix[1];
+    q = q.slice(prefix[0].length);
+  }
+  return { q, subdomain, pathFormat };
+}
+
+// "kjv/john.3.16/gen.1.1" → versionSpec "kjv", reference "john.3.16; gen.1.1"; "search/<terms>".
+function splitInput(q) {
+  const input = q.split('/');
+  if (input[0] === 'search' && input[1]) return { search: true, reference: input[1], versionSpec: null };
+  if (input.length === 1) return { search: false, reference: input[0], versionSpec: null };
+  return { search: false, reference: input.slice(1).join('; '), versionSpec: input[0] };
+}
+
+// With JST among the versions, a reference that does not name JST is read as JST.
+const withJst = reference =>
+  (!/(jst|joseph smith)/i.test(reference) && /\d/.test(reference) ? 'jst ' + reference : reference);
+
+// PHP request keys: "." and " " become "_".
+const phpKey = k => k.replace(/[. ]/g, '_');
+
+// The PHP site rewrote /<path>?<query> to index.php?q=<path>&<query>, so an "&" inside the
+// (still encoded) path split it into request keys; flattenRequest put "d&c" back together.
+function splitPathKeys(rawPath) {
+  const [first, ...fragments] = rawPath.split('&');
+  let q = decode(first);
+  let previous = q;
+  const keys = [];
+  for (const fragment of fragments) {
+    const eq = fragment.indexOf('=');
+    const key = phpKey(decode(eq < 0 ? fragment : fragment.slice(0, eq)));
+    const value = eq < 0 ? '' : decode(fragment.slice(eq + 1));
+    if (/d\.*\s*$/i.test(previous) && /^c/i.test(key)) q += key.replace(/_/g, '.');
+    else keys.push([key, value]);
+    previous = key;
+  }
+  return { q: q.replace(/\. /g, ' '), keys };
+}
+
+/**
+ * The request exactly as the PHP front controller saw it, for the formats that echo it (api
+ * "input" and "config") or follow it (meta, raw, plain):
+ *   q         the flattened q ("d&c.4" in the path → "dc.4"; "&flag" fragments removed)
+ *   ref       PHP $ref: the subverse letter goes with the digit before it ("john.3.16a" → "john.3.1")
+ *   versions  PHP $cfig['versions'], { VERSION: FORMAT } from the version path, or null
+ *   config    PHP $cfig before lookup: path keys, then query keys (empty value → 1), then
+ *             versions; null when empty
+ */
+function legacyRequest(rawPath, query) {
+  const { q: flat, keys } = splitPathKeys(String(rawPath || '/').replace(/^\/+/, ''));
+  let q = stripPathPrefixes(flat, '').q;
+  if (q.startsWith('=/')) q = q.slice(2);
+  q = q.replace(/\.(jpg|png)/gi, '');
+
+  const config = {};
+  for (const [key, value] of [...keys, ...Object.entries(query || {})]) {
+    if (key !== 'q') config[key] = value !== '' ? value : 1;
+  }
+
+  const { reference, versionSpec } = splitInput(q);
+  let versions = null;
+  if (versionSpec !== null) {
+    versions = {};
+    for (const v of parseVersionSpec(versionSpec, { keepEmpty: true })) versions[v.version] = v.format;
+    config.versions = versions;
+  }
+  let ref = reference.replace(/\d[a-z]$/i, '');
+  if (versions && 'JST' in versions) ref = withJst(ref);
+  return { q, ref, versions, config: Object.keys(config).length ? config : null };
 }
 
 /**
@@ -80,21 +161,15 @@ export function parseVersionSpec(spec) {
  * @param {Function} [input.random] RNG for q=random
  */
 export function parseRequest({ host = '', path = '/', query = {}, random = Math.random } = {}) {
-  let { subdomain, flags: hostFlags } = parseHost(host);
+  const { subdomain: hostSubdomain, flags: hostFlags } = parseHost(host);
   let q = decode(String(path || '/')).replace(/^\/+/, '');
   // index.php?q=... reaches the front controller without a rewritten path
   if (!q && typeof query?.q === 'string') q = query.q.replace(/^\/+/, '');
 
-  for (const shortcut of PHP_PATH_SHORTCUTS) {
-    const re = new RegExp(`^${shortcut}/`, 'i');
-    if (re.test(q)) { q = q.replace(re, ''); subdomain = shortcut; }
-  }
-  let outputFormat = formatForSubdomain(subdomain);
-  const prefix = q.match(/^([a-z0-9]+)\//i);
-  if (prefix && NODE_PATH_FORMATS.includes(prefix[1].toLowerCase())) {
-    outputFormat = formatForSubdomain(prefix[1]);
-    q = q.slice(prefix[0].length);
-  }
+  const stripped = stripPathPrefixes(q, hostSubdomain);
+  const subdomain = stripped.subdomain;
+  q = stripped.q;
+  const outputFormat = formatForSubdomain(stripped.pathFormat || subdomain);
 
   // Options: every query key except q (empty value → 1). D&C split at "&" by a
   // query string is rejoined first (scriptutil::flattenRequest).
@@ -117,30 +192,15 @@ export function parseRequest({ host = '', path = '/', query = {}, random = Math.
   q = q.replace(/\.(jpg|png)/gi, '');
   if (q === 'random') q = String(randomVerseId(random));
 
-  const input = q.split('/');
-  let search = false;
-  let reference = '';
-  let versions = [];
-  let versionSpec = null;
-
-  if (input[0] === 'search' && input[1]) {
-    search = true;
-    reference = input[1];
-  } else if (input.length === 1) {
-    reference = input[0];
-  } else {
-    versionSpec = input[0];
-    versions = parseVersionSpec(versionSpec);
-    reference = input.slice(1).join('; ');
-  }
+  let { search, reference, versionSpec } = splitInput(q);
+  let versions = versionSpec === null ? [] : parseVersionSpec(versionSpec);
 
   // Trailing subverse letter ("john.3.16a"). PHP's regex also drops the digit before
   // the letter; we keep it, since the rule's intent is to remove only the letter.
+  // (legacy.ref keeps PHP's version for the formats that echo it.)
   reference = reference.replace(/(\d)[a-z]$/i, '$1');
 
-  if (versions.some(v => v.version === 'JST') && !/(jst|joseph smith)/i.test(reference) && /\d/.test(reference)) {
-    reference = 'jst ' + reference;
-  }
+  if (versions.some(v => v.version === 'JST')) reference = withJst(reference);
 
   if (reference && !/\d/.test(reference)) search = true;
 
@@ -169,6 +229,7 @@ export function parseRequest({ host = '', path = '/', query = {}, random = Math.
     cropped,
     versions,
     versionSpec: parallel ? null : versionSpec,
+    legacy: legacyRequest(path, query),
   };
 }
 

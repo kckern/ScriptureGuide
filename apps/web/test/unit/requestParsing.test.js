@@ -1,5 +1,6 @@
 import { describe, test, expect } from 'vitest';
 import { parseHost, parseRequest, randomVerseId } from '../../src/domain/rules/requestParsing.js';
+import { hasFlag } from '../../src/presentation/formatOptions.js';
 
 const req = (path, query = {}, host = 'scripture.guide') => parseRequest({ host, path, query, random: () => 0 });
 
@@ -125,5 +126,72 @@ describe('q normalization', () => {
   });
   test('percent-encoded paths are decoded', () => {
     expect(req('/john%203:16').reference).toBe('john 3:16');
+  });
+});
+
+describe('legacy (what lib.php.inc saw: api input/config, meta, raw, plain)', () => {
+  const legacy = (path, query) => req(path, query, 'api.scripture.guide').legacy;
+
+  test('reference only: no versions, config null', () => {
+    expect(legacy('/john.3.16')).toEqual({ q: 'john.3.16', ref: 'john.3.16', versions: null, config: null });
+  });
+
+  test('version path sets config.versions', () => {
+    const r = legacy('/kjv/john.3.16');
+    expect(r.ref).toBe('john.3.16');
+    expect(r.versions).toEqual({ KJV: 'KJV' });
+    expect(r.config).toEqual({ versions: { KJV: 'KJV' } });
+  });
+
+  test('several versions and format overrides', () => {
+    expect(legacy('/kjv.asv*web/gen.1.1').versions).toEqual({ KJV: 'KJV', ASV: 'WEB' });
+  });
+
+  test('extra path segments become compound references', () => {
+    expect(legacy('/kjv/john.3.16/gen.1.1').ref).toBe('john.3.16; gen.1.1');
+  });
+
+  test('query flags: empty value becomes 1, order kept, versions last', () => {
+    const r = legacy('/kjv/john.3.16', { meta_only: '', heads: '', x: 'y' });
+    expect(r.config).toEqual({ meta_only: 1, heads: 1, x: 'y', versions: { KJV: 'KJV' } });
+    expect(Object.keys(r.config)).toEqual(['meta_only', 'heads', 'x', 'versions']);
+  });
+
+  test('d&c in the path is rejoined as PHP flattenRequest did', () => {
+    const r = legacy('/d&c.4');
+    expect(r.ref).toBe('dc.4');
+    expect(r.config).toBeNull();
+  });
+
+  test('other ampersand fragments become flags', () => {
+    const r = legacy('/john.3.16&meta_only');
+    expect(r.ref).toBe('john.3.16');
+    expect(r.config).toEqual({ meta_only: 1 });
+  });
+
+  test('strips a format path prefix', () => {
+    expect(legacy('/api/kjv/john.3.16').versions).toEqual({ KJV: 'KJV' });
+  });
+
+  test('shaves a trailing subverse letter with its digit (PHP quirk)', () => {
+    expect(legacy('/john.3.16a').ref).toBe('john.3.1');
+  });
+
+  test('adds jst to the reference when JST is the version', () => {
+    expect(legacy('/jst/gen.1.1').ref).toBe('jst gen.1.1');
+  });
+
+  test('decodes the path', () => {
+    expect(legacy('/John%203:16').ref).toBe('John 3:16');
+  });
+});
+
+describe('hasFlag', () => {
+  const flagOf = (name, path, query = {}, host = 'api.scripture.guide') => hasFlag({ config: req(path, query, host) }, name);
+  test('reads query flags, host labels and path fragments', () => {
+    expect(flagOf('meta_only', '/john.3.16', { meta_only: '' })).toBe(true);
+    expect(flagOf('heads', '/john.3.16', {}, 'api.heads.scripture.guide')).toBe(true);
+    expect(flagOf('output_only', '/john.3.16&output_only')).toBe(true);
+    expect(flagOf('meta_only', '/john.3.16')).toBe(false);
   });
 });

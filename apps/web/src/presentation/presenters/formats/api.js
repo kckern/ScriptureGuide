@@ -4,19 +4,19 @@
 //   ?meta_only     {input, config, meta: [{orig, book, verse_ids}]} (+ meta[0].heads with ?heads)
 //   ?output_only   the HTML string alone
 // "config" is the request's $cfig before lookup: query flags plus versions named in the path, or null.
-import { legacyRequest, hasFlag } from '../../legacy/request.js';
+import { hasFlag } from '../../formatOptions.js';
 import { scripturesHtml } from '../../legacy/passages.js';
 import { sendPhpJson } from '../../legacy/phpJson.js';
 import { metaOnly, blocksFor } from './meta.js';
 
 export class ApiPresenter {
   async present(result, req, res) {
-    const lr = legacyRequest(req);
+    const lr = req.config.legacy;
     if (lr.ref.includes('~')) return res.status(200).type('text/html').send('');
     sendPhpJson(res, await this.build(result, req, res, lr), { numericCheck: true });
   }
 
-  async build(result, req, res, lr = legacyRequest(req)) {
+  async build(result, req, res, lr = req.config.legacy) {
     const data = { input: lr.ref, config: lr.config };
 
     if (hasFlag(req, 'output_only')) {
