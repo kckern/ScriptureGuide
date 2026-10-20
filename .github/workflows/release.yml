@@ -1,0 +1,101 @@
+name: release
+on:
+  push:
+    branches: [master]
+concurrency: release-${{ github.ref }}
+permissions:
+  contents: write
+  pull-requests: write
+  id-token: write
+  packages: write
+
+jobs:
+  # Opens/updates the "Version packages" PR while changesets are pending;
+  # once that PR is merged, publishes any package version not yet on npm.
+  changesets:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: '20', cache: 'npm', registry-url: 'https://registry.npmjs.org' }
+      - run: npm ci
+      - run: npm run build -w scripture-guide
+      - uses: changesets/action@v1
+        with:
+          version: npm run version-packages
+          publish: npm run release
+          title: 'Version packages'
+          commit: 'chore: version packages'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+          NPM_CONFIG_PROVENANCE: 'true'
+
+  # Every push builds :edge and :sha-<short>; a commit that bumps apps/web's
+  # version (the merged Version PR) also tags :<version> and :latest.
+  web-image:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 2 }
+      - id: v
+        run: |
+          version=$(node -p "require('./apps/web/package.json').version")
+          tags="ghcr.io/kckern/scripture-guide:edge,ghcr.io/kckern/scripture-guide:sha-$(git rev-parse --short HEAD)"
+          if git diff HEAD^1 HEAD -- apps/web/package.json | grep -q '^[-+]  "version"'; then
+            tags="$tags,ghcr.io/kckern/scripture-guide:$version,ghcr.io/kckern/scripture-guide:latest"
+          fi
+          echo "tags=$tags" >> "$GITHUB_OUTPUT"
+      - uses: docker/setup-qemu-action@v3
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with: { registry: ghcr.io, username: '${{ github.actor }}', password: '${{ secrets.GITHUB_TOKEN }}' }
+      - id: build
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: apps/web/Dockerfile
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ steps.v.outputs.tags }}
+          labels: org.opencontainers.image.source=https://github.com/kckern/ScriptureGuide
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+      - uses: sigstore/cosign-installer@v3
+      - run: cosign sign --yes ghcr.io/kckern/scripture-guide@${{ steps.build.outputs.digest }}
+
+  # Uploads to the Chrome Web Store only on the commit that bumps the extension's version.
+  extension:
+    runs-on: ubuntu-latest
+    env:
+      HAS_CWS: ${{ secrets.CWS_CLIENT_ID != '' }}
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 2 }
+      - id: v
+        run: |
+          if git diff HEAD^1 HEAD -- apps/chrome-extension/package.json | grep -q '^[-+]  "version"'; then
+            echo "release=true" >> "$GITHUB_OUTPUT"
+          fi
+      - if: steps.v.outputs.release == 'true'
+        uses: actions/setup-node@v4
+        with: { node-version: '20', cache: 'npm' }
+      - if: steps.v.outputs.release == 'true'
+        run: |
+          npm ci
+          npm run build -w scripture-guide
+          npm test -w scripture-guide-chrome-extension -- --ci
+          npm run build -w scripture-guide-chrome-extension
+          cd apps/chrome-extension/dist && zip -r -q ../extension.zip .
+      - if: steps.v.outputs.release == 'true' && env.HAS_CWS == 'true'
+        run: npx chrome-webstore-upload-cli@3 upload --source apps/chrome-extension/extension.zip --auto-publish
+        env:
+          EXTENSION_ID: lkagejkikblabiegfnehlknmlgckhgan
+          CLIENT_ID: ${{ secrets.CWS_CLIENT_ID }}
+          CLIENT_SECRET: ${{ secrets.CWS_CLIENT_SECRET }}
+          REFRESH_TOKEN: ${{ secrets.CWS_REFRESH_TOKEN }}
+      - if: steps.v.outputs.release == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: chrome-extension-zip
+          path: apps/chrome-extension/extension.zip
