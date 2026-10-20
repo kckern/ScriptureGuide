@@ -182,10 +182,10 @@ export class HtmlPresenter {
           const endVerse = parseInt(crossChapterMatch[3]);
           if (startVerse === 1) {
             h.slug = `${version}/${bookSlugForH3}.${h3Chapter}-${endChap}.${endVerse}`;
-            h.ref = `${bookName} ${h3Chapter}\u2013${endChap}.${endVerse}`;
+            h.ref = `${bookName} ${h3Chapter}\u2013${endChap}:${endVerse}`;
           } else {
             h.slug = `${version}/${bookSlugForH3}.${h3Chapter}.${startVerse}-${endChap}.${endVerse}`;
-            h.ref = `${bookName} ${h3Chapter}:${startVerse}\u2013${endChap}.${endVerse}`;
+            h.ref = `${bookName} ${h3Chapter}:${startVerse}\u2013${endChap}:${endVerse}`;
           }
         } else {
           const f = h.firstVerseNum;
@@ -202,7 +202,7 @@ export class HtmlPresenter {
             if (f === 1) {
               // Starts at verse 1: compact format (no starting verse in slug/ref)
               h.slug = `${version}/${bookSlugForH3}.${h3Chapter}-${endChap}.${endVerse}`;
-              h.ref = `${bookName} ${h3Chapter}\u2013${endChap}.${endVerse}`;
+              h.ref = `${bookName} ${h3Chapter}\u2013${endChap}:${endVerse}`;
             } else {
               h.slug = `${version}/${bookSlugForH3}.${h3Chapter}.${f}-${endChap}.${endVerse}`;
               h.ref = `${bookName} ${h3Chapter}:${f}\u2013${endChap}:${endVerse}`;

@@ -44,13 +44,24 @@ export function bookKey(name) {
     .trim();
 }
 
-// Reference for titles and headings, in the PHP style: en dashes in ranges and verses of
-// the same chapter joined by commas ("John 3:16; 3:18" → "John 3:16,18").
+// Reference for titles and headings, in the PHP style (scriptutil::referenceFromVerseIds): en
+// dashes in ranges, a book named once for its run of parts ("2 Nephi 3:19; 2 Nephi 27:13" →
+// "2 Nephi 3:19; 27:13"), verses of the same chapter joined by commas ("John 3:16; 3:18" →
+// "John 3:16,18"), and a range from verse 1 into another chapter without its first verse
+// ("2 Nephi 3:1-4:2" → "2 Nephi 3–4:2").
 export function displayReference(normalized) {
   const parts = String(normalized || '').split(/;\s*/).filter(Boolean);
   const out = [];
   let chapter = null;
-  for (const part of parts) {
+  let lastBook = null;
+  for (let part of parts) {
+    const named = part.match(/^(.*[^\d\s].*?)\s+(\d[\d:,\-–]*)$/);
+    if (named && /[a-z]/i.test(named[1])) {
+      const book = named[1];
+      part = book === lastBook && out.length ? named[2] : part;
+      lastBook = book;
+    }
+    part = part.replace(/(^|\s)(\d+):1[-–](\d+:\d+)$/, '$1$2-$3');
     const own = part.match(/^(.*?\s)?(\d+):(.+)$/);
     if (own && !own[1] && own[2] === chapter && out.length) {
       out[out.length - 1] += `,${own[3]}`;

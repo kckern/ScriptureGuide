@@ -47,6 +47,16 @@ describe('displayReference', () => {
   test('separate books stay separate', () => {
     expect(displayReference('John 3:16; Genesis 1:1')).toBe('John 3:16; Genesis 1:1');
   });
+  test('a book is not repeated in the next part (referenceFromVerseIds)', () => {
+    expect(displayReference('2 Nephi 3:19-20; 2 Nephi 27:13; 2 Nephi 29:2')).toBe('2 Nephi 3:19–20; 27:13; 29:2');
+    expect(displayReference('Abraham 2:11; Genesis 17:7; Genesis 18:18')).toBe('Abraham 2:11; Genesis 17:7; 18:18');
+    expect(displayReference('1 Nephi 1-5; 1 Nephi 7-19')).toBe('1 Nephi 1–5; 7–19');
+    expect(displayReference('Isaiah 9:12; Isaiah 9:17; 2 Nephi 15:25')).toBe('Isaiah 9:12,17; 2 Nephi 15:25');
+  });
+  test('a range from verse 1 into the next chapter drops the first verse', () => {
+    expect(displayReference('2 Nephi 3:1-4:2')).toBe('2 Nephi 3–4:2');
+    expect(displayReference('Genesis 1:30-2:3')).toBe('Genesis 1:30–2:3');
+  });
 });
 
 describe('blankHeading', () => {
