@@ -1,5 +1,6 @@
 {
   "name": "scripture-guide-chrome-extension",
+  "private": true,
   "version": "2.0.1",
   "description": "Chrome extension for in-browser scripture reference detection and linking",
   "scripts": {
@@ -8,7 +9,7 @@
     "deploy": "./deploy.sh"
   },
   "dependencies": {
-    "scripture-guide": "^1.0.93"
+    "scripture-guide": "^1.0.98"
   },
   "devDependencies": {
     "@babel/core": "^7.22.0",
