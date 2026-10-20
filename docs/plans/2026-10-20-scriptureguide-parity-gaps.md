@@ -251,11 +251,25 @@ test('one JSON line per request with the fields log queries need', async () => {
 
 **Step 4: Commit** `feat(web): JSON request logs`.
 
+### Task 7b: Fix reader-facing differences found in real traffic
+
+From the traffic corpus (Task 4), non-probe failures that affect real readers: multi-reference titles repeating the book ("2 Nephi 3:19–20; 27:13; 29:2"); compound verses in 2HRBOM/CTBOM/EARLIEST (`compound="N"`, merged labels, `fax="1"` on headings); quoted-phrase search matching the exact phrase; references whose first token looks like a version (`/1835/1835.doctrine.and.covenants.2:11`, `/jst/jst.1.kgs.7.30`); chapter-to-verse range titles ("2 Nephi 3–4:2"); meta for book-only and comma-continued ranges; the D&C passage `background` block; `/versionselect` with no parameters; slugs ending in a number read as verse ids; per-version rendering details (chapter-nav labels, subscripts, indent blocks, NASR, GITA, ESV parallel attribute). Fix each with a unit test, rerun `--corpus traffic` (cached), and allow-list junk-path differences by category with reasons.
+
+### Task 7c: Performance parity
+
+Response time must be comparable to the live site.
+
+1. `apps/web/test/parity/perf.mjs`: for each URL in a corpus (built-in, and `--corpus traffic`), time `--runs N` sequential requests (after one warm-up) against live and against `NODE_BASE`; report p50/p95 per format and overall, and the ratio Node/live; flag a URL when Node p50 > 1.5 × live p50 and more than 300 ms slower. Live requests stay throttled (≥250 ms apart) and capped (`--max-live`).
+2. Profile the slow paths locally (`node --cpu-prof`, plus MySQL `EXPLAIN` / slow log on the sgfull copy): search first (`/faith`, `/search/the`, quoted phrases, Korean), then large chapters, parallel, vbox, latex. Fix with tests: query shape and indexes the app needs (document any index the production schema lacks), batching N+1 queries, caching static lookups (versions, books, headings per chapter), and keeping the MySQL fallback search bounded.
+3. Search in production uses Sphinx: measure the Sphinx path against the seeded stack in CI (`stack` workflow) and on staging; the fallback is for local development only.
+4. Local numbers are relative (laptop + local DB copy). The comparison that counts is on staging (Task 8), on the same host, database and Sphinx as live: target Node p50 ≤ live p50 × 1.25 per format and no flagged URLs.
+
 ### Task 8: Staging run
 
 Owner-gated (see the private infrastructure runbook for `next.scripture.guide`). After deployment:
 1. `NODE_BASE=<tunnel> node test/parity/run.mjs --refresh` → 0 fail.
 2. `node test/parity/run.mjs --corpus traffic` against the tunnel → 0 fail.
+2b. `node test/parity/perf.mjs` against the tunnel (built-in and traffic corpora) → no flagged URLs; p50 ≤ live × 1.25 per format.
 3. Browser suite with `NODE_ORIGIN=https://next.scripture.guide` → green.
 4. `curl https://next.scripture.guide/healthz` → `sphinx: ok`.
 
