@@ -18,6 +18,19 @@ export class VerseRepository {
     return rows;
   }
 
+  // Plain text from the verse index, for passages no version covers (PHP plainData).
+  async findIndexByIds(verseIds) {
+    if (!verseIds || verseIds.length === 0) return [];
+    return db.query(
+      `SELECT v.verse_id, v.verse, v.verse_scripture AS text, 'INDEX' AS version, 'prose' AS format,
+        '' AS s, '' AS p, v.chapter
+       FROM lds_scriptures_verses v
+       WHERE v.verse_id IN (?)
+       ORDER BY v.verse_id`,
+      [verseIds]
+    );
+  }
+
   async findByRange(startId, endId, version = 'KJV') {
     const rows = await db.query(
       `SELECT verse_id, verse, text, version, format

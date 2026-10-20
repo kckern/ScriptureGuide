@@ -1,47 +1,13 @@
-import { OutputFormat } from '../../domain/enums/OutputFormat.js';
+import { parseHost, formatForSubdomain } from '../../domain/rules/requestParsing.js';
 
-// Map subdomains to output formats
-const SUBDOMAIN_FORMATS = {
-  api: OutputFormat.API,
-  json: OutputFormat.API,
-  meta: OutputFormat.META,
-  raw: OutputFormat.RAW,
-  plain: OutputFormat.PLAIN,
-  markdown: OutputFormat.MARKDOWN,
-  xml: OutputFormat.XML,
-  latex: OutputFormat.LATEX,
-  notes: OutputFormat.NOTES,
-  audio: OutputFormat.AUDIO,
-  cover: OutputFormat.COVER,
-};
-
-// Known version prefixes (sample - expand as needed)
-const VERSION_PREFIXES = new Set([
-  'kjv', 'esv', 'niv', 'nasb', 'nlt', 'msg', 'nkjv', 'rsv', 'asv',
-  'bom', 'dc', 'pogp'
-]);
-
+// Host-level parsing: the first label is the subdomain (output format); extra labels
+// between it and the domain are flags (api.plain.scripture.guide → plain=1).
+// Path shortcuts (/api/..., /img/...) are applied later by configMiddleware.
 export function subdomainMiddleware(req, res, next) {
-  const host = req.hostname || '';
-  const parts = host.split('.');
-
-  // Default values
-  req.outputFormat = OutputFormat.HTML;
-  req.defaultVersion = null;
-
-  if (parts.length > 2) {
-    const subdomain = parts[0].toLowerCase();
-
-    // Check if subdomain is an output format
-    if (SUBDOMAIN_FORMATS[subdomain]) {
-      req.outputFormat = SUBDOMAIN_FORMATS[subdomain];
-    }
-    // Check if subdomain is a version prefix
-    else if (VERSION_PREFIXES.has(subdomain)) {
-      req.defaultVersion = subdomain.toUpperCase();
-    }
-  }
-
+  const { subdomain, flags } = parseHost(req.headers.host || req.hostname || '');
+  req.subdomain = subdomain;
+  req.hostFlags = flags;
+  req.outputFormat = formatForSubdomain(subdomain);
   next();
 }
 

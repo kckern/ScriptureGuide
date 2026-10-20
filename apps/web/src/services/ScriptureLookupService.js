@@ -5,6 +5,7 @@ import { Verse } from '../domain/entities/Verse.js';
 import { ScriptureResult } from '../domain/entities/ScriptureResult.js';
 import { Reference } from '../domain/entities/Reference.js';
 import VerseSerializer from '../presentation/serializers/VerseSerializer.js';
+import { defaultVersions, versionOrder } from '../domain/rules/defaultVersions.js';
 
 export class ScriptureLookupService {
   constructor(refService, verseRepo, headingRepo) {
@@ -46,11 +47,24 @@ export class ScriptureLookupService {
       return new ScriptureResult({ reference, verses: [], headings: [], config });
     }
 
-    const version = config.version || 'KJV';
     const verseIds = reference.verseIds;
 
-    // Fetch verses
-    const verseRows = await this.verseRepository.findByIds(verseIds, version);
+    // Versions to try, in order: requested ones (LDS last), then defaults by verse range.
+    // Text comes from the first version with rows; the verse index is the last resort.
+    const requested = config.versions?.length
+      ? config.versions
+      : (config.version ? [{ version: config.version, format: config.version }] : []);
+    const candidates = defaultVersions(versionOrder(requested), verseIds);
+    let version = null;
+    let verseRows = [];
+    for (const candidate of candidates) {
+      verseRows = await this.verseRepository.findByIds(verseIds, candidate.version);
+      if (verseRows.length) { version = candidate.version; break; }
+    }
+    if (!version) {
+      version = 'INDEX';
+      verseRows = await this.verseRepository.findIndexByIds(verseIds);
+    }
     const verses = verseRows.map(row => Verse.fromRow(row));
 
     // Build verse_id → chapter map from canonical verse table (covers ALL verse_ids, including
