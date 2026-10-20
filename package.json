@@ -14,8 +14,7 @@
     }
   },
   "scripts": {
-    "start": "node test/test.mjs",
-    "test": "node test/test.mjs",
+    "test": "npm run test:jest",
     "build": "node build/build.mjs",
     "embed": "node build/build.mjs",
     "generate-coc-mapping": "node build/generate-coc-mapping.cjs",
@@ -31,7 +30,8 @@
   "homepage": "https://scripture.guide",
   "repository": {
     "type": "git",
-    "url": "git://github.com/kckern/ScriptureGuideUtils.git"
+    "url": "git+https://github.com/kckern/ScriptureGuide.git",
+    "directory": "packages/scripture-guide"
   },
   "keywords": [
     "bible",
@@ -50,18 +50,19 @@
     "pearl of great price"
   ],
   "files": [
-    "scriptures.mjs",
-    "scriptures.cjs",
-    "scriptures.d.ts"
+    "dist/scriptures.mjs",
+    "dist/scriptures.cjs",
+    "dist/scriptures.d.ts"
   ],
   "devDependencies": {
+    "dotenv": "^17.2.3",
     "esbuild": "^0.27.2",
     "glob": "^13.0.0",
     "jest": "^30.2.0",
-    "js-yaml": "^4.1.1"
-  },
-  "dependencies": {
-    "dotenv": "^17.2.3",
+    "js-yaml": "^4.1.1",
     "mysql2": "^3.16.0"
+  },
+  "bugs": {
+    "url": "https://github.com/kckern/ScriptureGuide/issues"
   }
 }
