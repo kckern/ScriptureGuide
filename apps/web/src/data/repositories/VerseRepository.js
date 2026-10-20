@@ -31,6 +31,16 @@ export class VerseRepository {
     );
   }
 
+  // Paragraphing and line format of a version, for format overrides ("/kjv*niv/...")
+  async findFormatRows(verseIds, version) {
+    if (!verseIds || verseIds.length === 0) return [];
+    return db.query(
+      `SELECT verse_id, format, p, s, version FROM scripture_verses
+       WHERE version = ? AND verse_id IN (?) ORDER BY verse_id`,
+      [version, verseIds]
+    );
+  }
+
   // All books of the verse index (cached; the table is static)
   async findAllBooks() {
     if (!this._books) {

@@ -23,7 +23,7 @@ function buildH3(h, version) {
   const faxAttr = h.fax ? ` fax="1"` : '';
   // A heading without text shows its reference (PHP "Reference Headings")
   const text = (h.headless || !h.text) ? (h.ref || h.text || '') : h.text;
-  let html = `<h3 class="heading" version="${version}" heading_verse_id="${h.displayVerseId || h.verse_id}"${vc}${lv}${headless}${ref}${slug}${ver}${img}${parallelAttr}${faxAttr}${audioAttr}>${text}</h3>`;
+  let html = `<h3 class="heading" version="${h.headVersion || version}" heading_verse_id="${h.displayVerseId || h.verse_id}"${vc}${lv}${headless}${ref}${slug}${ver}${img}${parallelAttr}${faxAttr}${audioAttr}>${text}</h3>`;
   return html;
 }
 
@@ -68,7 +68,8 @@ data.verses.forEach(verse => {
   const verseLabel = (verse.segIndex === 0 && verse.lbIndex === 0) ? (verse.num === 1 ? `${vChapter}:${verse.num}` : verse.num) : null;
   const verseLabelAttr = verseLabel !== null ? ` verse_label="${verseLabel}"` : '';
   const lbClassStr = verse.lbClass ? ` ${verse.lbClass}` : '';
-  const span = `<span class="verse v_${verse.id} ${fmt}${lbClassStr} ${verseClass}" verse_id="${verse.id}" ref="${ref}" version="${version}"${verseLabelAttr}>${verse.text}</span>`;
+  const mixAttr = verse.mixmatch ? ` mixmatch="${verse.mixmatch}"` : '';
+  const span = `<span class="verse v_${verse.id} ${fmt}${lbClassStr} ${verseClass}" verse_id="${verse.id}" ref="${ref}"${mixAttr} version="${version}"${verseLabelAttr}>${verse.text}</span>`;
   currentGroup.spans.push(span);
   currentGroup.ids.push(verse.id);
 });
@@ -80,7 +81,7 @@ const showExtras = data.verseCount > 1 && data.startsSection;
 const faxIds = new Set(data.faxIds || []);
 const types = id => (data.typesByVerse && data.typesByVerse[id]) || {};
 
-function headerRows(t, h3html) {
+function headerRows(t, h3html, version) {
   let out = '';
   if (showExtras) {
     if (t.title) {
@@ -160,9 +161,9 @@ for (const p of passages) {
   if (p.h3) {
     const ids = [...new Set(p.ids)];
     const fax = ids.length > 0 && ids.every(id => faxIds.has(id));
-    header = headerRows(p.t, buildH3({ ...p.h3, fax }, version)) + p.ellipsis;
+    header = headerRows(p.t, buildH3({ ...p.h3, fax }, version), p.h3.headVersion || version) + p.ellipsis;
   }
-  passagesHtml += `\n      <div class="passage ver_${p.h3 ? version : ''}">${header}${p.body}\n      </div>`;
+  passagesHtml += `\n      <div class="passage ver_${p.h3 ? (p.h3.headVersion || version) : ''}">${header}${p.body}\n      </div>`;
 }
 
 // Chapter nav: its own passage after the text (no version on its first element)

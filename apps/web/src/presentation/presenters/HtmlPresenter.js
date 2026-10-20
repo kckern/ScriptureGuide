@@ -247,6 +247,18 @@ export class HtmlPresenter {
       }
     });
 
+    // Format override ("/niv*kjv/..."): headings loaded from the format version link as TEXT*FORMAT
+    const headingVersion = result.config.headingVersion;
+    const mixVer = headingVersion && headingVersion !== version ? `${version}*${headingVersion}` : null;
+    if (mixVer) {
+      for (const h of h3Headings) {
+        if (h.synthetic || h.preSectionSynthetic || !h.text) continue;
+        h.ver = mixVer;
+        h.headVersion = headingVersion;
+        if (h.slug) h.slug = h.slug.replace(/^[^/]+\//, `${mixVer}/`);
+      }
+    }
+
     // Index h3 headings by verse_id for EJS lookup
     const h3ByVerse = {};
     for (const h of h3Headings) {
@@ -324,6 +336,7 @@ export class HtmlPresenter {
           preH3Slug = bookSlugForH3 && chToUse ? `${version}/${bookSlugForH3}.${chToUse}` : '';
         }
       }
+      if (mixVer && preH3Slug) preH3Slug = preH3Slug.replace(/^[^/]+\//, `${mixVer}/`);
       prePassageH3 = {
         verse_id: ch.verse_id,
         text: ch.heading || '',
@@ -336,7 +349,8 @@ export class HtmlPresenter {
         ellipsisLast: chLast,
         headless: false,
         img,
-        ver: version,
+        ver: mixVer || version,
+        headVersion: mixVer ? headingVersion : undefined,
         tver: version,
         audio: ch.audio > 0 ? 1 : 0,
         parallel: ch._prePassageParallel || null
@@ -404,6 +418,7 @@ export class HtmlPresenter {
             id: v.id,
             num: v.verseNum,
             chapter: v.chapter,
+            mixmatch: v.mixmatch,
             text: VerseSerializer.formatHtml(part.text),
             format: segFormat,
             lbClass: part.lbClass,

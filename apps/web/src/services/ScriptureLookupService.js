@@ -6,6 +6,7 @@ import { ScriptureResult } from '../domain/entities/ScriptureResult.js';
 import { Reference } from '../domain/entities/Reference.js';
 import VerseSerializer from '../presentation/serializers/VerseSerializer.js';
 import { defaultVersions, versionOrder } from '../domain/rules/defaultVersions.js';
+import { applyFormatOverride } from '../domain/rules/formatOverride.js';
 import { wantsChapterNav, chapterNavLinks, sectionNavLinks, sectionRef } from '../domain/rules/chapterNav.js';
 
 export class ScriptureLookupService {
@@ -105,13 +106,25 @@ export class ScriptureLookupService {
       : (config.version ? [{ version: config.version, format: config.version }] : []);
     const candidates = defaultVersions(versionOrder(requested), verseIds);
     let version = null;
+    let headingVersion = null;
     let verseRows = [];
     for (const candidate of candidates) {
       verseRows = await this.verseRepository.findByIds(verseIds, candidate.version);
-      if (verseRows.length) { version = candidate.version; break; }
+      if (verseRows.length) {
+        version = candidate.version;
+        // "TEXT*FORMAT": paragraphing, line format and headings come from the format version
+        headingVersion = candidate.format || version;
+        if (headingVersion !== version) {
+          const formatRows = headingVersion === 'FLAT'
+            ? 'FLAT'
+            : await this.verseRepository.findFormatRows(verseIds, headingVersion);
+          verseRows = applyFormatOverride(verseRows, formatRows, headingVersion);
+        }
+        break;
+      }
     }
     if (!version) {
-      version = 'INDEX';
+      version = headingVersion = 'INDEX';
       verseRows = await this.verseRepository.findIndexByIds(verseIds);
     }
     const verses = verseRows.map(row => Verse.fromRow(row));
@@ -132,7 +145,7 @@ export class ScriptureLookupService {
     let chapterNav = null;
 
     if (config.includeHeadings !== false && verseIds.length > 0) {
-      headings = await this.headingRepository.findByVerseIds(verseIds, version);
+      headings = await this.headingRepository.findByVerseIds(verseIds, headingVersion);
 
       const firstVerseId = verseIds[0];
       const lastVerseId = verseIds[verseIds.length - 1];
@@ -143,7 +156,7 @@ export class ScriptureLookupService {
         // PHP loadHeading: if first verse starts with §¶, do NOT decrement verse_id for lookup
         const firstVerseText = verseRows[0]?.text || '';
         const isNewSection = firstVerseText.startsWith('§¶');
-        chapterHeading = await this.headingRepository.findChapterHeading(firstVerseId, bookId, version, isNewSection);
+        chapterHeading = await this.headingRepository.findChapterHeading(firstVerseId, bookId, headingVersion, isNewSection);
         if (!config._multiBlock && wantsChapterNav(reference.normalized) && !/[,;:]/.test(referenceString)) {
           chapterNav = chapterNavLinks({
             ...(await this.headingRepository.findChapterNavRows(firstVerseId, lastVerseId)),
@@ -155,8 +168,8 @@ export class ScriptureLookupService {
         const firstSection = headings.find(h => h.type === 'heading' && h.text && h.verse_id === firstVerseId);
         if (!config._multiBlock && firstSection && firstSection.last_verse_id === lastVerseId && isNewSection) {
           chapterNav = sectionNavLinks({
-            prev: await this.neighbourSection(firstVerseId - 1, version),
-            next: await this.neighbourSection(lastVerseId + 1, version),
+            prev: await this.neighbourSection(firstVerseId - 1, headingVersion),
+            next: await this.neighbourSection(lastVerseId + 1, headingVersion),
             versionSpec: config.versionSpec || null,
           });
         }
@@ -447,7 +460,7 @@ export class ScriptureLookupService {
       chapterHeading,
       chapterNav,
       annotations: [],
-      config: { ...config, version }
+      config: { ...config, version, headingVersion }
     });
   }
 
