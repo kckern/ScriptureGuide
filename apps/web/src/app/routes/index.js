@@ -2,48 +2,14 @@ import { Router } from 'express';
 import scriptureController from '../controllers/ScriptureController.js';
 import configMiddleware from '../middleware/config.js';
 import outputMiddleware from '../middleware/output.js';
-import scriptureLookupService from '../../services/ScriptureLookupService.js';
-import verseRepository from '../../data/repositories/VerseRepository.js';
-import HtmlPresenter from '../../presentation/presenters/HtmlPresenter.js';
+import { ajaxRouter } from './ajax.js';
+import { legacyRouter } from './legacy.js';
 
-const presenter = new HtmlPresenter();
 const router = Router();
 
-// Version selector — returns <img class="option"> HTML for available versions
-router.post('/versionselect', async (req, res) => {
-  try {
-    const { ver, ref, seq } = req.body;
-    const result = await scriptureLookupService.lookup(ref, { version: ver, includeHeadings: false });
-    const verseIds = result.reference.verseIds;
-    const versions = await verseRepository.findAvailableVersions(verseIds);
-    const coverHost = 'https://img.scripture.guide/covers';
-
-    const html = versions
-      .filter(v => v.id !== ver)
-      .map(v => {
-        const img = v.id.replace(/\*.*$/, '').toLowerCase();
-        return `<img class="option" src="${coverHost}/${img}.jpg" title="${v.title}" ver="${v.id}" seq="${seq || 0}">`;
-      })
-      .join('\n');
-
-    res.send(html);
-  } catch (err) {
-    res.status(500).send('');
-  }
-});
-
-// Passage AJAX — returns h3 + verses HTML for replacePassage()
-router.get('/passage', async (req, res) => {
-  try {
-    const { ref, version } = req.query;
-    const config = { version: version || 'KJV', includeHeadings: true, includeVerseNumbers: true };
-    const result = await scriptureLookupService.lookup(ref, config);
-    const data = presenter.serialize(result);
-    res.render('partials/passage', { data, config: result.config });
-  } catch (err) {
-    res.status(500).send('');
-  }
-});
+// AJAX endpoints (vbox, passage, versionselect, settings, save_prefs), legacy .php URLs, /healthz
+router.use(ajaxRouter());
+router.use(legacyRouter());
 
 // Home page
 router.get('/', (req, res, next) => {
