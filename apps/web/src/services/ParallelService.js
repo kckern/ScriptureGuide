@@ -7,22 +7,14 @@ import verseRepository from '../data/repositories/VerseRepository.js';
 import parallelRepository from '../data/repositories/ParallelRepository.js';
 import { arrayText, splitVerseLines } from '../domain/rules/legacyText.js';
 import { formatReference, slugifyRef, versionImg } from '../domain/rules/legacyReference.js';
+import { defaultVersions } from '../domain/rules/defaultVersions.js';
 
 // A left side with no verses, or one of these years, is an edition: "1830~msg/john1"
 const EDITION_YEARS = ['1830', '1829', '1833', '1853', '1837', '1840', '1841', '1879', '1920', '1981', '2013'];
 
 // scriptures::defaultVersions: the version used when none is given, by verse id range
 export function defaultVersion(ids) {
-  if (!ids.length) return null;
-  const min = Math.min(...ids), max = Math.max(...ids);
-  const table = [
-    [1, 31103, 'LDS'], [31103, 37707, 'LDS'], [37707, 41361, 'LDS'], [41361, 41996, 'LDS'], [41996, 42600, 'LEC'],
-    [42600, 73912, 'JST'], [73912, 82863, 'TSP'], [82863, 83195, 'LAW'], [83195, 89431, 'YALI'],
-    [91463, 91885, 'GFRONSDAL'], [91886, 92585, 'ASITIS'], [89431, 90773, '1833'], [90773, 99999, '1835'],
-    [92587, 92667, 'MITCHELL'], [92668, 93382, 'ULOLD'],
-  ];
-  const hit = table.find(([lo, hi]) => min >= lo && max < hi);
-  return hit ? hit[2] : null;
+  return defaultVersions([], ids)[0]?.version ?? null;
 }
 
 // lib.php.inc: split "ver/ref~ver/ref" into sides
