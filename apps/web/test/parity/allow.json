@@ -1,1 +1,3 @@
-{}
+{
+  "api /john.3.16?output_only": "Body is a bare JSON string of HTML, which run.mjs compares byte for byte (canonicalJson only canonicalizes HTML under object keys), so PHP's tab/newline layout would have to match exactly. The same HTML is compared canonically as the output key of api /john.3.16; remove this entry if the harness learns to canonicalize a top-level api string."
+}
