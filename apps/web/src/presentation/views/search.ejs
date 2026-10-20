@@ -1,103 +1,66 @@
 <%
-const version = config.version || 'LDS';
+// Markup follows search.php in the PHP site. Verse text is printed raw, as there.
+// The query is escaped (PHP printed it raw): a deliberate fix, identical for plain words.
 const coverHost = 'https://media.scripture.guide/covers';
-const coverImg = version.replace(/\*.*$/, '').toLowerCase();
-
-// Volume tab config (only show volumes that have results)
-const VOL_CONFIG = [
-  { key: 'ot',   label: 'Old Testament' },
-  { key: 'nt',   label: 'New Testament' },
-  { key: 'bm',   label: 'Book of Mormon' },
-  { key: 'dc',   label: 'Doctrine & Covenants' },
-  { key: 'pgp',  label: 'Pearl of Great Price' },
-  { key: 'lec',  label: 'Lectures on Faith' },
-  { key: 'jsto', label: 'JST Old Testament' },
-  { key: 'jstn', label: 'JST New Testament' },
-];
-
-const activeTabs = VOL_CONFIG.filter(v => totals[v.key] > 0);
-
-// Strip formatting markers and convert to plain displayable text
-function stripMarkers(text) {
-  return text.replace(/^[§¶]+/, '').replace(/｟([^｠]*)｠/g, '$1');
-}
-
-// Highlight search terms in verse text (strip markers first)
-function highlightTerms(text, terms) {
-  let t = stripMarkers(text);
-  for (const term of terms) {
-    const esc = term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    t = t.replace(new RegExp('\\b(' + esc + ')\\b', 'gi'), '<span class="searchterm">$1</span>');
-  }
-  return t;
-}
-
-function buildRefSlug(row) {
-  const slug = row.book_slug.toLowerCase().replace(/\./g,'').replace(/\s+/g,'.');
-  return `${version.toLowerCase()}/${slug}.${row.chapter}.${row.verse_num}`;
-}
-
-// Full book name for ref attr (matches production: "Genesis 3:22")
-function buildRefLabel(row) {
-  return `${row.book_title} ${row.chapter}:${row.verse_num}`;
-}
-
-// Short book name for display in refblock link (matches production: "Gen. 3:22")
-function buildRefShort(row) {
-  return `${row.book_short} ${row.chapter}:${row.verse_num}`;
-}
-
-// Cover image per volume
-function volCover(row) {
-  if (version === 'LDS') {
-    const v = row.vol_org;
-    if (v === 'ot' || v === 'nt') return 'ldskjv';
-    if (v === 'bm') return 'lds-bom2';
-    if (v === 'dc') return 'lds-dc2';
-    if (v === 'pgp') return 'lds-pgp2';
-  }
-  return coverImg;
-}
+const esc = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+const jsq = s => JSON.stringify(String(s)).replace(/</g, '\\u003c');
+const shown = count >= 100 ? 'Selected' : count;
+const tabs = vols.map(v => `
+			<li onclick="volfilter('${v.key}')"><span>${v.count}</span>${v.label}</li>`).join('');
+const trs = rows.map(r => `			<tr vol="${r.vol}" >
+				<td style="white-space:nowrap; " valign='top' align="center">
+					<div class="refblock"><a href="${r.href}" target="_blank">${r.refShort}
+					<br/><img src="${coverHost}/${r.cover}.jpg"></a></div>
+				</td>
+				<td  class="searchtext">
+					<span class="clipboard">${r.text}</span>
+					<span class='verse v_${r.verse_id}' verse_id="${r.verse_id}" ref="${r.ref}" version="${r.version}">${r.highlighted}</span>
+					<div><img 	onClick="copyToClipbord(this)"	src="/img/copy.svg"></div>
+				</td>
+			</tr>
+`).join('');
 %>
 <%- include('layouts/main', {
-  title: total + ' Search Results',
+  title: count ? count + ' Search Results' : 'Home',
   config,
   slugver: '',
-  slugref: '',
+  slugref: slugref || '',
+  ogMeta: {
+    title: (count ? count + ' Search Results' : 'Home') + ' | Scripture Guide',
+    image: 'http://cover.scripture.guide/search',
+    description: count + ' passages matching: ' + query,
+    url: ogUrl || ''
+  },
   body: `
+		<div id='container'>
 <script>
-searchterm = ${JSON.stringify(query)};
-versions_index = null;
+searchterm = ${jsq(query)};
+versions_index = null
 
-function copyToClipbord(e) {
-  e.src = "/img/check.svg";
-  let main = e.parentElement.previousElementSibling;
-  let clipboardtext = e.parentElement.previousElementSibling.previousElementSibling.textContent;
-  let version = main.attributes.version.value;
-  let ref = main.attributes.ref.value;
-  let parenth = ' (' + ref + ', ' + version + ')';
-  if(["LDS","KJV"].includes(version)) parenth = ' (' + ref + ')';
-  parenth = parenth.replace("Doctrine and Covenants","D&C");
-  navigator.clipboard.writeText(clipboardtext + parenth);
+
+function copyToClipbord(e)
+{
+	e.src = "/img/check.svg";
+	let main = e.parentElement.previousElementSibling;
+	let clipboardtext = e.parentElement.previousElementSibling.previousElementSibling.textContent;
+	let version = main.attributes.version.value;
+	let ref = main.attributes.ref.value;
+	let parenth = \` (\${ref}, \${version})\`;
+	if(["LDS","KJV"].includes(version)) parenth = \` (\${ref})\`;
+	parenth = parenth.replace("Doctrine and Covenants","D&C");
+	let copyMe = clipboardtext + parenth;
+
+	navigator.clipboard.writeText(copyMe);
 }
+
 </script>
 
-<h1 style='margin-top:30px; text-align:center; font-size:2em'>Selected Search Results<br><small style='font-size:.7em; color:#777;'><em>${JSON.stringify(query).slice(1,-1)}</em></small></h1>
+		<h1 style='margin-top:30px; text-align:center; font-size:2em'>${shown} Search Results<br><small style='font-size:.7em; color:#777;'><em>“${esc(query)}”</em></small></h1>
 
-${activeTabs.length > 1 ? `<ul class="tabs">
-${activeTabs.map(v => `  <li onclick="volfilter('${v.key}')"><span>${totals[v.key]}</span>${v.label}</li>`).join('\n')}
-</ul>` : ''}
-
-<table id="searchresults">${results.map(row => `<tr vol="${row.vol_org}" >
-  <td style="white-space:nowrap; " valign='top' align="center">
-    <div class="refblock"><a href="/${buildRefSlug(row)}" target="_blank">${buildRefShort(row)}<br/><img src="${coverHost}/${volCover(row)}.jpg"></a></div>
-  </td>
-  <td  class="searchtext">
-    <span class="clipboard">${stripMarkers(row.text)}</span>
-    <span class='verse v_${row.verse_id}' verse_id="${row.verse_id}" ref="${buildRefLabel(row)}" version="${version}">${highlightTerms(row.text, terms)}</span>
-    <div><img onClick="copyToClipbord(this)" src="/img/copy.svg"></div>
-  </td>
-</tr>`).join('\n')}
-</table>
+		<ul class="tabs">${tabs}
+		</ul>
+		<table id="searchresults">${trs}
+		</table>
+		</div>
 `
 }) %>
