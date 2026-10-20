@@ -1,0 +1,12 @@
+**/node_modules
+**/.env
+.git
+data
+docs
+apps/chrome-extension
+!apps/chrome-extension/package.json
+packages/scripture-guide/dist/*.mjs
+packages/scripture-guide/dist/*.cjs
+packages/scripture-guide/dist/*.map
+packages/scripture-guide/src/data
+packages/scripture-guide/coverage
