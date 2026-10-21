@@ -14,7 +14,8 @@
     "test": "vitest run --passWithNoTests",
     "test:watch": "vitest --watch",
     "lint": "eslint src/",
-    "parity": "node test/parity/run.mjs"
+    "parity": "node test/parity/run.mjs",
+    "browser": "node test/browser/smoke.mjs"
   },
   "keywords": [
     "bible",
@@ -40,6 +41,9 @@
   "devDependencies": {
     "cheerio": "^1.1.0",
     "eslint": "^8.56.0",
+    "pixelmatch": "^8.0.0",
+    "playwright": "^1.64.1",
+    "pngjs": "^7.0.0",
     "supertest": "^6.3.3",
     "vitest": "^4.1.12"
   }
