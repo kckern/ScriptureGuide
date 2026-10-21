@@ -9,7 +9,7 @@ import { createHash } from 'node:crypto';
 import { mkdirSync, readFileSync, writeFileSync, existsSync, rmSync } from 'node:fs';
 import * as cheerio from 'cheerio';
 import { DIR, CACHE_ROOT, NODE_BASE, LIVE_SCHEME, USER_AGENT, cliOptions, loadCorpus, selectRequests, get, hostFor, diffName } from './harness.mjs';
-import { canonicalHtml, canonicalJson, canonicalAsset, mediaType, encodeCacheEntry, decodeCacheEntry, compare } from './normalize.mjs';
+import { canonicalHtml, canonicalJson, canonicalAsset, mediaType, encodeCacheEntry, decodeCacheEntry, compare, homeCleanups } from './normalize.mjs';
 import { allowReason } from './allow.mjs';
 
 const CACHE = CACHE_ROOT + '/live/';
@@ -46,7 +46,7 @@ function canonical(format, res) {
       const $ = cheerio.load(body);
       const title = collapse($('title').text());
       const container = $('#container').length ? canonicalHtml(body, '#container') : canonicalHtml(body, 'body');
-      return `TITLE ${title}\n${container}`;
+      return `TITLE ${title}\n${homeCleanups(container)}`;
     }
     case 'api': {
       // ?output_only returns the HTML as a bare JSON string.

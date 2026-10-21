@@ -75,3 +75,19 @@ export function decodeCacheEntry({ status, type, body, bodyBase64 }) {
   const buf = bodyBase64 !== undefined ? Buffer.from(bodyBase64, 'base64') : Buffer.from(body, 'utf8');
   return { status, type, buf, body: buf.toString('utf8') };
 }
+
+// Home page cleanups the owner chose to keep (controller decision 2026-10-20): the live page's
+// leftover value="Test" in the search box (JS replaced it on load), the fbclid tracking tag on
+// the Chrome Web Store link, and the line-heigth typo with the unspaced style next to it.
+// They are rewritten in canonical HTML, on these exact elements only, so a home page compares
+// equal while every other difference on it, or on a page that should not be home, still shows.
+const HOME_CLEANUPS = [
+  [/^(\s*<input id="searchbox" name="searchbox" type="text" value=)"Test">$/gm, '$1"">'],
+  [/^(\s*<a class="button" href="https:\/\/chrome\.google\.com\/webstore\/detail\/scripture-guide\/[^"?]*\?hl=en)&fbclid=[^"&]*(" target="_blank">)$/gm, '$1$2'],
+  [/^(\s*<img src="\/img\/chrome\.png" style="float:left; margin-bottom:100px;)(margin-top:50px; margin-right:30px;" width="128">)$/gm, '$1 $2'],
+  [/^(\s*<h3 style="line-)heigth(:1em">)$/gm, '$1height$2'],
+];
+
+export function homeCleanups(canonical) {
+  return HOME_CLEANUPS.reduce((text, [re, to]) => text.replace(re, to), canonical);
+}

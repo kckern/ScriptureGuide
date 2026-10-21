@@ -1,5 +1,5 @@
 import { describe, test, expect } from 'vitest';
-import { canonicalHtml, canonicalJson, compare, canonicalAsset, encodeCacheEntry, decodeCacheEntry } from './normalize.mjs';
+import { canonicalHtml, canonicalJson, compare, canonicalAsset, encodeCacheEntry, decodeCacheEntry, homeCleanups } from './normalize.mjs';
 
 describe('canonicalHtml', () => {
   test('ignores quote style, attribute order and whitespace between tags', () => {
@@ -64,5 +64,24 @@ describe('cache entries', () => {
   test('textual bodies stay a utf8 string body', () => {
     const entry = encodeCacheEntry({ status: 200, type: 'text/css; charset=UTF-8', buf: Buffer.from('a {}') });
     expect(entry).toEqual({ status: 200, type: 'text/css; charset=UTF-8', body: 'a {}' });
+  });
+});
+
+describe('homeCleanups', () => {
+  const live = canonicalHtml(`<div><input type="text" value="Test" name="searchbox" id="searchbox"/>
+    <a class="button" href="https://chrome.google.com/webstore/detail/scripture-guide/abc?hl=en&fbclid=IwAR2x-y_z" target="_blank">Install</a>
+    <img src="/img/chrome.png" width="128" style="float:left; margin-bottom:100px;margin-top:50px; margin-right:30px;"/>
+    <h3 style="line-heigth:1em">Chrome Extension</h3></div>`);
+  const node = canonicalHtml(`<div><input type="text" value="" name="searchbox" id="searchbox">
+    <a class="button" href="https://chrome.google.com/webstore/detail/scripture-guide/abc?hl=en" target="_blank">Install</a>
+    <img src="/img/chrome.png" width="128" style="float:left; margin-bottom:100px; margin-top:50px; margin-right:30px;">
+    <h3 style="line-height:1em">Chrome Extension</h3></div>`);
+  test('the live home page markup reads as the cleaned-up Node markup', () => {
+    expect(homeCleanups(live)).toBe(node);
+    expect(homeCleanups(node)).toBe(node);
+  });
+  test('leaves other values alone', () => {
+    const other = canonicalHtml('<input id="searchbox" name="searchbox" type="text" value="faith"><a href="https://example.com/?fbclid=1">x</a><p style="line-heigth:2em">y</p>');
+    expect(homeCleanups(other)).toBe(other);
   });
 });
