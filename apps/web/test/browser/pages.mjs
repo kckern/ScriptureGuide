@@ -8,12 +8,19 @@
 //               versions  the version selector (click the heading's cover) shows covers that load
 //   mask      selectors painted over on BOTH screenshots before comparing, for regions that
 //             change from load to load whatever the server does. Each one says why.
-// Node-page problems that live has too, so they are reported but do not fail. Each is checked
-// against live; anything Node-only is a finding and fails.
+// Node-page problems that live has too, so they are reported but do not fail. Anything Node-only
+// is a finding and fails. Each run without --reuse-live checks the entries against live's own
+// problems and warns about any that excused a Node problem but no longer occur on live.
+//
+//   re       matched against the problem line ("requestfailed: <url> ...", "console: ...")
+//   why      where live shows it too
+//   trigger  an interaction that causes it; it then also runs on live, once per run
+//   echo     a line naming no URL, excused only next to a non-echo entry's problem
 export const SHARED_WITH_LIVE = [
   {
     re: /media\.scripture\.guide\/covers\/nirv\.jpg/,
     why: 'S3 has no covers/nirv.jpg (403); live /versionselect lists the same cover (checked 2026-10-20)',
+    trigger: 'versions',
   },
   {
     re: /fonts\.gstatic\.com\/ea\/kopubbatang\//,
