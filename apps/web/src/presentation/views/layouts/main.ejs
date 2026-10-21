@@ -128,8 +128,10 @@ function activateCopyButtons() {
 <div id="audio_preloader"></div>
 
 <script>
-var slugver = "<%- typeof slugver !== 'undefined' && slugver ? '/' + slugver.toLowerCase() : '' %>";
-slugref = "<%- typeof slugref !== 'undefined' ? slugref : '' %>";
+<% /* from the URL: a JS string literal, with "<" escaped so it cannot close the script */
+   const jsString = v => JSON.stringify(String(v)).replace(/</g, '\\u003c'); %>
+var slugver = <%- jsString(typeof slugver !== 'undefined' && slugver ? '/' + slugver.toLowerCase() : '') %>;
+slugref = <%- jsString(typeof slugref !== 'undefined' ? slugref : '') %>;
 
 // Client-side URL canonicalization — avoids server 301 round-trip
 (function() {
