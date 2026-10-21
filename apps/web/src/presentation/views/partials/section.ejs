@@ -73,7 +73,8 @@ data.verses.forEach(verse => {
   // verse_label only on first segment and first linebreak part; second+ get no attr
   // Note: <sup class="vnum"> is NOT rendered server-side — JS adds it from verse_label attr
   const verseLabel = verse.compoundLabel ?? ((verse.segIndex === 0 && verse.lbIndex === 0) ? (verse.num === 1 ? `${vChapter}:${verse.num}` : verse.num) : null);
-  const verseLabelAttr = verseLabel !== null ? ` verse_label="${verseLabel}"` : '';
+  // PHP dropped empty() attributes, so verse 0 has none
+  const verseLabelAttr = verseLabel !== null && String(verseLabel) !== '0' ? ` verse_label="${verseLabel}"` : '';
   const compoundAttr = verse.compound ? ` compound="${verse.compound}"` : '';
   const lbClassStr = verse.lbClass ? ` ${verse.lbClass}` : '';
   const mixAttr = verse.mixmatch ? ` mixmatch="${verse.mixmatch}"` : '';

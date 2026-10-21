@@ -248,7 +248,9 @@ export class HtmlPresenter {
             // and handles missing-verse gaps (e.g. NRSV Mark 15:28 absent → [21-27,29-32]).
             // Scope by chapter to avoid matching duplicate verse numbers from adjacent chapters.
             const sectionVerseNums = (f != null && l != null) ? result.verses
-              .filter(v => v.id >= h.verse_id && v.verseNum != null && v.verseNum >= f && v.verseNum <= l &&
+              // Verse 0 (Book of Commandments) sorts by id between other verses: keep it in place
+              .filter(v => v.id >= h.verse_id && v.verseNum != null &&
+                ((v.verseNum >= f && v.verseNum <= l) || (v.verseNum === 0 && v.id <= h.last)) &&
                 (h3Chapter == null || v.chapter == null || v.chapter === h3Chapter))
               .map(v => v.verseNum) : [];
             let verseRangeSlug, refVerse;

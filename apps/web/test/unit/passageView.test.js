@@ -55,3 +55,29 @@ describe('reference that matched nothing', () => {
     expect(cheerio.load(html)('h3').text().toLowerCase()).toBe('xyz 1<img src=x onerror=alert(1)>');
   });
 });
+
+// Book of Commandments 13: verse 0 sits between verses 1 and 2 (verse id order)
+function withVerseZero() {
+  const rows = [[89527, 1], [89528, 0], [89529, 2]];
+  const verses = rows.map(([id, verseNum]) => new Verse({ id, verseNum, chapter: 13, text: '¶And it came to pass.', version: '1833' }));
+  return new ScriptureResult({
+    reference: new Reference({ query: 'boc.13.1,0,2', normalized: 'Book of Commandments 13:1,0,2', verseIds: rows.map(r => r[0]) }),
+    verses,
+    headings: [{ verse_id: 89527, type: 'heading', text: '', last_verse_id: 89529, synthetic: true }],
+    config: { version: '1833', _bookTitle: 'Book of Commandments', _vChapterMap: Object.fromEntries(rows.map(r => [r[0], 13])) },
+  });
+}
+
+describe('verse 0', () => {
+  test('stays in the heading ref and slug, in verse id order', () => {
+    const h = new HtmlPresenter().serialize(withVerseZero()).h3ByVerse[89527];
+    expect(h.ref).toBe('Book of Commandments 13:1,0,2');
+    expect(h.slug).toBe('1833/book.of.commandments.13.1,0,2');
+  });
+  test('has no verse_label (PHP dropped the empty() "0" attribute)', async () => {
+    const data = new HtmlPresenter().serialize(withVerseZero());
+    const $ = cheerio.load(await ejs.renderFile(VIEW, { data }));
+    expect($('span.v_89528').attr('verse_label')).toBeUndefined();
+    expect($('span.v_89529').attr('verse_label')).toBe('2');
+  });
+});
