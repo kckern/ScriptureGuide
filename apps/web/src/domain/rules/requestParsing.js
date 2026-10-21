@@ -53,9 +53,10 @@ export function randomVerseId(random = Math.random) {
 }
 
 // Apache handed the path to PHP as the value of q (index.php?q=<path>), so a "+" in the
-// path arrived as a space; "%2B" stays a "+".
+// path arrived as a space. So did "%2B": Apache decoded it before the rewrite, which put it
+// back unescaped (live /john%2B3:16 is John 3:16, /search/c%2B%2B searches "c").
 function decode(path) {
-  const spaced = String(path).replace(/\+/g, ' ');
+  const spaced = String(path).replace(/\+|%2B/gi, ' ');
   try { return decodeURIComponent(spaced); } catch { return spaced; }
 }
 

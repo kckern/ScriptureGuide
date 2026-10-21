@@ -137,8 +137,9 @@ describe('q normalization', () => {
     expect(req('/kjv/john+3.16').reference).toBe('john 3.16');
     expect(req('/kjv/john+3.16').versions.map(v => v.version)).toEqual(['KJV']);
   });
-  test('an encoded plus stays a plus', () => {
-    expect(req('/a%2Bb').reference).toBe('a+b');
+  test('an encoded plus is a space too, as on live', () => {
+    expect(req('/john%2B3:16').reference).toBe('john 3:16');
+    expect(req('/search/c%2b%2B').reference).toBe('c  ');
   });
 });
 
