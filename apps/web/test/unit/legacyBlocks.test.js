@@ -116,6 +116,17 @@ describe('LegacyBlockService.blocks (scriptures::loadMetaFromRef)', () => {
   });
 });
 
+describe('LegacyBlockService.blocks: cost of a long junk reference', () => {
+  test('pieces past the first 100 are blocks without a lookup', async () => {
+    const ref = Array.from({ length: 150 }, (_, i) => `word${i}`).join('; ');
+    fakeRepo.calls = 0;
+    const blocks = await service().blocks(ref);
+    expect(blocks).toHaveLength(150);
+    expect(fakeRepo.calls).toBeLessThanOrEqual(100);
+    expect(blocks[149]).toEqual({ orig: 'Word Word 149', book: 'Word', verse_ids: [] });
+  });
+});
+
 describe('getRanges (scriptutil::getRanges)', () => {
   test.each([
     ['John 3:16', 'John', ['3:16']],

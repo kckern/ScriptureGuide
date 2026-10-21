@@ -19,6 +19,9 @@ export const MAX_MULTI_RANGE = 1000;
 const MAX_TITLES = 5000;
 // Nesting of multi-book ranges inside the ends of a multi-book range.
 const MAX_DEPTH = 3;
+// Pieces looked up per reference: later pieces of a long junk path are blocks without verses,
+// so one request cannot cost thousands of queries.
+const MAX_LOOKUP_PIECES = 100;
 
 const MULTI = /[—-](\d\s)*[A-Za-z]/;
 const trimChars = (s, chars) => s.replace(new RegExp(`^[${chars}]+|[${chars}]+$`, 'g'), '');
@@ -136,8 +139,14 @@ export class LegacyBlockService {
     const out = [];
     let book = '';
     let all; // $all_verse_ids: shared by every range of the reference, never reset
-    for (const piece of (cleaned === false ? '' : cleaned).split(';')) {
+    const pieces = (cleaned === false ? '' : cleaned).split(';');
+    for (const [index, piece] of pieces.entries()) {
       let orig = trimChars(piece, ';:');
+      const lookUp = index < MAX_LOOKUP_PIECES;
+      if (MULTI.test(orig) && !lookUp) {
+        out.push({ orig: phpTrim(orig), book: 'Multi', verse_ids: [] });
+        continue;
+      }
       if (MULTI.test(orig)) {
         const range = orig.split('-');
         if (range[1] !== ':') {
@@ -159,7 +168,8 @@ export class LegacyBlockService {
       }
       book = getBook(orig, book);
       if (orig.startsWith(' ')) orig = book + orig;
-      out.push({ orig, book, verse_ids: await this.verseIds(book, getRanges(orig, book)) });
+      const ids = lookUp ? await this.verseIds(book, getRanges(orig, book)) : (isPhpEmpty(book) ? false : []);
+      out.push({ orig, book, verse_ids: ids });
     }
     return out;
   }
