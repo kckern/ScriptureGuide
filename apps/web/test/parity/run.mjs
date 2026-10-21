@@ -8,7 +8,7 @@
 import { createHash } from 'node:crypto';
 import { mkdirSync, readFileSync, writeFileSync, existsSync, rmSync } from 'node:fs';
 import * as cheerio from 'cheerio';
-import { DIR, CACHE_ROOT, NODE_BASE, LIVE_SCHEME, USER_AGENT, cliOptions, loadCorpus, selectRequests, get, hostFor } from './harness.mjs';
+import { DIR, CACHE_ROOT, NODE_BASE, LIVE_SCHEME, USER_AGENT, cliOptions, loadCorpus, selectRequests, get, hostFor, diffName } from './harness.mjs';
 import { canonicalHtml, canonicalJson, canonicalAsset, mediaType, encodeCacheEntry, decodeCacheEntry, compare } from './normalize.mjs';
 import { allowReason } from './allow.mjs';
 
@@ -84,9 +84,7 @@ for (const [format, path] of requests) {
     const reason = allowReason(allow, format, path);
     verdict = c.equal ? 'pass' : reason ? 'allowed' : 'fail';
     if (!c.equal) {
-      // long traffic paths would overflow the filename limit: truncate and add a hash
-      let name = `${format}__${path.replace(/[^a-z0-9]+/gi, '_')}`;
-      if (name.length > 120) name = name.slice(0, 100) + '_' + createHash('sha1').update(key).digest('hex').slice(0, 12);
+      const name = diffName(format, path);
       writeFileSync(DIFFS + name + '.live.txt', expected);
       writeFileSync(DIFFS + name + '.node.txt', actual);
     }

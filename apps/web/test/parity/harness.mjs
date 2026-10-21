@@ -1,5 +1,6 @@
 // Shared by run.mjs (parity) and perf.mjs (timing): command-line options, corpus loading and
 // filtering, and a small HTTP client.
+import { createHash } from 'node:crypto';
 import http from 'node:http';
 import https from 'node:https';
 import { readFileSync, existsSync } from 'node:fs';
@@ -50,6 +51,14 @@ export function loadCorpus(name) {
 // The corpus requests that pass --format and --only.
 export function selectRequests(requests, { formats, only } = {}) {
   return requests.filter(([format, path]) => (!formats || formats.includes(format)) && (!only || path.includes(only)));
+}
+
+// The diff file name for a failing request: the path made filename-safe and cut to 100
+// characters, plus a hash of the whole request, so '/', '/~/' and '/?feed=rss2' stay apart.
+export function diffName(format, path) {
+  const slug = path.replace(/[^a-z0-9]+/gi, '_').replace(/^_+|_+$/g, '').slice(0, 100);
+  const hash = createHash('sha1').update(`${format} ${path}`).digest('hex').slice(0, 8);
+  return `${format}__${slug}_${hash}`;
 }
 
 // Keep-alive agents, so repeated timed requests measure the server rather than TCP/TLS setup.
