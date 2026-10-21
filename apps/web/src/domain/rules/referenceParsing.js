@@ -83,7 +83,10 @@ export function displayReference(normalized) {
 
 // Heading for a reference that matched no verses (approximates scriptutil::cleanReference):
 // "john.3.99" → "John 3:99"
+// A reference PHP's is_numeric accepts ("2.47", "1-2;5" without ";" and "-") was read as verse
+// ids; ids that matched nothing gave no heading at all.
 export function blankHeading(ref) {
+  if (/^\s*[+-]?(\d+\.?\d*|\.\d+)(e[+-]?\d+)?\s*$/i.test(String(ref || '').replace(/[;-]/g, ''))) return '';
   return String(ref || '')
     .trim()
     .replace(/(\d)\.(\d)/g, '$1:$2')

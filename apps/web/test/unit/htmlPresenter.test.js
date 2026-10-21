@@ -49,4 +49,11 @@ describe('HtmlPresenter heading ref', () => {
     expect(data.verses[0]).toMatchObject({ compound: 3, compoundRef: '1 Ne. 2:1–3', compoundLabel: '1–3', gapIds: [11, 12] });
     expect(data.verses[1].compound).toBeUndefined();
   });
+
+  test('a subheading follows the heading on a new line, in <small>', () => {
+    const result = crossChapter('Genesis 29:31-30:3', 31);
+    result.headings.push({ verse_id: 1, type: 'subheading', text: 'al-Dukh\u0101n' });
+    const data = new HtmlPresenter().serialize(result);
+    expect(data.h3ByVerse[1].textHtml).toBe('A section<br/><small>al-Dukh\u0101n</small>');
+  });
 });

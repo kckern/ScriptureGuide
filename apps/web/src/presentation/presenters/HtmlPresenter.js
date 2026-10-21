@@ -285,9 +285,13 @@ export class HtmlPresenter {
 
     // Index h3 headings by verse_id for EJS lookup
     const h3ByVerse = {};
+    // Subheadings by verse_id: shown under their heading (buildHeading)
+    const subheadings = {};
+    for (const h of result.headings) if (h.type === 'subheading' && h.text) subheadings[h.verse_id] = h.text;
+    const headingHtml = (text, sub) => renderHeadingHtml(text) + (sub ? `<br/><small>${renderHeadingHtml(sub)}</small>` : '');
     for (const h of h3Headings) {
       // Heading text as the page shows it (renderHeadingHTML); h.text stays as stored
-      h.textHtml = renderHeadingHtml(h.text);
+      h.textHtml = headingHtml(h.text, subheadings[h.verse_id]);
       h3ByVerse[h.verse_id] = h;
     }
 
@@ -366,7 +370,7 @@ export class HtmlPresenter {
       prePassageH3 = {
         verse_id: ch.verse_id,
         text: ch.heading || '',
-        textHtml: renderHeadingHtml(ch.heading),
+        textHtml: headingHtml(ch.heading, ch.subheading),
         ref: preH3Ref,
         slug: preH3Slug,
         verse_count: chVerseCount,

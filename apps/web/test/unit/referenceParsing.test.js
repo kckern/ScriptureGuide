@@ -79,6 +79,11 @@ describe('blankHeading', () => {
     expect(blankHeading('xyz.99')).toBe('Xyz 99');
     expect(blankHeading('john.3.99')).toBe('John 3:99');
   });
+  test('a number (PHP is_numeric) is read as verse ids, so one that matched nothing has no heading', () => {
+    expect(blankHeading('2.47')).toBe('');
+    expect(blankHeading('99999999')).toBe('');
+    expect(blankHeading('1-2;5')).toBe('');
+  });
 });
 
 describe('formatReference', () => {
