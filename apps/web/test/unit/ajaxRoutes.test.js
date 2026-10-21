@@ -62,7 +62,9 @@ beforeEach(() => {
   render = vi.fn(async (view, { data }) => `\n\t\t<h3 class="heading" ref="${data.ref}">${data.ref}</h3>\n\t\t<p class="prose"><span class="verse">For God so loved the world</span></p>`);
   const presenter = { serialize: r => ({ ref: r.ref, verses: [], h3ByVerse: {} }) };
   const references = { parse: ref => ({ verseIds: ref ? [26137] : [] }) };
-  const controller = new AjaxController({ lookup, references, repo, presenter, render });
+  // PHP blocks of a non-numeric verse_id (LegacyBlockService), as cleanReference titled them
+  const blocks = { blocks: vi.fn(async ref => [{ orig: ref.charAt(0).toUpperCase() + ref.slice(1), book: ref, verse_ids: [] }]) };
+  const controller = new AjaxController({ lookup, references, repo, presenter, render, blocks });
   app = express();
   app.use(express.urlencoded({ extended: true }));
   app.use(cookieParser());
@@ -149,6 +151,14 @@ describe('/vbox', () => {
       const $ = cheerio.load((await request(app).get(path)).text);
       expect($('.refpanel tr.original .gridtext').text()).toBe('No scripture verses found.');
     }
+  });
+  it('a non-numeric verse_id shows its PHP blocks as plain text (live looked it up as a reference)', async () => {
+    const $ = cheerio.load((await request(app).get('/vbox?verse_id=abc')).text);
+    expect($('.refpanel tr.original .gridtext').text().replace(/\s+/g, ' ').trim()).toBe('Abc No scripture verses found.');
+  });
+  it('the echoed verse_id is escaped', async () => {
+    const res = await request(app).get('/vbox?verse_id=%3Cimg%20src%3Dx%3E');
+    expect(res.text).not.toContain('<img src=x>');
   });
   it('leads with references when the saved preference says so', async () => {
     repo.findPrefs.mockResolvedValue({ options: { verpanel: 'ref' } });

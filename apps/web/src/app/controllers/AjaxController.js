@@ -1,4 +1,7 @@
 import { isEmptyReference } from '../../domain/rules/requestParsing.js';
+import legacyBlockService from '../../services/LegacyBlockService.js';
+import { plainFor } from '../../presentation/presenters/formats/plain.js';
+import { escapeHtml } from '../../domain/rules/legacyText.js';
 import scriptureLookupService from '../../services/ScriptureLookupService.js';
 import referenceService from '../../services/ReferenceService.js';
 import verseboxRepository from '../../data/repositories/VerseboxRepository.js';
@@ -18,8 +21,9 @@ const params = req => ({ ...(req.query || {}), ...(req.body || {}) });
 const str = v => (Array.isArray(v) ? v[0] : v) ?? '';
 
 export class AjaxController {
-  constructor({ lookup, references, repo, presenter, render }) {
+  constructor({ lookup, references, repo, presenter, render, blocks = legacyBlockService }) {
     this.lookup = lookup;
+    this.blocks = blocks;
     this.references = references;
     this.repo = repo;
     this.presenter = presenter;
@@ -85,6 +89,15 @@ export class AjaxController {
       html = html.replace(/<h3\b/gi, "<h4 class='filler'></h4><h3");
       this.send(res, highlightSearchTerm(html, str(p.searchterm)));
     } catch (err) { this.fail(res, err); }
+  }
+
+  // The original verse panel: live looked the raw verse_id up as a reference in plain text
+  // (scriptures::lookup($verse_id, plain)). A verse id is that verse's text; an empty one, or one
+  // that is not a number, is its PHP blocks ("abc" → "Abc" and "No scripture verses found.").
+  async originalText(raw, ver, ownText) {
+    if (/^\d+$/.test(raw) && !isEmptyReference(raw)) return flattenText(ownText[0]?.text || '').trim();
+    // escaped: it echoes the request (the PHP site reflected it raw)
+    return escapeHtml(await plainFor(await this.blocks.blocks(isEmptyReference(raw) ? '' : raw), { [ver]: ver }));
   }
 
   // GET|POST /vbox — the verse analysis box (versions, references, comparison).
@@ -157,8 +170,7 @@ export class AjaxController {
           title: verse?.verse_title || '',
           titleShort: verse?.verse_title_short || '',
           chapter: chapterSlug(verseId),
-          // live looked the raw verse_id up as a reference: an empty one is the not-found text
-          text: isEmptyReference(str(p.verse_id)) ? 'No scripture verses found.' : flattenText(ownText[0]?.text || '').trim(),
+          text: await this.originalText(str(p.verse_id), ver, ownText),
         },
         refs,
         refslug: verse ? slugifyRef(rowsReference([metaById.get(verseId)].filter(Boolean), 'book_title')) : '',
