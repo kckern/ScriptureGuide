@@ -12,7 +12,7 @@
 import { performance } from 'node:perf_hooks';
 import { mkdirSync, readFileSync, writeFileSync, existsSync } from 'node:fs';
 import { CACHE_ROOT, NODE_BASE, LIVE_SCHEME, USER_AGENT, cliOptions, loadCorpus, selectRequests, get, hostFor } from './harness.mjs';
-import { report, cachedLive, FLAG_RATIO, FLAG_MS } from './perfStats.mjs';
+import { report, cachedLive, isOk, FLAG_RATIO, FLAG_MS } from './perfStats.mjs';
 
 const LIVE_GAP_MS = 250;
 const LIVE_CACHE = CACHE_ROOT + '/perf-live.json';
@@ -41,7 +41,7 @@ async function series(url, headers, { gap = 0 } = {}) {
   for (let i = 0; i <= runs; i++) { // i = 0 is the warm-up
     if (gap && i) await new Promise(r => setTimeout(r, gap));
     const t = await timed(url, headers);
-    status = t.status;
+    if (status === undefined || isOk(status)) status = t.status; // keep the first error status
     if (i) times.push(Math.round(t.ms * 10) / 10);
   }
   return { times, status };
@@ -50,19 +50,20 @@ async function series(url, headers, { gap = 0 } = {}) {
 let liveSpent = 0;
 let liveSkipped = 0;
 let lastLive = 0;
+// { times, status } for the live URL, or null without live times
 async function liveTimes(format, path) {
   const url = `${LIVE_SCHEME}://${hostFor(format)}${path}`;
   const cached = cachedLive(liveCache, url, runs, { refresh: refreshLive });
-  if (cached) return cached;
+  if (cached) return { times: cached, status: liveCache[url].status };
   if (liveSpent + runs + 1 > maxLive) { liveSkipped++; return null; }
   const wait = lastLive + LIVE_GAP_MS - Date.now();
   if (wait > 0) await new Promise(r => setTimeout(r, wait));
   liveSpent += runs + 1;
   try {
-    const { times } = await series(url, {}, { gap: LIVE_GAP_MS });
-    liveCache[url] = { at: new Date().toISOString(), times };
+    const { times, status } = await series(url, {}, { gap: LIVE_GAP_MS });
+    liveCache[url] = { at: new Date().toISOString(), times, status };
     writeFileSync(LIVE_CACHE, JSON.stringify(liveCache, null, 1));
-    return times;
+    return { times, status };
   } catch (e) {
     console.error(`live ${url}: ${e.message}`);
     return null;
@@ -75,13 +76,13 @@ const results = [];
 for (const [format, path] of requests) {
   let node;
   try {
-    node = (await series(NODE_BASE + path, { Host: hostFor(format) })).times;
+    node = await series(NODE_BASE + path, { Host: hostFor(format) });
   } catch (e) {
     console.error(`node ${format} ${path}: ${e.message}`);
     continue;
   }
   const live = await liveTimes(format, path);
-  results.push({ format, path, node, live });
+  results.push({ format, path, node: node.times, nodeStatus: node.status, live: live?.times ?? null, liveStatus: live?.status });
   process.stderr.write('.');
 }
 process.stderr.write('\n');
@@ -92,7 +93,7 @@ const x = v => (v == null ? '-' : v.toFixed(2));
 const row = (name, g, n) => `${name.padEnd(14)} ${String(n).padStart(4)} ${ms(g.node.p50).padStart(8)} ${ms(g.node.p95).padStart(8)} ` +
   `${ms(g.live.p50).padStart(8)} ${ms(g.live.p95).padStart(8)} ${x(g.ratio).padStart(6)} ${String(g.flagged).padStart(7)}`;
 
-console.log(`${runs} runs per URL, median per URL; p50/p95 across URLs, in ms. Ratio = Node p50 / live p50 over URLs timed on both.`);
+console.log(`${runs} runs per URL, median per URL; p50/p95 across URLs, in ms. Ratio = Node p50 / live p50 over URLs timed on both. Error responses are listed apart.`);
 console.log('format         urls node p50 node p95 live p50 live p95  ratio flagged');
 for (const [f, g] of Object.entries(r.formats)) console.log(row(f, g, r.urls.filter(u => u.format === f).length));
 console.log(row('overall', r.overall, r.urls.length));
@@ -103,6 +104,10 @@ for (const u of flagged) console.log(`  ${u.format.padEnd(8)} ${u.path}  node ${
 console.log('\nSlowest on Node:');
 for (const u of [...r.urls].sort((a, b) => b.node - a.node).slice(0, 10)) {
   console.log(`  ${ms(u.node).padStart(6)}  live ${ms(u.live).padStart(6)}  ${u.format.padEnd(8)} ${u.path}`);
+}
+if (r.errors.length) {
+  console.log(`\nError responses (not 2xx/3xx; a Node error leaves the URL out of the stats, a live one its live time): ${r.errors.length}`);
+  for (const e of r.errors) console.log(`  ${e.format.padEnd(8)} ${e.path}  node ${e.nodeStatus ?? '-'}  live ${e.liveStatus ?? '-'}`);
 }
 console.log(`\nLive: ${liveSpent} requests made, ${liveSkipped} URLs without live times (--max-live ${maxLive}).`);
 

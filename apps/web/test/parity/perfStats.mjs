@@ -20,6 +20,11 @@ export function summarize(values) {
   return { n: values.length, p50: percentile(values, 50), p95: percentile(values, 95) };
 }
 
+// A response worth timing: 2xx or 3xx. Error pages (404 probes, 5xx) are reported apart.
+export function isOk(status) {
+  return Number.isInteger(status) && status >= 200 && status < 400;
+}
+
 export function ratio(node, live) {
   return node == null || !live ? null : node / live;
 }
@@ -47,16 +52,22 @@ function group(urls) {
 }
 
 /**
- * @param {{format:string, path:string, node:number[], live:number[]|null}[]} results
+ * @param {{format:string, path:string, node:number[], live:number[]|null, nodeStatus?:number, liveStatus?:number}[]} results
  * Per URL: the median of its runs. Per format and overall: p50/p95 across those URL medians.
+ * A URL whose Node response is an error is left out (listed in `errors`); a live error response
+ * leaves the URL without a live time. A missing liveStatus (cached before statuses were kept)
+ * counts as ok.
  */
 export function report(results) {
-  const urls = results.map(({ format, path, node, live }) => {
+  const errors = results
+    .filter(r => !isOk(r.nodeStatus ?? 200) || !isOk(r.liveStatus ?? 200))
+    .map(({ format, path, nodeStatus, liveStatus }) => ({ format, path, nodeStatus, liveStatus }));
+  const urls = results.filter(r => isOk(r.nodeStatus ?? 200)).map(({ format, path, node, live, liveStatus }) => {
     const n = percentile(node, 50);
-    const l = live?.length ? percentile(live, 50) : null;
+    const l = live?.length && isOk(liveStatus ?? 200) ? percentile(live, 50) : null;
     return { format, path, node: n, live: l, ratio: ratio(n, l), flagged: isFlagged(n, l) };
   });
   const formats = {};
   for (const f of new Set(urls.map(u => u.format))) formats[f] = group(urls.filter(u => u.format === f));
-  return { urls, formats, overall: group(urls) };
+  return { urls, formats, overall: group(urls), errors };
 }

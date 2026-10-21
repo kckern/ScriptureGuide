@@ -1,5 +1,5 @@
 import { describe, test, expect } from 'vitest';
-import { percentile, summarize, ratio, isFlagged, cachedLive, report } from './perfStats.mjs';
+import { percentile, summarize, ratio, isFlagged, cachedLive, report, isOk } from './perfStats.mjs';
 
 describe('percentile', () => {
   test('interpolates between the closest ranks', () => {
@@ -98,5 +98,32 @@ describe('report', () => {
     expect(r.overall.live.n).toBe(2);
     // the ratio pairs node and live on the same URLs (api /a has no live time)
     expect(r.overall.ratio).toBeCloseTo(530 / 200);
+  });
+});
+
+describe('error responses', () => {
+  test('isOk: 2xx and 3xx', () => {
+    expect([200, 204, 301, 304, 399].every(isOk)).toBe(true);
+    expect([400, 404, 410, 500, 503, undefined, null].some(isOk)).toBe(false);
+  });
+  const results = [
+    { format: 'html', path: '/a', node: [100, 100], nodeStatus: 200, live: [50, 50], liveStatus: 200 },
+    { format: 'html', path: '/missing', node: [5, 5], nodeStatus: 404, live: [900, 900], liveStatus: 404 },
+    { format: 'html', path: '/broken-live', node: [20, 20], nodeStatus: 200, live: [3000, 3000], liveStatus: 500 },
+    { format: 'html', path: '/old-cache', node: [30, 30], nodeStatus: 200, live: [40, 40] },
+  ];
+  const r = report(results);
+  test('a Node error response is left out of the stats and listed', () => {
+    expect(r.urls.map(u => u.path)).toEqual(['/a', '/broken-live', '/old-cache']);
+    expect(r.errors).toEqual([
+      { format: 'html', path: '/missing', nodeStatus: 404, liveStatus: 404 },
+      { format: 'html', path: '/broken-live', nodeStatus: 200, liveStatus: 500 },
+    ]);
+  });
+  test('a live error response leaves the URL without a live time', () => {
+    const u = r.urls.find(x => x.path === '/broken-live');
+    expect(u.live).toBeNull();
+    expect(u.flagged).toBe(false);
+    expect(r.formats.html.live.n).toBe(2); // /a and /old-cache (cached before statuses were kept)
   });
 });
