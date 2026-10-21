@@ -203,6 +203,15 @@ describe('helpers', () => {
     expect(out).toContain("<span class='searchterm'>and</span> labour");
     expect(Date.now() - start).toBeLessThan(2000);
   });
+  test('a long row of separators in the query does not make the prefix step backtrack', () => {
+    // Runs of two separators (', ' and '; ') can each be split two ways; before the cut, 14 of these
+    // took over 20 s
+    const verse = `the ${Array(14).fill('word, word; word—word').join(' ')}`;
+    const start = Date.now();
+    const out = highlight(verse, `the${' '.repeat(1000)}lord`);
+    expect(out).not.toMatch(/<span[^>]*>[^<]*<span/);
+    expect(Date.now() - start).toBeLessThan(1000);
+  });
   test('highlight treats repeated separators as live does', () => {
     expect(highlight('faith, hope', 'faith  hope')).toBe("<span class='searchterm'>faith, hope</span>");
     expect(highlight('faith hope', 'faith  hope')).toBe("<span class='searchterm'>faith</span> <span class='searchterm'>hope</span>");

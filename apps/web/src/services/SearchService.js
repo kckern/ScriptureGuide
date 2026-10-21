@@ -73,10 +73,25 @@ function joinPieces(pieces) {
   return src;
 }
 
+// In the prefix step an empty piece is [a-z]*, which matches nothing inside a run of separators,
+// so a long row of them makes the regex try every way of splitting each run it crosses (a query of
+// 'the', 1000 spaces and 'lord' took 40 s on one verse). Rows of more than MAX_GAP empty pieces
+// (more than MAX_GAP + 1 spaces or dots in a row, which no realistic query has) are cut to MAX_GAP.
+const MAX_GAP = 8;
+function prefixPieces(pieces) {
+  const out = [];
+  let empties = 0;
+  for (const p of pieces) {
+    empties = p ? 0 : empties + 1;
+    if (empties <= MAX_GAP) out.push(p);
+  }
+  return out;
+}
+
 export function makeHighlighter(query) {
   const pieces = String(query).split(' ');
   const phrase = `\\b${joinPieces(pieces.map(escapeRegex))}[a-z]*`;
-  const prefixes = `\\b${pieces.map(p => `${escapeRegex(p.slice(0, 3))}[a-z]*`).join('\\W+')}[a-z]*`;
+  const prefixes = `\\b${prefixPieces(pieces).map(p => `${escapeRegex(p.slice(0, 3))}[a-z]*`).join('\\W+')}[a-z]*`;
   const stages = [phrase, prefixes].map(src => ({ test: new RegExp(src, 'i'), all: new RegExp(src, 'gi') }));
   const words = new Set(String(query).split(/[^a-z]+/i).filter(Boolean).map(q => q.slice(0, 3).toLowerCase()));
   const marked = w => {
