@@ -441,10 +441,6 @@ export class HtmlPresenter {
       h3ByVerse,       // full h3 headings indexed by verse_id
       inlineByVerse,   // non-heading inline elements indexed by verse_id
       prePassageH3,    // chapter heading from prior section (renders before verses with ellipsis)
-      // Keep headings for backward compat (partials/passage.ejs)
-      headings: Object.fromEntries(
-        Object.entries(h3ByVerse).map(([k, v]) => [k, [v]])
-      ),
       chapterHeading: result.chapterHeading,
       // chapterHeading with its title fields rendered (renderHeadingHTML), for the header rows
       chapterHeadingHtml: renderHeadingFields(result.chapterHeading),

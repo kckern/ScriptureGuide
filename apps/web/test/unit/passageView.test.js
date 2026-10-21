@@ -1,0 +1,39 @@
+import { describe, test, expect } from 'vitest';
+import ejs from 'ejs';
+import { fileURLToPath } from 'node:url';
+import * as cheerio from 'cheerio';
+import { HtmlPresenter } from '../../src/presentation/presenters/HtmlPresenter.js';
+import { Verse } from '../../src/domain/entities/Verse.js';
+import { Reference } from '../../src/domain/entities/Reference.js';
+import { ScriptureResult } from '../../src/domain/entities/ScriptureResult.js';
+
+const VIEW = fileURLToPath(new URL('../../src/presentation/views/partials/passage.ejs', import.meta.url));
+
+// A whole chapter (synthetic KJV-style text) whose heading carries a background and a summary.
+function chapter() {
+  const verses = [1, 2, 3].map(n => new Verse({ id: n, verseNum: n, chapter: 1, text: `${n === 1 ? '§¶' : '¶'}In the beginning.`, version: 'LDS' }));
+  return new ScriptureResult({
+    reference: new Reference({ query: 'Genesis 1', normalized: 'Genesis 1', verseIds: [1, 2, 3] }),
+    verses,
+    headings: [
+      { verse_id: 1, type: 'heading', text: '', last_verse_id: 3, synthetic: true, _wholeChapter: true },
+      { verse_id: 1, type: 'background', text: 'Background text' },
+      { verse_id: 1, type: 'summary', text: 'Summary text' },
+    ],
+    chapterHeading: { verse_id: 1, background: 'Background text', summary: 'Summary text', last: 3 },
+    config: { version: 'LDS', _bookTitle: 'Genesis', _faxIds: [1, 2, 3] },
+  });
+}
+
+describe('passage partial (passage_script.php)', () => {
+  test('renders the page passage: header rows and fax, no passage wrapper or nav', async () => {
+    const data = new HtmlPresenter().serialize(chapter());
+    data.chapterNav = { prev: { href: '/x', label: 'X' } };
+    const $ = cheerio.load(await ejs.renderFile(VIEW, { data }));
+    expect($('div.background').text()).toBe('Background text');
+    expect($('div.summary').text()).toBe('Summary text');
+    expect($('h3.heading').attr('fax')).toBe('1');
+    expect($('div.passage').length).toBe(0);
+    expect($('.chapterNav').length).toBe(0);
+  });
+});
