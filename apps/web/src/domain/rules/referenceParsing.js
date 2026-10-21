@@ -18,8 +18,12 @@ export function parseVerseIdList(ref) {
 }
 
 // "jst john.3.16" → { book: 'jst john', chapter: 3, verseStart: 16, verseEnd: 16, chapterEnd: null }
+// No book reference is this long; the cap bounds the backtracking match below (quadratic on failure).
+const MAX_REFERENCE_LENGTH = 200;
+
 export function splitBookReference(ref) {
   const s = String(ref || '').trim().toLowerCase().replace(/\s+/g, ' ');
+  if (s.length > MAX_REFERENCE_LENGTH) return null;
   // The book is everything before the trailing chapter/verse numbers, digits included
   // ("jst.1.kgs.7.30", "1835.doctrine.and.covenants.2:11").
   const m = s.match(/^(.*?[a-z&][^\d]*?)[\s.]*(\d+)(?:[.:](\d+)(?:-(\d+))?)?(?:-(\d+))?$/);

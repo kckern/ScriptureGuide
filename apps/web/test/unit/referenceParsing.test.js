@@ -23,6 +23,13 @@ describe('splitBookReference', () => {
     expect(splitBookReference('jst.1.kgs.7.30')).toEqual({ book: 'jst.1.kgs', chapter: 7, verseStart: 30, verseEnd: 30, chapterEnd: null });
     expect(splitBookReference('1835.doctrine.and.covenants.2:11')).toEqual({ book: '1835.doctrine.and.covenants', chapter: 2, verseStart: 11, verseEnd: 11, chapterEnd: null });
   });
+  test('a long adversarial string fails fast', () => {
+    const s = 'a'.repeat(8000) + '1'.repeat(8000) + 'x';
+    const t0 = performance.now();
+    expect(splitBookReference(s)).toBeNull();
+    expect(splitBookReference('a.'.repeat(8000) + '1-')).toBeNull();
+    expect(performance.now() - t0).toBeLessThan(50);
+  });
   test('not a reference', () => {
     expect(splitBookReference('faith')).toBeNull();
     expect(splitBookReference('3')).toBeNull();
