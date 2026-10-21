@@ -1,0 +1,30 @@
+import { describe, test, expect } from 'vitest';
+import { allowReason } from './allow.mjs';
+
+describe('allowReason', () => {
+  const allow = {
+    'html /': 'home page cleanups',
+    'html re:^/wp-': 'scanner probes',
+    '* re:\\.php$': 'retired PHP files',
+    'meta re:[': 'an invalid pattern is ignored',
+  };
+  test('an exact "<format> <path>" key', () => {
+    expect(allowReason(allow, 'html', '/')).toBe('home page cleanups');
+    expect(allowReason(allow, 'api', '/')).toBeUndefined();
+  });
+  test('a "<format> re:<regex>" key matches the path', () => {
+    expect(allowReason(allow, 'html', '/wp-login')).toBe('scanner probes');
+    expect(allowReason(allow, 'html', '/blog/wp-login')).toBeUndefined();
+    expect(allowReason(allow, 'api', '/wp-login')).toBeUndefined();
+  });
+  test('format "*" matches every format', () => {
+    expect(allowReason(allow, 'raw', '/zup.php')).toBe('retired PHP files');
+    expect(allowReason(allow, 'html', '/index.php')).toBe('retired PHP files');
+  });
+  test('an exact key wins over a pattern', () => {
+    expect(allowReason({ ...allow, 'html /wp-x': 'exact' }, 'html', '/wp-x')).toBe('exact');
+  });
+  test('an invalid pattern never matches', () => {
+    expect(allowReason(allow, 'meta', '/[')).toBeUndefined();
+  });
+});

@@ -12,6 +12,7 @@ import { fileURLToPath } from 'node:url';
 import * as cheerio from 'cheerio';
 import { corpus, hostFor } from './corpus.mjs';
 import { canonicalHtml, canonicalJson, canonicalAsset, mediaType, encodeCacheEntry, decodeCacheEntry, compare } from './normalize.mjs';
+import { allowReason } from './allow.mjs';
 
 const DIR = fileURLToPath(new URL('.', import.meta.url));
 // PARITY_CACHE lets several worktrees share one cache of live responses.
@@ -129,7 +130,8 @@ for (const [format, path] of requests) {
     expected = `STATUS ${l.status}\n` + safe(format, l);
     actual = `STATUS ${n.status}\n` + safe(format, n);
     const c = compare(expected, actual);
-    verdict = c.equal ? 'pass' : allow[key] ? 'allowed' : 'fail';
+    const reason = allowReason(allow, format, path);
+    verdict = c.equal ? 'pass' : reason ? 'allowed' : 'fail';
     if (!c.equal) {
       // long traffic paths would overflow the filename limit: truncate and add a hash
       let name = `${format}__${path.replace(/[^a-z0-9]+/gi, '_')}`;
@@ -137,7 +139,7 @@ for (const [format, path] of requests) {
       writeFileSync(DIFFS + name + '.live.txt', expected);
       writeFileSync(DIFFS + name + '.node.txt', actual);
     }
-    results.push({ key, format, verdict, diff: c, reason: allow[key] });
+    results.push({ key, format, verdict, diff: c, reason });
   } catch (e) {
     results.push({ key, format, verdict: 'error', diff: { error: e.message } });
   }
