@@ -30,6 +30,44 @@ export function getBook(ref, lastBook) {
 
 const trimChars = (s, chars) => s.replace(new RegExp(`^[${chars}]+|[${chars}]+$`, 'g'), '');
 
+// The package splits verses after a comma into their own part ("Matthew 13:24-30, 36-43" →
+// "Matthew 13:24-30; 13:36-43"); cleanReference kept them in one block. Group the package's parts
+// by the ";"-separated pieces of the input, and join a group's parts back with ", ".
+function blockTexts(ref, normalized) {
+  const parts = normalized.split(';');
+  const pieces = String(ref).split(/;|\.\./);
+  const groups = [];
+  let used = 0;
+  pieces.forEach((piece, i) => {
+    const upTo = i === pieces.length - 1 ? parts.length : normalize(pieces.slice(0, i + 1).join(';')).split(';').length;
+    if (upTo > used) groups.push(parts.slice(used, upTo));
+    used = Math.max(used, upTo);
+  });
+  return groups.flatMap(group => {
+    const out = [group[0]];
+    for (const part of group.slice(1)) {
+      const prev = out[out.length - 1];
+      const bare = part.trim();
+      if (!/^\d/.test(bare) || !prev.includes(':')) { out.push(part); continue; }
+      const chapter = prev.match(/(\d+):[^:]*$/)?.[1];
+      out[out.length - 1] = `${prev}, ${bare.startsWith(`${chapter}:`) ? bare.slice(chapter.length + 1) : bare}`;
+    }
+    return out;
+  });
+}
+
+// A book named alone is its first chapter (scriptutil::getRanges): the reference to resolve for
+// "Song.of.Solomon" is "Song of Solomon 1"; null when the text has digits or is empty.
+export function bookOnlyQuery(ref) {
+  const text = String(ref ?? '').replace(/[._]+/g, ' ').replace(/\s+/g, ' ').trim();
+  return text && !/\d/.test(text) ? `${text} 1` : null;
+}
+
+// The block for a book named alone: its title (lds_scriptures_books) and first chapter.
+export function bookOnlyBlock(bookTitle, verseIds) {
+  return { orig: bookTitle, book: bookTitle, verse_ids: [...verseIds] };
+}
+
 // [{orig, book, verse_ids}] per ";"-separated block. A block after the first keeps the leading
 // space left by the split, so PHP prefixed the book to it: "Genesis Genesis 1:1". Reproduced.
 export function metaFromRef(ref) {
@@ -37,7 +75,7 @@ export function metaFromRef(ref) {
   if (!normalized) return [];
   const blocks = [];
   let book = '';
-  for (const piece of normalized.split(';')) {
+  for (const piece of blockTexts(ref, normalized)) {
     let orig = trimChars(piece, ';:');
     if (!orig.trim()) continue;
     book = getBook(orig, book);

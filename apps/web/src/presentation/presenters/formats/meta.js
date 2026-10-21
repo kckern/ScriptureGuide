@@ -2,7 +2,8 @@
 // meta_only, returning only "meta"). JSON as PHP's json_encode(PRETTY_PRINT | NUMERIC_CHECK).
 import rawRepository from '../../../data/repositories/RawRepository.js';
 import { flag } from '../../formatOptions.js';
-import { metaFromRef } from '../../legacy/meta.js';
+import { metaFromRef, bookOnlyQuery, bookOnlyBlock } from '../../legacy/meta.js';
+import referenceService from '../../../services/ReferenceService.js';
 import { sendPhpJson } from '../../legacy/phpJson.js';
 
 // Fallback for references the package cannot parse but the lookup resolved (DB slugs).
@@ -14,9 +15,15 @@ function blocksFor(ref, result) {
 }
 
 // inc_api.php meta_only branch, including ?heads (heading verse ids of the first block).
-export async function metaOnly(req, result, repo = rawRepository) {
+export async function metaOnly(req, result, repo = rawRepository, references = referenceService) {
   const lr = req.config.legacy;
   const meta = blocksFor(lr.ref, result);
+  // A book named alone: its first chapter (resolved through the verse index for books the package lacks)
+  const bookQuery = !meta.length && bookOnlyQuery(lr.ref);
+  if (bookQuery) {
+    const r = await references.resolve(bookQuery);
+    if (!r.isEmpty && r.book) meta.push(bookOnlyBlock(r.book, r.verseIds));
+  }
   if (flag(req, 'heads', { hostLabels: true }) && meta[0]) {
     const versions = Object.keys(lr.versions || {});
     const heads = new Map();

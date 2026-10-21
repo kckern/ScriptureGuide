@@ -1,7 +1,7 @@
 import { lookupReference, generateReference } from 'scripture-guide';
 import { Reference } from '../domain/entities/Reference.js';
 import verseRepository from '../data/repositories/VerseRepository.js';
-import { parseVerseIdList, splitBookReference, bookKey, formatReference } from '../domain/rules/referenceParsing.js';
+import { parseVerseIdList, splitBookReference, bookKey, bookAlias, formatReference } from '../domain/rules/referenceParsing.js';
 
 export class ReferenceService {
   constructor(verseRepo = verseRepository) {
@@ -74,7 +74,7 @@ export class ReferenceService {
 
   async findBook(name, chapter = 1) {
     const books = await this.verseRepository.findAllBooks();
-    let key = bookKey(name);
+    let key = bookAlias(bookKey(name));
     // "jst john": resolve the base book through the package, then its JST counterpart
     const jst = key.match(/^jst (.+)$/);
     if (jst) {

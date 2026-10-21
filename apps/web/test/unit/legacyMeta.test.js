@@ -1,5 +1,6 @@
 import { describe, test, expect } from 'vitest';
-import { metaFromRef, getBook, defaultVersions } from '../../src/presentation/legacy/meta.js';
+import { metaFromRef, getBook, defaultVersions, bookOnlyQuery, bookOnlyBlock } from '../../src/presentation/legacy/meta.js';
+import { metaOnly } from '../../src/presentation/presenters/formats/meta.js';
 
 describe('metaFromRef (scriptures::loadMetaFromRef)', () => {
   test('single verse', () => {
@@ -32,6 +33,15 @@ describe('metaFromRef (scriptures::loadMetaFromRef)', () => {
     expect(metaFromRef('js-h.1.17')[0]).toMatchObject({ orig: 'Joseph Smith History 1:17', book: 'Joseph Smith History' });
   });
 
+  test('verses after a comma stay in their block (cleanReference keeps "13:24-30, 36-43")', () => {
+    const [block, ...rest] = metaFromRef('Matthew.13:24-30,.36-43');
+    expect(rest).toEqual([]);
+    expect(block.orig).toBe('Matthew 13:24-30, 36-43');
+    expect(block.book).toBe('Matthew');
+    expect(block.verse_ids).toEqual([23564, 23565, 23566, 23567, 23568, 23569, 23570, 23576, 23577, 23578, 23579, 23580, 23581, 23582, 23583]);
+    expect(metaFromRef('john.3.16,18;gen.1.1').map(b => b.orig)).toEqual(['John 3:16, 18', 'Genesis Genesis 1:1']);
+  });
+
   test('unknown reference gives no blocks', () => {
     expect(metaFromRef('nothing')).toEqual([]);
   });
@@ -57,5 +67,21 @@ describe('defaultVersions (scriptures::defaultVersions)', () => {
   test('other ranges', () => {
     expect(defaultVersions(null, [42600])).toEqual({ JST: 'JST' });
     expect(defaultVersions(null, [1, 31103])).toEqual({});
+  });
+});
+
+describe('a book named alone (meta)', () => {
+  test('is looked up as its first chapter', () => {
+    expect(bookOnlyQuery('Song.of.Solomon')).toBe('Song of Solomon 1');
+    expect(bookOnlyQuery('john.3')).toBeNull();
+    expect(bookOnlyQuery('')).toBeNull();
+  });
+  test('is titled with the book title', () => {
+    expect(bookOnlyBlock('Genesis', [1])).toEqual({ book: 'Genesis', orig: 'Genesis', verse_ids: [1] });
+  });
+  test('metaOnly resolves it when no block parsed', async () => {
+    const references = { resolve: async q => ({ isEmpty: false, book: "Solomon's Song", verseIds: q === 'Song of Solomon 1' ? [17539] : [] }) };
+    const req = { config: { legacy: { ref: 'Song.of.Solomon', versions: null } }, query: {}, headers: {} };
+    expect(await metaOnly(req, null, {}, references)).toEqual([{ book: "Solomon's Song", orig: "Solomon's Song", verse_ids: [17539] }]);
   });
 });

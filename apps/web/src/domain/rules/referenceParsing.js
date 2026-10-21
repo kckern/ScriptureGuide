@@ -46,6 +46,12 @@ export function bookKey(name) {
     .trim();
 }
 
+// Book names scriptutil::cleanReference rewrote to the title in lds_scriptures_books, for names
+// the book table does not hold: "(the )*song*\.*(?: of solomon)*" → "Solomon's Song".
+export function bookAlias(key) {
+  return /^(the )?song?( of solomon)?$/.test(key) ? bookKey("Solomon's Song") : key;
+}
+
 // Reference for titles and headings, in the PHP style (scriptutil::referenceFromVerseIds): en
 // dashes in ranges, a book named once for its run of parts ("2 Nephi 3:19; 2 Nephi 27:13" →
 // "2 Nephi 3:19; 27:13"), verses of the same chapter joined by commas ("John 3:16; 3:18" →

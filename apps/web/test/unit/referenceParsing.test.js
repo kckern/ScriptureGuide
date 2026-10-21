@@ -1,5 +1,5 @@
 import { describe, test, expect } from 'vitest';
-import { parseVerseIdList, splitBookReference, bookKey, formatReference, displayReference, blankHeading } from '../../src/domain/rules/referenceParsing.js';
+import { parseVerseIdList, splitBookReference, bookKey, bookAlias, formatReference, displayReference, blankHeading } from '../../src/domain/rules/referenceParsing.js';
 
 describe('parseVerseIdList', () => {
   test('numeric references are verse ids', () => {
@@ -26,6 +26,16 @@ describe('splitBookReference', () => {
   test('not a reference', () => {
     expect(splitBookReference('faith')).toBeNull();
     expect(splitBookReference('3')).toBeNull();
+  });
+});
+
+describe('bookAlias', () => {
+  test('cleanReference names for Solomon\'s Song', () => {
+    expect(bookAlias('song of solomon')).toBe("solomon's song");
+    expect(bookAlias('the song of solomon')).toBe("solomon's song");
+    expect(bookAlias('song')).toBe("solomon's song");
+    expect(bookAlias('songs')).toBe('songs');
+    expect(bookAlias('genesis')).toBe('genesis');
   });
 });
 
