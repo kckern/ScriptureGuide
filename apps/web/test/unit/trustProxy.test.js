@@ -34,3 +34,20 @@ test('known gap: a visitor X-Real-IP that NPM swaps in for the ALB hop becomes r
   const res = await request(appWithTrust()).get('/ip').set('X-Forwarded-For', '198.51.100.7, 162.158.10.20, 203.0.113.66');
   expect(res.text).toBe('203.0.113.66');
 });
+
+// With trust proxy on, Express's req.hostname honours X-Forwarded-Host. Format and subdomain routing
+// read the Host header first, so a visitor-supplied X-Forwarded-Host cannot switch the output format.
+test('X-Forwarded-Host cannot change the subdomain or output format', async () => {
+  const { subdomainMiddleware } = await import('../../src/app/middleware/subdomain.js');
+  const { configMiddleware } = await import('../../src/app/middleware/config.js');
+  const app = express();
+  app.set('trust proxy', TRUST_PROXY);
+  app.use(subdomainMiddleware, configMiddleware);
+  app.get('*', (req, res) => res.json({ sub: req.outputFormat, format: req.config.outputFormat }));
+  const plain = await request(app).get('/kjv/john.3.16').set('Host', 'scripture.guide').set('X-Forwarded-Host', 'api.scripture.guide');
+  expect(plain.body).toEqual({ sub: 'html', format: 'html' });
+  const api = await request(app).get('/kjv/john.3.16').set('Host', 'api.scripture.guide').set('X-Forwarded-Host', 'scripture.guide');
+  expect(api.body).toEqual({ sub: 'api', format: 'api' });
+  const gone = await request(app).get('/x').set('Host', 'scripture.guide').set('X-Forwarded-Host', 'hub.scripture.guide');
+  expect(gone.status).toBe(200);
+});

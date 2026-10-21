@@ -35,6 +35,7 @@ export function rawQuery(req) {
  */
 export function configMiddleware(req, res, next) {
   const path = (req.originalUrl || req.url || '/').split('?')[0];
+  // Host header first (req.hostname would honour X-Forwarded-Host under trust proxy)
   const parsed = parseRequest({ host: req.headers.host || req.hostname || '', path, query: rawQuery(req) });
   const { options } = parsed;
 

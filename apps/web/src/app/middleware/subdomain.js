@@ -7,6 +7,7 @@ const GONE = new Set(['hub', 'slide']);
 // Host-level parsing: the first label is the subdomain (output format); extra labels
 // between it and the domain are flags (api.plain.scripture.guide → plain=1).
 // Path shortcuts (/api/..., /img/...) are applied later by configMiddleware.
+// Host header first: with trust proxy on, req.hostname honours a visitor-supplied X-Forwarded-Host.
 export function subdomainMiddleware(req, res, next) {
   const { subdomain, flags } = parseHost(req.headers?.host || req.hostname || '');
   if (GONE.has(subdomain)) {
