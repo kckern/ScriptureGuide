@@ -52,8 +52,11 @@ export function randomVerseId(random = Math.random) {
   return min + Math.min(max - min, Math.floor(random() * (max - min + 1)));
 }
 
+// Apache handed the path to PHP as the value of q (index.php?q=<path>), so a "+" in the
+// path arrived as a space; "%2B" stays a "+".
 function decode(path) {
-  try { return decodeURIComponent(path); } catch { return path; }
+  const spaced = String(path).replace(/\+/g, ' ');
+  try { return decodeURIComponent(spaced); } catch { return spaced; }
 }
 
 // Version spec "kjv.1830*rebom" → [{ version: 'KJV', format: 'KJV' }, { version: '1830', format: 'REBOM' }]

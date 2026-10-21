@@ -127,6 +127,14 @@ describe('q normalization', () => {
   test('percent-encoded paths are decoded', () => {
     expect(req('/john%203:16').reference).toBe('john 3:16');
   });
+  test('+ in the path is a space (Apache passed the path to PHP as a query value)', () => {
+    expect(req('/john+3:16').reference).toBe('john 3:16');
+    expect(req('/kjv/john+3.16').reference).toBe('john 3.16');
+    expect(req('/kjv/john+3.16').versions.map(v => v.version)).toEqual(['KJV']);
+  });
+  test('an encoded plus stays a plus', () => {
+    expect(req('/a%2Bb').reference).toBe('a+b');
+  });
 });
 
 describe('legacy (what lib.php.inc saw: api input/config, meta, raw, plain)', () => {
@@ -183,6 +191,11 @@ describe('legacy (what lib.php.inc saw: api input/config, meta, raw, plain)', ()
 
   test('decodes the path', () => {
     expect(legacy('/John%203:16').ref).toBe('John 3:16');
+  });
+
+  test('+ in the path is a space', () => {
+    expect(legacy('/John+3:16').ref).toBe('John 3:16');
+    expect(legacy('/john+3:16&meta_only+x').config).toEqual({ 'meta_only_x': 1 });
   });
 });
 
