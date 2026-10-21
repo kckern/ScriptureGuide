@@ -147,14 +147,19 @@ describe('legacy (what lib.php.inc saw: api input/config, meta, raw, plain)', ()
   const legacy = (path, query) => req(path, query, 'api.scripture.guide').legacy;
 
   test('reference only: no versions, config null', () => {
-    expect(legacy('/john.3.16')).toEqual({ q: 'john.3.16', ref: 'john.3.16', versions: null, config: null });
+    expect(legacy('/john.3.16')).toEqual({ q: 'john.3.16', ref: 'john.3.16', versions: null, versionList: [], config: null });
   });
 
   test('version path sets config.versions', () => {
     const r = legacy('/kjv/john.3.16');
     expect(r.ref).toBe('john.3.16');
     expect(r.versions).toEqual({ KJV: 'KJV' });
-    expect(r.config).toEqual({ versions: { KJV: 'KJV' } });
+    expect(r.config).toEqual({ versions: new Map([['KJV', 'KJV']]) });
+  });
+
+  test('config.versions keeps the path order, integer-like names included (PHP array order)', () => {
+    expect([...legacy('/2.0/x').config.versions.keys()]).toEqual(['2', '0']);
+    expect(legacy('/2.0/x').versionList).toEqual([['2', '2'], ['0', '0']]);
   });
 
   test('several versions and format overrides', () => {
@@ -167,12 +172,12 @@ describe('legacy (what lib.php.inc saw: api input/config, meta, raw, plain)', ()
 
   test('query flags: empty value becomes 1, order kept, versions last', () => {
     const r = legacy('/kjv/john.3.16', { meta_only: '', heads: '', x: 'y' });
-    expect(r.config).toEqual({ meta_only: 1, heads: 1, x: 'y', versions: { KJV: 'KJV' } });
+    expect(r.config).toEqual({ meta_only: 1, heads: 1, x: 'y', versions: new Map([['KJV', 'KJV']]) });
     expect(Object.keys(r.config)).toEqual(['meta_only', 'heads', 'x', 'versions']);
   });
 
   test('search flag: 1 last when the ref has no digit, true for /search/ with digits', () => {
-    expect(legacy('/kjv/faith', { x: 'y' }).config).toEqual({ x: 'y', versions: { KJV: 'KJV' }, search: 1 });
+    expect(legacy('/kjv/faith', { x: 'y' }).config).toEqual({ x: 'y', versions: new Map([['KJV', 'KJV']]), search: 1 });
     expect(Object.keys(legacy('/kjv/faith', { x: 'y' }).config)).toEqual(['x', 'versions', 'search']);
     expect(legacy('/', {}).config).toEqual({ search: 1 });
     expect(legacy('/search/john3').config).toEqual({ search: true });
@@ -208,7 +213,7 @@ describe('legacy (what lib.php.inc saw: api input/config, meta, raw, plain)', ()
   });
 
   test('?q= wins over the path', () => {
-    expect(legacy('/john.3.16', { q: 'kjv/gen.1.1' })).toEqual({ q: 'kjv/gen.1.1', ref: 'gen.1.1', versions: { KJV: 'KJV' }, config: { versions: { KJV: 'KJV' } } });
+    expect(legacy('/john.3.16', { q: 'kjv/gen.1.1' })).toEqual({ q: 'kjv/gen.1.1', ref: 'gen.1.1', versions: { KJV: 'KJV' }, versionList: [['KJV', 'KJV']], config: { versions: new Map([['KJV', 'KJV']]) } });
     expect(legacy('/', { q: 'john.3.16' }).ref).toBe('john.3.16');
   });
 

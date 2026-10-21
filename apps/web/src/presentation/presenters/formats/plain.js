@@ -34,7 +34,7 @@ export class PlainPresenter {
     const blocks = blocksFor(lr.ref, result);
     if (!lr.q.includes('/')) return res.send(await plainFor(blocks, null));
     const out = [];
-    for (const format of Object.values(lr.versions || {})) out.push(await plainFor(blocks, { [format]: format }));
+    for (const [, format] of lr.versionList ?? Object.entries(lr.versions || {})) out.push(await plainFor(blocks, { [format]: format }));
     res.send(out.join('\n'));
   }
 }

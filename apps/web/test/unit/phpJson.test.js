@@ -25,6 +25,13 @@ describe('phpJson (json_encode with JSON_PRETTY_PRINT)', () => {
     expect(out).toBe('{\n    "versions": {\n        "1830": 1830\n    },\n    "verse": 16,\n    "text": "John 3:16",\n    "f": 1.5\n}');
   });
 
+  test('a Map is an object in insertion order, integer-like keys included (PHP arrays keep it)', () => {
+    const versions = new Map([['2', '2'], ['0', '0']]);
+    expect(phpJson({ versions }, { numericCheck: true })).toBe('{\n    "versions": {\n        "2": 2,\n        "0": 0\n    }\n}');
+    expect(phpJson(new Map())).toBe('{}');
+    expect(phpJson([new Map([['b', 'x/y'], ['a', null]])])).toBe('[\n    {\n        "b": "x\\/y",\n        "a": null\n    }\n]');
+  });
+
   test('without numericCheck numeric strings stay strings', () => {
     expect(phpJson({ verse_id: '1' })).toBe('{\n    "verse_id": "1"\n}');
   });

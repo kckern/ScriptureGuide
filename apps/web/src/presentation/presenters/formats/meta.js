@@ -28,7 +28,7 @@ export async function metaOnly(req, result, repo = rawRepository) {
     }
   }
   if (flag(req, 'heads', { hostLabels: true }) && meta[0]) {
-    const versions = Object.keys(lr.versions || {});
+    const versions = (lr.versionList ?? Object.entries(lr.versions || {})).map(([v]) => v);
     const heads = new Map();
     for (const id of meta[0].verse_ids || []) {
       const h = await repo.loadHeading(id, versions, '§¶');

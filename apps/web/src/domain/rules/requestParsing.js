@@ -143,8 +143,9 @@ function splitPathKeys(rawPath) {
  *   q         the flattened q ("d&c.4" in the path → "dc.4"; "&flag" fragments removed)
  *   ref       PHP $ref: the subverse letter goes with the digit before it ("john.3.16a" → "john.3.1")
  *   versions  PHP $cfig['versions'], { VERSION: FORMAT } from the version path, or null
+ *   versionList  the same as [[VERSION, FORMAT]] in path order (an object reorders "2.0")
  *   config    PHP $cfig before lookup: path keys, then query keys (empty value → 1), then
- *             versions, then search (true for /search/<terms>, 1 when ref has no digit);
+ *             versions (a Map, in path order), then search (true for /search/<terms>, 1 when ref has no digit);
  *             null when empty
  */
 function legacyRequest(rawPath, query) {
@@ -163,16 +164,18 @@ function legacyRequest(rawPath, query) {
   const { search, reference, versionSpec } = splitInput(q);
   if (search) config.search = true;
   let versions = null;
+  let versionList = [];
   if (versionSpec !== null) {
-    versions = {};
-    for (const v of parseVersionSpec(versionSpec, { keepEmpty: true })) versions[v.version] = v.format;
-    config.versions = versions;
+    versionList = parseVersionSpec(versionSpec, { keepEmpty: true }).map(v => [v.version, v.format]);
+    versions = Object.fromEntries(versionList);
+    // A Map keeps PHP's array order for the api "config" (an object puts "0" before "2")
+    config.versions = new Map(versionList);
   }
   let ref = reference.replace(/\d[a-z]$/i, '');
   if (versions && 'JST' in versions) ref = withJst(ref);
   // No digit in the reference means search (lib.php.inc:213), added last.
   if (!/[0-9]/.test(ref)) config.search = 1;
-  return { q, ref, versions, config: Object.keys(config).length ? config : null };
+  return { q, ref, versions, versionList, config: Object.keys(config).length ? config : null };
 }
 
 /**
