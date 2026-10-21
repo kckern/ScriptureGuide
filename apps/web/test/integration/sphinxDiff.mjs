@@ -1,6 +1,5 @@
 // Comparison and report logic for sphinx-vs-fallback.mjs, kept free of I/O for unit tests.
-import { queryTerms, matchesTerms, tokenize, stemPrefix } from '../../src/services/search/matcher.js';
-import { snowballStem as stem } from '../../src/services/search/snowballEnglish.js';
+import { queryTerms, matchesTerms, tokenize, stemPrefix, stemToken } from '../../src/services/search/matcher.js';
 import { plainText } from '../../src/domain/rules/legacyText.js';
 
 export const MAX_SHOWN = 10;
@@ -64,7 +63,7 @@ export function stemmedWords(text, query) {
   const seen = new Map();
   for (const t of tokenize(plainText(text))) {
     if (seen.has(t) || !prefixes.some(p => t.startsWith(p))) continue;
-    seen.set(t, t.length < 3 || !/^[a-z]+$/.test(t) ? t : stem(t));
+    seen.set(t, stemToken(t));
   }
   return [...seen].map(([w, s]) => (w === s ? w : `${w}→${s}`)).join(', ');
 }

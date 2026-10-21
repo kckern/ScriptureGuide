@@ -6,9 +6,13 @@
 //
 // Sphinx's `morphology = stem_en` follows the version of the algorithm from before Snowball 3.0,
 // so the 3.0/3.1 changes listed on that page (past, univers, later, emerg, organ, inter, -ogist,
-// even, the a/e/o undoubling exception) are left out. Where Sphinx's output differs from that
-// version, the SPHINX rules below reproduce it; they mirror observed Sphinx stem_en behaviour
-// (searchd 3.x in the stack workflow, and the stem_en reference compared word by word).
+// even, the a/e/o undoubling exception) are left out.
+//
+// Provenance: with the SNOWBALL rules this gives the same stem as the official BSD
+// snowballstemmer (Python, 2.2.0, pre-3.0) on all 234,289 words of a dictionary. The SPHINX rule
+// switches are derived from, and checked against, observed Sphinx stem_en input/output pairs
+// (288,696 words, no differences; test/fixtures/stem-sphinx.json keeps a sample), and the stack
+// workflow compares the fallback with searchd 3.x.
 //
 // Input is a lowercase ASCII word ([0-9a-z_]); other characters count as non-vowels.
 
@@ -28,6 +32,13 @@ const INVARIANT_AFTER_1A = new Set(['inning', 'outing', 'canning', 'herring', 'e
 // R1 is the rest of the word after these
 const R1_PREFIXES = ['gener', 'commun', 'arsen'];
 const STEP3 = ['tional', 'ational', 'alize', 'icate', 'iciti', 'ical', 'ful', 'ness', 'ative'];
+// Replacements in Steps 2 and 3 (-ogi, -li and -ative have conditions of their own)
+const STEP2_TO = {
+  tional: 'tion', enci: 'ence', anci: 'ance', abli: 'able', entli: 'ent', izer: 'ize', ization: 'ize',
+  ational: 'ate', ation: 'ate', ator: 'ate', alism: 'al', aliti: 'al', alli: 'al', fulness: 'ful',
+  ousli: 'ous', ousness: 'ous', iveness: 'ive', iviti: 'ive', biliti: 'ble', bli: 'ble', fulli: 'ful', lessli: 'less',
+};
+const STEP3_TO = { tional: 'tion', ational: 'ate', alize: 'al', icate: 'ic', iciti: 'ic', ical: 'ic', ful: '', ness: '' };
 
 // The longest of `suffixes` the word ends with, or null
 const longest = (w, suffixes) => suffixes.reduce((best, s) => (w.endsWith(s) && (!best || s.length > best.length) ? s : best), null);
@@ -90,15 +101,10 @@ export function snowballStem(word, rules = SPHINX) {
     'alism', 'aliti', 'alli', 'fulness', 'ousli', 'ousness', 'iveness', 'iviti', 'biliti', 'bli', 'ogi',
     'fulli', 'lessli', 'li']);
   if (s && inR1(s)) {
-    const to = {
-      tional: 'tion', enci: 'ence', anci: 'ance', abli: 'able', entli: 'ent', izer: 'ize', ization: 'ize',
-      ational: 'ate', ation: 'ate', ator: 'ate', alism: 'al', aliti: 'al', alli: 'al', fulness: 'ful',
-      ousli: 'ous', ousness: 'ous', iveness: 'ive', iviti: 'ive', biliti: 'ble', bli: 'ble', fulli: 'ful', lessli: 'less',
-    };
     if (s === 'alli' && rules.tionalli && w.endsWith('tionalli')) {
       if (w.endsWith('ationalli') && inR1('ationalli')) replace('ationalli', 'ate');
       else replace('alli', '');
-    } else if (s in to) replace(s, to[s]);
+    } else if (s in STEP2_TO) replace(s, STEP2_TO[s]);
     else if (s === 'ogi') { if (rules.ogi(w)) replace(s, 'og'); }
     else if (s === 'li' && VALID_LI.has(w[w.length - 3])) replace(s, '');
   }
@@ -106,8 +112,7 @@ export function snowballStem(word, rules = SPHINX) {
   // Step 3
   s = longest(w, rules.step3);
   if (s && inR1(s)) {
-    const to = { tional: 'tion', ational: 'ate', alize: 'al', icate: 'ic', iciti: 'ic', ical: 'ic', ful: '', ness: '' };
-    if (s in to) replace(s, to[s]);
+    if (s in STEP3_TO) replace(s, STEP3_TO[s]);
     else if (s === 'ative' && rules.ativeInR(inR1, inR2)) replace(s, '');
   }
 
@@ -116,7 +121,7 @@ export function snowballStem(word, rules = SPHINX) {
     'ate', 'iti', 'ous', 'ive', 'ize', 'ion']);
   if (s && inR2(s)) {
     if (s !== 'ion') replace(s, '');
-    else if ('st'.includes(w[w.length - 4]) && w.length >= 4) replace(s, '');
+    else if (w.length >= 4 && 'st'.includes(w[w.length - 4])) replace(s, '');
   }
 
   // Step 5

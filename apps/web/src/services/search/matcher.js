@@ -15,7 +15,8 @@ export function tokenize(text) {
 // the vocabulary is small, so stems are memoized; the memo is cleared if it ever grows past STEM_MEMO.
 const STEM_MEMO = 200000;
 const stems = new Map();
-const stemToken = t => {
+// A token's stem as the index has it; words under min_stemming_len or with characters other than a-z stay as they are
+export const stemToken = t => {
   if (t.length < 3 || !/^[a-z]+$/.test(t)) return t;
   let s = stems.get(t);
   if (s === undefined) {

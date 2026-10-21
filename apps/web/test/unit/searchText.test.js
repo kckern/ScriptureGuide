@@ -1,5 +1,5 @@
 import { describe, test, expect } from 'vitest';
-import { snowballStem as stem, SNOWBALL } from '../../src/services/search/snowballEnglish.js';
+import { snowballStem as stem, SNOWBALL, SPHINX } from '../../src/services/search/snowballEnglish.js';
 import { tokenize, queryStems, matchesAll, stemPrefix, queryTerms, matchesTerms } from '../../src/services/search/matcher.js';
 
 // The stemmer is written from Snowball's English (Porter2) description; every expected stem here
@@ -50,10 +50,17 @@ describe('where Sphinx stem_en differs from the Snowball description', () => {
     ['aquarelle', 'aquarel', 'aquarell'],                                // ll undoubled after e goes
     ['atlas', 'atla', 'atlas'], ['bias', 'bia', 'bias'],                  // not exceptions
     ['exceeds', 'exce', 'exceed'], ['herring', 'her', 'herring'],        // fewer invariant forms
-    ['conditionally', 'condit', 'condit'], ['relationally', 'relat', 'relat'], ['nationally', 'nation', 'nation'],
   ])('%s → %s (Snowball: %s)', (word, sphinx, snowball) => {
     expect(stem(word)).toBe(sphinx);
     expect(stem(word, SNOWBALL)).toBe(snowball);
+  });
+  // Without Step 3's -tional, -tionalli needs its own Step 2 rule to reach Snowball's stem
+  test.each([
+    ['additionally', 'addit', 'addition'], ['conditionally', 'condit', 'condition'],
+    ['relationally', 'relat', 'relation'], ['nationally', 'nation', 'nation'],
+  ])('-tionalli: %s → %s (without the rule: %s)', (word, sphinx, without) => {
+    expect(stem(word)).toBe(sphinx);
+    expect(stem(word, { ...SPHINX, tionalli: false })).toBe(without);
   });
   test('-ied/-ies: -ie only after exactly one letter', () => {
     expect([stem('ties'), stem('cries'), stem('ies')]).toEqual(['tie', 'cri', 'i']);

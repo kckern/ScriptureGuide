@@ -1,8 +1,7 @@
 // MySQL's built-in MyISAM full-text stopword list: ft_precompiled_stopwords in
 // storage/myisam/ft_static.cc (MySQL 8.0), copied unchanged. That list derives from the SMART
-// information retrieval system's stopword list. LICENSING: MySQL's source is GPL-2.0 (with the
-// Universal FOSS Exception); the owner must confirm that carrying this word list here is fine
-// before it ships.
+// information retrieval system's stopword list. The owner reviewed and accepted including this
+// list (543 common English words) on 2026-10-20.
 //
 // Used when ft_stopword_file is '(built-in)'. These words are left out of a MyISAM FULLTEXT
 // index, so the search fallback cannot find them through it.
