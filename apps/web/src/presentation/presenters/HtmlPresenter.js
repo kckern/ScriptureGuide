@@ -2,7 +2,7 @@ import VerseSerializer from '../serializers/VerseSerializer.js';
 import { displayReference, blankHeading } from '../../domain/rules/referenceParsing.js';
 
 import { versionImg, formatReference as referenceFromVerseIds } from '../../domain/rules/legacyReference.js';
-import { renderHeadingHtml, renderHeadingFields, RENDERED_HEADING_FIELDS } from '../../domain/rules/legacyText.js';
+import { renderHeadingHtml, renderHeadingFields, RENDERED_HEADING_FIELDS, segmentFormats } from '../../domain/rules/legacyText.js';
 
 // versionImg takes lds_scriptures_volumes.volume_id; Reference.volume is a volume code.
 // Verses outside the five volumes (null) have no LDS cover: 0 gives "lds".
@@ -427,23 +427,10 @@ export class HtmlPresenter {
       verseCount: result.verseCount,
       verses: foldCompounds(result.verses.flatMap(v => {
         const segments = VerseSerializer.splitSegments(v.text);
+        const formats = segmentFormats(v.format, segments);
         return segments.flatMap((seg, i) => {
           const lbParts = VerseSerializer.splitLinebreaks(seg.text);
-          // Format override rules:
-          // - If segment text starts with §, it's a subtitle/heading line → always prose
-          // - If segment meta contains ▼ (preceded by ¶▼), next segment is poetry
-          // - If segment meta contains ► (preceded by ¶►), next segment is indent
-          // - Otherwise use DB verse format
-          let segFormat;
-          if (seg.text.startsWith('§')) {
-            segFormat = 'prose';
-          } else if (seg.meta.includes('▼')) {
-            segFormat = 'poetry';
-          } else if (seg.meta.includes('►')) {
-            segFormat = 'indent';
-          } else {
-            segFormat = v.format || 'prose';
-          }
+          const { format: segFormat, paraClass } = formats[i];
           return lbParts.map((part, lbIdx) => ({
             id: v.id,
             num: v.verseNum,
@@ -451,6 +438,8 @@ export class HtmlPresenter {
             mixmatch: v.mixmatch,
             text: VerseSerializer.formatHtml(part.text),
             format: segFormat,
+            // Extra class of the paragraph this segment starts ("flush", "linebreak", "nogap")
+            paraClass: lbIdx === 0 ? paraClass : '',
             lbClass: part.lbClass,
             version: v.version,
             // Break paragraph if first linebreak part: meta has ¶, or single-segment verse with DB paraBreak

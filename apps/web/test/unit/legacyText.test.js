@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   flattenText, splitVerseLines, arrayText, plainText, plainPassage,
-  stemText, transposeRef, baseVersion, highlightSearchTerm, escapeHtml, renderHeadingHtml,
+  stemText, transposeRef, baseVersion, highlightSearchTerm, escapeHtml, renderHeadingHtml, segmentFormats,
 } from '../../src/domain/rules/legacyText.js';
 
 // Fixtures are KJV (public domain) or hand-written.
@@ -118,5 +118,25 @@ describe('renderHeadingHtml (scriptutil::renderHeadingHTML)', () => {
     expect(renderHeadingHtml('Lehi\u2081\u2019s Words to Joseph\u2082')).toBe('Lehi<sub>1</sub>\u2019s Words to Joseph<sub>2</sub>');
     expect(renderHeadingHtml('A\u2083 B\u2084')).toBe('A<sub>3</sub> B<sub>4</sub>');
     expect(renderHeadingHtml(null)).toBe('');
+  });
+});
+
+describe('segmentFormats (scriptures::formattedData paragraph markers)', () => {
+  const seg = (meta, text = 'And it came to pass.') => ({ meta, text });
+  it('starts from the verse format and keeps a marker\'s format for the rest of the verse', () => {
+    expect(segmentFormats('prose', [seg(''), seg('¶↪'), seg('¶')])).toEqual([
+      { format: 'prose', paraClass: '' }, { format: 'indent', paraClass: '' }, { format: 'indent', paraClass: '' },
+    ]);
+    expect(segmentFormats('prose', [seg('¶▼'), seg('¶►')]).map(f => f.format)).toEqual(['poetry', 'prose']);
+  });
+  it('¶◄ starts a flush paragraph; ¶◤ a linebreak one; ‾¶ a nogap one', () => {
+    expect(segmentFormats('prose', [seg('¶◄')])).toEqual([{ format: 'prose', paraClass: 'flush' }]);
+    expect(segmentFormats('indent', [seg('§¶◄')])).toEqual([{ format: 'indent', paraClass: 'flush' }]);
+    expect(segmentFormats('poetry', [seg('¶◤')])).toEqual([{ format: 'prose', paraClass: 'linebreak' }]);
+    expect(segmentFormats('poetry', [seg('‾¶')])).toEqual([{ format: 'prose', paraClass: 'nogap' }]);
+    expect(segmentFormats('prose', [seg('¶▼◄')])).toEqual([{ format: 'prose', paraClass: 'flush' }]);
+  });
+  it('a line that starts with § (a subtitle) is prose', () => {
+    expect(segmentFormats('poetry', [seg('¶', '§A Psalm of David.'), seg('/')]).map(f => f.format)).toEqual(['prose', 'poetry']);
   });
 });

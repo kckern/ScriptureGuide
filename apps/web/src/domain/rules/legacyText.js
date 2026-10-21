@@ -104,6 +104,26 @@ export function renderHeadingFields(record) {
   return out;
 }
 
+// scriptures::formattedData: the format and paragraph class of each segment of a verse, from the
+// verse's own format and the marker before each segment. A marker's format holds for the rest of
+// the verse: ¶▼ poetry, ¶↪ indent, ¶► prose; ¶◄ starts a "flush" paragraph, ¶◤ a "linebreak"
+// one and ‾¶ a "nogap" one (both prose). A line starting with § (a subtitle) is prose.
+// segments: [{ meta, text }] from VerseSerializer.splitSegments.
+export function segmentFormats(verseFormat, segments) {
+  let format = verseFormat || 'prose';
+  return segments.map(({ meta, text }) => {
+    let paraClass = '';
+    if (meta === '¶◄' || meta === '§¶◄') { paraClass = 'flush'; }
+    else if (meta === '¶▼') format = 'poetry';
+    else if (meta === '¶↪') format = 'indent';
+    else if (meta === '¶►') format = 'prose';
+    else if (meta === '¶◤') { format = 'prose'; paraClass = 'linebreak'; }
+    else if (meta === '‾¶') { format = 'prose'; paraClass = 'nogap'; }
+    else if (meta === '¶▼◄') paraClass = 'flush';
+    return { format: String(text).startsWith('§') ? 'prose' : format, paraClass };
+  });
+}
+
 // Strip a "*FMT" suffix: "NIV*KJV" → "NIV".
 export function baseVersion(ver) {
   return String(ver ?? '').replace(/\*.*$/, '');

@@ -63,7 +63,7 @@ data.verses.forEach(verse => {
   const fmtChange = currentGroup && fmt !== currentGroup.fmt;
 
   if (hasBreak || fmtChange) {
-    currentGroup = { fmt, spans: [], h3, inlineItems, ids: [], versebreak };
+    currentGroup = { fmt, cls: verse.paraClass || '', spans: [], h3, inlineItems, ids: [], versebreak };
     paraGroups.push(currentGroup);
   }
 
@@ -79,7 +79,9 @@ data.verses.forEach(verse => {
   const compoundAttr = verse.compound ? ` compound="${verse.compound}"` : '';
   const lbClassStr = verse.lbClass ? ` ${verse.lbClass}` : '';
   const mixAttr = verse.mixmatch ? ` mixmatch="${verse.mixmatch}"` : '';
-  const span = `<span class="verse v_${verse.id} ${fmt}${lbClassStr} ${verseClass}" verse_id="${verse.id}" ref="${ref}"${mixAttr}${compoundAttr} version="${version}"${verseLabelAttr}>${verse.text}</span>`;
+  // An indent line's span carries no format class (formattedData clears it for "indent")
+  const fmtClass = fmt === 'indent' ? '' : ` ${fmt}`;
+  const span = `<span class="verse v_${verse.id}${fmtClass}${lbClassStr} ${verseClass}" verse_id="${verse.id}" ref="${ref}"${mixAttr}${compoundAttr} version="${version}"${verseLabelAttr}>${verse.text}</span>`;
   currentGroup.spans.push(span);
   currentGroup.ids.push(verse.id, ...(verse.gapIds || []));
 });
@@ -157,11 +159,10 @@ paraGroups.forEach(group => {
 
   const content = group.spans.join(' ');
   if (group.fmt === 'poetry') {
-    current.body += `\n\t\t<blockquote class="poetry">${content}</blockquote>`;
-  } else if (group.fmt === 'indent') {
-    current.body += `\n\t\t<blockquote class="indent">${content}</blockquote>`;
+    current.body += `\n\t\t<blockquote class="poetry${group.cls ? ' ' + group.cls : ''}">${content}</blockquote>`;
   } else {
-    current.body += `\n\t\t<p class="${group.fmt}">${content}</p>`;
+    // indent is a <p> too ($tag['indent'] = "p"); flush/linebreak/nogap paragraphs add a class
+    current.body += `\n\t\t<p class="${group.fmt}${group.cls ? ' ' + group.cls : ''}">${content}</p>`;
   }
   current.ids.push(...group.ids);
 });
