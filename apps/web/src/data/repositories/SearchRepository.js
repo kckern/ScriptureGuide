@@ -34,17 +34,34 @@ export class SearchRepository {
     return this.fulltextPending;
   }
 
+  // The highest row id of scripture_verses, looked up once (the table does not change while the
+  // process runs; a failed lookup is retried)
+  maxId() {
+    this.maxIdPending ??= this.db.query('SELECT MAX(id) AS max FROM scripture_verses')
+      .then(([row]) => Number(row?.max ?? 0))
+      .catch(err => { this.maxIdPending = null; throw err; });
+    return this.maxIdPending;
+  }
+
   // Candidate verses for the MySQL fallback: the text has a word starting with each stem's prefix
   // (through the FULLTEXT index where it covers the stem), or contains the prefix (LIKE).
   // The caller filters the candidates with the Sphinx tokenizer and stemmer.
-  // Pages by primary key: pass the last row's id as afterId to continue.
-  async candidates(stems, versions, { range = null, afterId = 0, limit = 5000 } = {}) {
-    if (!stems.length || !versions.length) return [];
+  //
+  // Pages by primary key: up to `limit` rows after afterId. A LIKE-only query over all versions
+  // reads the table in id order, and when no row matches that read can cover the whole table
+  // (about 2 s), so with `scan` it reads at most that many ids per query.
+  // Returns { rows, through, done, scanned }: continue after `through` unless `done`; `scanned`
+  // estimates the rows read (the id span of a bounded scan, else the rows returned).
+  async candidates(stems, versions, { range = null, afterId = 0, limit = 5000, scan = null } = {}) {
+    if (!stems.length || !versions.length) return { rows: [], through: afterId, done: true, scanned: 0 };
     // Within a verse range (the LDS/KJV requery) MySQL reads the versions' rows through the version
     // index, about 70,000, faster than MATCH on a three-letter prefix ('+lor*'), so those stay LIKE.
     const { match, like } = fulltextPlan(stems, await this.fulltext(), { minPrefix: range ? 4 : 1 });
-    const where = ['id > ?', 'version IN (?)'];
-    const params = [afterId, versions];
+    const bounded = !match && !range && scan > 0;
+    const where = bounded ? ['id > ? AND id <= ?'] : ['id > ?'];
+    const params = bounded ? [afterId, afterId + scan] : [afterId];
+    where.push('version IN (?)');
+    params.push(versions);
     if (match) {
       where.push('MATCH(text) AGAINST(? IN BOOLEAN MODE)');
       params.push(match);
@@ -58,7 +75,14 @@ export class SearchRepository {
       params.push(range[0], range[1]);
     }
     params.push(limit);
-    return this.db.query(`SELECT id, verse_id, version, text FROM scripture_verses WHERE ${where.join(' AND ')} ORDER BY id LIMIT ?`, params);
+    const rows = await this.db.query(`SELECT id, verse_id, version, text FROM scripture_verses WHERE ${where.join(' AND ')} ORDER BY id LIMIT ?`, params);
+    const full = rows.length >= limit;
+    if (full || !bounded) {
+      const through = rows.length ? rows[rows.length - 1].id : afterId;
+      return { rows, through, done: !full, scanned: bounded ? through - afterId : rows.length };
+    }
+    const through = afterId + scan;
+    return { rows, through, done: through >= await this.maxId(), scanned: scan };
   }
 
   // Stand-in duplicates for Book of Commandments / 1835 D&C verses

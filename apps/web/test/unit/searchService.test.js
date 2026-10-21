@@ -1,4 +1,6 @@
 import { describe, test, expect, vi } from 'vitest';
+import ejs from 'ejs';
+import { fileURLToPath } from 'node:url';
 import { SearchService, highlight, sortByOrder, volumeRange, formatOverride } from '../../src/services/SearchService.js';
 import { stemPrefix } from '../../src/services/search/matcher.js';
 
@@ -18,9 +20,11 @@ function fakeRepo({ texts = { 'LDS': [28679, 29564, 1], 'WEB': [28679] } } = {})
     searchableVersions: vi.fn(async forced => (forced ? forced.filter(f => ['LDS', 'WEB'].includes(f)) : ['LDS', 'WEB'])),
     volumeVersions: vi.fn(async () => []),
     versionsByPriority: vi.fn(async ids => ['LDS', 'KJV', 'WEB'].filter(v => ids.includes(v))),
-    candidates: vi.fn(async (stems, versions, { afterId = 0, range } = {}) =>
-      rows.filter(r => r.id > afterId && versions.includes(r.version) && (!range || (r.verse_id >= range[0] && r.verse_id <= range[1]))
-        && stems.every(s => r.text.toLowerCase().includes(stemPrefix(s))))),
+    candidates: vi.fn(async (stems, versions, { afterId = 0, range } = {}) => {
+      const found = rows.filter(r => r.id > afterId && versions.includes(r.version) && (!range || (r.verse_id >= range[0] && r.verse_id <= range[1]))
+        && stems.every(s => r.text.toLowerCase().includes(stemPrefix(s))));
+      return { rows: found, through: found.at(-1)?.id ?? afterId, done: true, scanned: found.length };
+    }),
     standins: vi.fn(async () => []),
     verseInfo: vi.fn(async ids => ids.filter(i => VERSES[i]).map(i => ({
       verse_id: i, volume_id: VERSES[i].volume_id, book_id: VERSES[i].book_id, chapter: VERSES[i].chapter, verse: VERSES[i].verse,
@@ -79,7 +83,58 @@ describe('SearchService (MySQL fallback)', () => {
   });
 });
 
+// A repository whose table is endless: every chunk of the scan yields one matching verse.
+function endlessRepo(onCandidates = () => {}) {
+  const repo = fakeRepo();
+  repo.candidates = vi.fn(async (stems, versions, { afterId = 0, scan } = {}) => {
+    onCandidates();
+    return { rows: [{ id: afterId + 1, verse_id: 28679, version: versions[0], text: VERSES[28679].text }], through: afterId + scan, done: false, scanned: scan };
+  });
+  return repo;
+}
+
+describe('SearchService (MySQL fallback budget)', () => {
+  test('stops after the scanned-row budget and marks the result truncated', async () => {
+    const repo = endlessRepo();
+    const svc = new SearchService(repo, null, { fallbackMaxRows: 250000, fallbackMaxMs: 60000, fallbackScanChunk: 100000 });
+    const r = await svc.search('charity');
+    expect(repo.candidates).toHaveBeenCalledTimes(3); // 100k + 100k + 100k ≥ 250k
+    expect(r.truncated).toBe(true);
+    expect(r.count).toBe(1); // what was found so far is shown
+  });
+  test('stops after the time budget', async () => {
+    let now = 0;
+    const repo = endlessRepo(() => { now += 400; });
+    const svc = new SearchService(repo, null, { fallbackMaxRows: Infinity, fallbackMaxMs: 1000, fallbackScanChunk: 1, clock: () => now });
+    const r = await svc.search('charity');
+    expect(repo.candidates).toHaveBeenCalledTimes(3); // 400, 800, 1200 ms
+    expect(r.truncated).toBe(true);
+  });
+  test('a search that finishes within the budget is not truncated', async () => {
+    const r = await new SearchService(fakeRepo(), null).search('charity');
+    expect(r.truncated).toBe(false);
+  });
+});
+
+describe('search view', () => {
+  const VIEW = fileURLToPath(new URL('../../src/presentation/views/search.ejs', import.meta.url));
+  const render = locals => ejs.renderFile(VIEW, { query: 'faith', count: 0, vols: [], rows: [], config: {}, slugref: 'faith', ogUrl: '', verNames: {}, browserClass: 'chrome', ...locals });
+  test('a truncated search says the results are partial', async () => {
+    expect(await render({ truncated: true })).toContain('Showing partial results — narrow your search');
+    expect(await render({ truncated: false })).not.toContain('partial results');
+  });
+});
+
 describe('SearchService with Sphinx', () => {
+  test('is never truncated and passes the PHP limits through', async () => {
+    const sphinx = { search: vi.fn(async () => [{ verse_id: 28679, version: 'LDS' }]) };
+    const repo = fakeRepo();
+    const r = await new SearchService(repo, sphinx, { fallbackMaxRows: 0, fallbackMaxMs: 0 }).search('charity');
+    expect(r.truncated).toBe(false);
+    expect(r.count).toBe(1);
+    expect(sphinx.search.mock.calls[0][1]).toMatchObject({ limit: 99999 });
+    expect(repo.candidates).not.toHaveBeenCalled();
+  });
   test('uses Sphinx hits and requeries LDS/KJV by volume when over 300', async () => {
     const many = Array.from({ length: 301 }, (_, i) => ({ verse_id: 28679, version: `V${i}` }));
     const sphinx = { search: vi.fn(async (q, { range }) => (range ? (range[0] === 23146 ? [{ verse_id: 28679, version: 'LDS' }] : []) : many)) };

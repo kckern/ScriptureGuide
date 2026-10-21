@@ -56,7 +56,9 @@ function copyToClipbord(e)
 </script>
 
 		<h1 style='margin-top:30px; text-align:center; font-size:2em'>${shown} Search Results<br><small style='font-size:.7em; color:#777;'><em>“${esc(query)}”</em></small></h1>
-
+${typeof truncated !== 'undefined' && truncated ? `
+		<p class='partial' style='text-align:center; color:#777;'>Showing partial results — narrow your search</p>
+` : ''}
 		<ul class="tabs">${tabs}
 		</ul>
 		<table id="searchresults">${trs}

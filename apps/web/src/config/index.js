@@ -22,6 +22,14 @@ export const config = {
     port: parseInt(process.env.SPHINX_PORT, 10) || 9306
   },
 
+  // MySQL search fallback (no SPHINX_HOST): stop a search after this long or after reading about
+  // this many rows, and show what was found so far as partial results. A full read of
+  // scripture_verses is about 1.6 million rows and 2 s.
+  search: {
+    fallbackMaxMs: parseInt(process.env.SEARCH_FALLBACK_MAX_MS, 10) || 1500,
+    fallbackMaxRows: parseInt(process.env.SEARCH_FALLBACK_MAX_ROWS, 10) || 1000000
+  },
+
   external: {
     coverHost: process.env.COVER_HOST || 'https://covers.scripture.guide',
     assetHost: process.env.ASSET_HOST || 'https://assets.scripture.guide'

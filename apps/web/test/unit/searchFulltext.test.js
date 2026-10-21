@@ -93,4 +93,22 @@ describe('SearchRepository.candidates', () => {
     expect(sql).not.toMatch(/MATCH/);
     expect(params).toEqual([0, ['KJV'], '%fait%', 1, 5, 5000]);
   });
+  test('a LIKE-only scan over all versions reads one id span per query', async () => {
+    const db = { query: vi.fn(async sql => (/MAX\(id\)/.test(sql) ? [{ max: 250 }] : [{ id: 120, verse_id: 1, version: 'KJV', text: 'x' }])) };
+    const repo = new SearchRepository(db);
+    repo.fulltext = () => Promise.resolve(null);
+    const first = await repo.candidates(queryStems('the'), ['KJV'], { afterId: 0, limit: 10, scan: 100 });
+    expect(db.query.mock.calls[0][0]).toMatch(/id > \? AND id <= \?/);
+    expect(db.query.mock.calls[0][1]).toEqual([0, 100, ['KJV'], '%the%', 10]);
+    expect(first).toMatchObject({ through: 100, done: false, scanned: 100 });
+    const last = await repo.candidates(queryStems('the'), ['KJV'], { afterId: 200, limit: 10, scan: 100 });
+    expect(last).toMatchObject({ through: 300, done: true, scanned: 100 });
+  });
+  test('a full page continues after its last row', async () => {
+    const db = { query: vi.fn(async () => [{ id: 7 }, { id: 9 }]) };
+    const repo = new SearchRepository(db);
+    repo.fulltext = () => Promise.resolve({ minWordLen: 4, stopwords: [] });
+    expect(await repo.candidates(queryStems('faith'), ['KJV'], { limit: 2, scan: 100 })).toMatchObject({ through: 9, done: false, scanned: 2 });
+    expect(await repo.candidates(queryStems('faith'), ['KJV'], { limit: 5, scan: 100 })).toMatchObject({ through: 9, done: true, scanned: 2 });
+  });
 });

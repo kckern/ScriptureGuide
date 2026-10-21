@@ -15,6 +15,8 @@ const TOP = 5000;
 // versions stops after REQUERY_OVER hits, so its pages are small.
 const PAGE = 20000;
 const FIRST_PAGE = 5000;
+// Ids read per query by a LIKE-only scan over all versions (about 150 ms each)
+const SCAN_CHUNK = 100000;
 // Requery ranges (OT, NT, BoM, D&C+PGP) for LDS and KJV when the first query is too broad
 const BOOK_RANGES = [[1, 23145], [23146, 31102], [31103, 37706], [37707, 41995]];
 const BOC = [89431, 90772];
@@ -81,13 +83,31 @@ export function formatOverride(text, fmt) {
 }
 
 export class SearchService {
-  constructor(repo = searchRepository, sphinx = createSphinxClient(config.sphinx)) {
+  /**
+   * @param {object} [limits] budget of the MySQL fallback (config.search): fallbackMaxMs,
+   *   fallbackMaxRows; fallbackScanChunk and clock for tests. The Sphinx path has none: it keeps
+   *   the PHP site's LIMIT 99999 and 5,000 per requery range.
+   */
+  constructor(repo = searchRepository, sphinx = createSphinxClient(config.sphinx), limits = config.search) {
     this.repo = repo;
     this.sphinx = sphinx;
+    this.limits = { fallbackMaxMs: 1500, fallbackMaxRows: 1000000, fallbackScanChunk: SCAN_CHUNK, clock: Date.now, ...limits };
   }
 
-  // Sphinx-equivalent hits: [{verse_id, version}]
-  async hits(query, versions, { range = null, limit = 99999, stopAfter = Infinity } = {}) {
+  // A fresh budget for one fallback search: spent() once either limit is reached
+  budget() {
+    const { fallbackMaxMs, fallbackMaxRows, clock } = this.limits;
+    const start = clock();
+    return {
+      scanned: 0,
+      truncated: false,
+      spent() { return this.scanned >= fallbackMaxRows || clock() - start >= fallbackMaxMs; },
+    };
+  }
+
+  // Sphinx-equivalent hits: [{verse_id, version}]. The fallback stops when `budget` is spent and
+  // sets budget.truncated.
+  async hits(query, versions, { range = null, limit = 99999, stopAfter = Infinity, budget = this.budget() } = {}) {
     if (this.sphinx) return this.sphinx.search(query, { versions, range, limit });
     const stems = queryStems(query);
     const terms = queryTerms(query);
@@ -96,13 +116,14 @@ export class SearchService {
     const page = Number.isFinite(stopAfter) ? FIRST_PAGE : PAGE;
     let afterId = 0;
     while (out.length < limit && out.length <= stopAfter) {
-      const rows = await this.repo.candidates(stems, versions, { range, afterId, limit: page });
-      if (!rows.length) break;
+      if (budget.spent()) { budget.truncated = true; break; }
+      const { rows, through, done, scanned } = await this.repo.candidates(stems, versions, { range, afterId, limit: page, scan: this.limits.fallbackScanChunk });
+      budget.scanned += scanned;
       for (const r of rows) {
         if (matchesTerms(r.text, terms)) out.push({ verse_id: Number(r.verse_id), version: r.version });
       }
-      if (rows.length < page) break; // the last page
-      afterId = rows[rows.length - 1].id;
+      if (done) break;
+      afterId = through;
     }
     return out.slice(0, limit);
   }
@@ -110,6 +131,7 @@ export class SearchService {
   async search(rawQuery, { forcedVersion = null } = {}) {
     const query = String(rawQuery).replace(/\./g, ' ');
     let min = 0, max = 999999999;
+    const budget = this.budget(); // one budget for all of this search's fallback queries
 
     let versions;
     if (forcedVersion) {
@@ -123,11 +145,11 @@ export class SearchService {
       versions = await this.repo.searchableVersions();
     }
 
-    let results = await this.hits(query, versions, { stopAfter: REQUERY_OVER });
+    let results = await this.hits(query, versions, { stopAfter: REQUERY_OVER, budget });
     if (results.length > REQUERY_OVER) {
       results = [];
       for (const range of BOOK_RANGES) {
-        results.push(...await this.hits(query, ['LDS', 'KJV'], { range, limit: 5000 }));
+        results.push(...await this.hits(query, ['LDS', 'KJV'], { range, limit: 5000, budget }));
       }
     }
 
@@ -215,7 +237,7 @@ export class SearchService {
       };
     });
 
-    return { query, count: groups.size, vols: [...vols.values()], rows };
+    return { query, count: groups.size, vols: [...vols.values()], rows, truncated: budget.truncated };
   }
 
   // referenceFromVerseIds([id], 'book_title_short') for each id
