@@ -26,5 +26,29 @@ jobs:
           n=$(mysql -h127.0.0.1 -P9306 -N -e "SELECT COUNT(*) FROM sgindex WHERE MATCH('loved')")
           echo "sphinx matches for 'loved': $n"
           test "$n" -gt 0
+      - name: Search response times, Sphinx vs MySQL fallback
+        run: |
+          # The compose web service has no SPHINX_HOST, so it searches through the MySQL fallback.
+          # A second web container on the same network searches through Sphinx.
+          docker compose -f infra/docker-compose.yml --profile search run -d --name web-sphinx \
+            -e SPHINX_HOST=sphinx -p 127.0.0.1:3001:3000 web
+          for _ in $(seq 1 60); do curl -fsS http://localhost:3001/health >/dev/null 2>&1 && break; sleep 2; done
+          # median of 5 timed requests after one warm-up, in ms
+          median() {
+            curl -fsS -o /dev/null "$1"
+            for _ in 1 2 3 4 5; do curl -fsS -o /dev/null -w '%{time_total}\n' "$1"; done |
+              sort -n | sed -n 3p | awk '{printf "%d", $1 * 1000}'
+          }
+          printf '%-28s %10s %10s\n' path 'mysql ms' 'sphinx ms'
+          worst=0
+          for p in /search/loved /search/faith /search/the '/search/%22the%20lord%22' /kjv/charity; do
+            m=$(median "http://localhost:3000$p"); s=$(median "http://localhost:3001$p")
+            printf '%-28s %10s %10s\n' "$p" "$m" "$s"
+            [ "$s" -gt "$worst" ] && worst=$s
+          done
+          echo "slowest Sphinx search: ${worst} ms"
+          # Generous for now; production times come from staging (Task 8)
+          loved=$(median http://localhost:3001/search/loved)
+          test "$loved" -lt 500 || { echo "Sphinx /search/loved took ${loved} ms (limit 500)"; exit 1; }
       - if: failure()
         run: docker compose -f infra/docker-compose.yml --profile search logs --tail 80
