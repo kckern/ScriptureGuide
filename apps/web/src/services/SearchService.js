@@ -47,24 +47,51 @@ export function sortByOrder(map, order) {
   return out;
 }
 
-// search.php: wrap the query (or its words' first three letters) in <span class='searchterm'>
+// search.php: wrap the query (or its words' first three letters) in <span class='searchterm'>.
+// PHP ran the query as a raw regex; here each word is escaped, so a query is matched as text.
+// Its last step ran one preg_replace per query word over the text it had already marked up, so a
+// repeated word (or two sharing a first three letters) wrapped a word again and again, and a word
+// starting like span/class/searchterm wrapped the markup. Here that step is one pass over the
+// text's words, each wrapped once, and words with no letters (a leading or trailing separator)
+// mark nothing. The regexes are built once per query: makeHighlighter(query) for many texts.
+const escapeRegex = s => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+const WRAP = m => `<span class='searchterm'>${m}</span>`;
+
+// Pieces joined by \W+, as PHP's str_replace(' ', '\W+'); a run of k separators (from empty
+// pieces) becomes \W{k,}, which matches the same text without backtracking through each split.
+function joinPieces(pieces) {
+  let src = '';
+  let seps = 0;
+  pieces.forEach((p, i) => {
+    if (i) seps++;
+    if (!p) return;
+    if (seps) src += seps === 1 ? '\\W+' : `\\W{${seps},}`;
+    seps = 0;
+    src += p;
+  });
+  if (seps) src += seps === 1 ? '\\W+' : `\\W{${seps},}`;
+  return src;
+}
+
+export function makeHighlighter(query) {
+  const pieces = String(query).split(' ');
+  const phrase = `\\b${joinPieces(pieces.map(escapeRegex))}[a-z]*`;
+  const prefixes = `\\b${pieces.map(p => `${escapeRegex(p.slice(0, 3))}[a-z]*`).join('\\W+')}[a-z]*`;
+  const stages = [phrase, prefixes].map(src => ({ test: new RegExp(src, 'i'), all: new RegExp(src, 'gi') }));
+  const words = new Set(String(query).split(/[^a-z]+/i).filter(Boolean).map(q => q.slice(0, 3).toLowerCase()));
+  const marked = w => {
+    const l = w.toLowerCase();
+    return words.has(l.slice(0, 1)) || words.has(l.slice(0, 2)) || words.has(l.slice(0, 3));
+  };
+  return (text) => {
+    const stage = stages[0].test.test(text) ? stages[0] : stages[1];
+    if (stage.test.test(text)) return text.replace(stage.all, WRAP);
+    return text.replace(/\b[a-z]+/gi, w => (marked(w) ? WRAP(w) : w));
+  };
+}
+
 export function highlight(text, query) {
-  const wrap = (re) => text.replace(re, m => `<span class='searchterm'>${m}</span>`);
-  try {
-    let pattern = query.split(' ').join('\\W+');
-    if (!new RegExp(`\\b${pattern}[a-z]*`, 'i').test(text)) {
-      pattern = pattern.split('\\W+').map(p => `${p.slice(0, 3)}[a-z]*`).join('\\W+');
-    }
-    if (new RegExp(`\\b${pattern}[a-z]*`, 'i').test(text)) return wrap(new RegExp(`\\b${pattern}[a-z]*`, 'gi'));
-    let out = text;
-    for (const q of query.split(/[^a-z]+/i)) {
-      const re = new RegExp(`\\b${q.slice(0, 3)}[a-z]*`, 'gi');
-      out = out.replace(re, m => `<span class='searchterm'>${m}</span>`);
-    }
-    return out;
-  } catch {
-    return text;
-  }
+  return makeHighlighter(query)(text);
 }
 
 // Text in the version's own words, laid out in another version's paragraph format
@@ -225,6 +252,7 @@ export class SearchService {
 
     const shortRefs = await this.shortReferences(picks.map(p => p.verse_id), info);
 
+    const highlightText = makeHighlighter(query);
     const rows = picks.map(p => {
       const i = info.get(p.verse_id);
       const fv = verformat(p.version);
@@ -241,7 +269,7 @@ export class SearchService {
         href: `/${p.version.toLowerCase()}/${slugifyRef(refShort)}`,
         cover: versionImg(p.version, i?.volume_id),
         text,
-        highlighted: highlight(text, query),
+        highlighted: highlightText(text),
       };
     });
 

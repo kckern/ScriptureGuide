@@ -175,6 +175,38 @@ describe('helpers', () => {
     expect(highlight('faith, hope, charity', 'faith hope charity')).toBe("<span class='searchterm'>faith, hope, charity</span>");
     expect(highlight('hope and faith', 'faith hope')).toBe("<span class='searchterm'>hope</span> and <span class='searchterm'>faith</span>");
   });
+  test('highlight wraps each word once however often its term repeats', () => {
+    const out = highlight('hope and faith', 'faith faith hope hope faith');
+    expect(out).toBe("<span class='searchterm'>hope</span> and <span class='searchterm'>faith</span>");
+    // Terms sharing a prefix (fai) wrap the word once too
+    expect(highlight('hope and faith', 'faith fail hope')).toBe("<span class='searchterm'>hope</span> and <span class='searchterm'>faith</span>");
+  });
+  test('highlight leaves its own markup alone when a later term matches span or class', () => {
+    expect(highlight('the Lord spake', 'spake lord class')).toBe(
+      "the <span class='searchterm'>Lord</span> <span class='searchterm'>spake</span>");
+  });
+  test('highlight escapes regex metacharacters in the query', () => {
+    expect(highlight('a+b and aab', 'a+b')).toBe("<span class='searchterm'>a+b</span> and aab");
+    const verse = 'And the Lord said unto Moses, Go in unto Pharaoh, and tell him, Thus saith the Lord God of the Hebrews, Let my people go, that they may serve me.';
+    const start = Date.now();
+    expect(highlight(verse, 'the (\\w*\\s?)*!')).toBe(verse.replace(/\b(?:the|w|s)[a-z]*/gi, "<span class='searchterm'>$&</span>"));
+    expect(Date.now() - start).toBeLessThan(1000);
+  });
+  test('a 1000-term query highlights in one pass', () => {
+    const verse = VERSES[29564].text;
+    const query = Array(1000).fill('a').join(' ') + ' ' + Array.from({ length: 1000 }, (_, i) => `w${i}x`).join(' ');
+    const start = Date.now();
+    const out = highlight(verse, query);
+    // Every word starting with "a" wrapped once: no span inside a span
+    expect(out).not.toMatch(/<span[^>]*>[^<]*<span/);
+    expect(out.length).toBeLessThan(verse.length * 4);
+    expect(out).toContain("<span class='searchterm'>and</span> labour");
+    expect(Date.now() - start).toBeLessThan(2000);
+  });
+  test('highlight treats repeated separators as live does', () => {
+    expect(highlight('faith, hope', 'faith  hope')).toBe("<span class='searchterm'>faith, hope</span>");
+    expect(highlight('faith hope', 'faith  hope')).toBe("<span class='searchterm'>faith</span> <span class='searchterm'>hope</span>");
+  });
   test('sortByOrder puts known keys first in the given order', () => {
     const m = new Map([['WEB', 1], ['LDS', 1], ['X', 1]]);
     expect([...sortByOrder(m, ['LDS', 'KJV', 'WEB']).keys()]).toEqual(['LDS', 'WEB', 'X']);
