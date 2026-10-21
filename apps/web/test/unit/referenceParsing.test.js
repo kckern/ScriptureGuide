@@ -34,6 +34,7 @@ describe('bookAlias', () => {
     expect(bookAlias('song of solomon')).toBe("solomon's song");
     expect(bookAlias('the song of solomon')).toBe("solomon's song");
     expect(bookAlias('song')).toBe("solomon's song");
+    expect(bookAlias('son')).toBe("solomon's song");
     expect(bookAlias('songs')).toBe('songs');
     expect(bookAlias('genesis')).toBe('genesis');
   });

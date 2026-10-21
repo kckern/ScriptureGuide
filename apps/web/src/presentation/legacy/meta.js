@@ -50,11 +50,11 @@ function blockTexts(ref, normalized) {
   });
 }
 
-// A book named alone is its first chapter (scriptutil::getRanges): the reference to resolve for
-// "Song.of.Solomon" is "Song of Solomon 1"; null when the text has digits or is empty.
+// A book named alone is its first chapter (scriptutil::getRanges): the name to resolve for
+// "Song.of.Solomon" is "Song of Solomon"; null when the text has digits or is empty.
 export function bookOnlyQuery(ref) {
   const text = String(ref ?? '').replace(/[._]+/g, ' ').replace(/\s+/g, ' ').trim();
-  return text && !/\d/.test(text) ? `${text} 1` : null;
+  return text && !/\d/.test(text) && !text.includes(';') ? text : null;
 }
 
 // The block for a book named alone: its title (lds_scriptures_books) and first chapter.

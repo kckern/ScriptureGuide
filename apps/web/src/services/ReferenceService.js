@@ -72,7 +72,16 @@ export class ReferenceService {
     });
   }
 
-  async findBook(name, chapter = 1) {
+  // A book named alone (meta): its first chapter, when the name is a whole book title, short
+  // title or slug, or a cleanReference alias; never a prefix. { book, verseIds } or null.
+  async resolveBookOnly(name) {
+    const book = await this.findBook(name, 1, { prefix: false });
+    if (!book) return null;
+    const rows = await this.verseRepository.findIndexRowsByBook(book.book_id, 1);
+    return rows.length ? { book: book.book_title, verseIds: rows.map(r => r.verse_id) } : null;
+  }
+
+  async findBook(name, chapter = 1, { prefix = true } = {}) {
     const books = await this.verseRepository.findAllBooks();
     let key = bookAlias(bookKey(name));
     // "jst john": resolve the base book through the package, then its JST counterpart
@@ -83,7 +92,7 @@ export class ReferenceService {
     }
     const fields = b => [b.book_title, b.book_title_short, b.lds_org].map(bookKey);
     return books.find(b => fields(b).includes(key))
-      || (key.length >= 3 ? books.find(b => bookKey(b.book_title).startsWith(key)) : null)
+      || (prefix && key.length >= 3 ? books.find(b => bookKey(b.book_title).startsWith(key)) : null)
       || null;
   }
 

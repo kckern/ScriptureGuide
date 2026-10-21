@@ -72,16 +72,46 @@ describe('defaultVersions (scriptures::defaultVersions)', () => {
 
 describe('a book named alone (meta)', () => {
   test('is looked up as its first chapter', () => {
-    expect(bookOnlyQuery('Song.of.Solomon')).toBe('Song of Solomon 1');
+    expect(bookOnlyQuery('Song.of.Solomon')).toBe('Song of Solomon');
     expect(bookOnlyQuery('john.3')).toBeNull();
     expect(bookOnlyQuery('')).toBeNull();
   });
   test('is titled with the book title', () => {
     expect(bookOnlyBlock('Genesis', [1])).toEqual({ book: 'Genesis', orig: 'Genesis', verse_ids: [1] });
   });
-  test('metaOnly resolves it when no block parsed', async () => {
-    const references = { resolve: async q => ({ isEmpty: false, book: "Solomon's Song", verseIds: q === 'Song of Solomon 1' ? [17539] : [] }) };
-    const req = { config: { legacy: { ref: 'Song.of.Solomon', versions: null } }, query: {}, headers: {} };
-    expect(await metaOnly(req, null, {}, references)).toEqual([{ book: "Solomon's Song", orig: "Solomon's Song", verse_ids: [17539] }]);
+  // A stub of ReferenceService.resolveBookOnly: whole book names (or aliases) only, no prefixes
+  const BOOKS = { 'song of solomon': "Solomon's Song", son: "Solomon's Song", genesis: 'Genesis' };
+  const references = { resolveBookOnly: async t => (BOOKS[t.toLowerCase()] ? { book: BOOKS[t.toLowerCase()], verseIds: [17539] } : null) };
+  const meta = ref => metaOnly({ config: { legacy: { ref, versions: null } }, query: {}, headers: {} }, null, {}, references);
+  test('metaOnly resolves a whole book name or alias', async () => {
+    expect(await meta('Song.of.Solomon')).toEqual([{ book: "Solomon's Song", orig: "Solomon's Song", verse_ids: [17539] }]);
+    expect(await meta('son')).toEqual([{ book: "Solomon's Song", orig: "Solomon's Song", verse_ids: [17539] }]);
+  });
+  test('a word that is not a whole book name is a block without verses, as live', async () => {
+    expect(await meta('the')).toEqual([{ orig: 'The', book: 'The', verse_ids: [] }]);
+    expect(await meta('is')).toEqual([{ orig: 'Is', book: 'Is', verse_ids: [] }]);
+    expect(await meta('and')).toEqual([{ orig: 'And', book: 'And', verse_ids: [] }]);
+    expect(await meta('Christmas')).toEqual([{ orig: 'Christmas', book: 'Christmas', verse_ids: [] }]);
+  });
+});
+
+describe('ReferenceService.resolveBookOnly', async () => {
+  const { ReferenceService } = await import('../../src/services/ReferenceService.js');
+  const books = [
+    { book_id: 22, book_title: "Solomon's Song", book_title_short: 'Song.', lds_org: 'song' },
+    { book_id: 23, book_title: 'Isaiah', book_title_short: 'Isa.', lds_org: 'isa' },
+    { book_id: 80, book_title: 'The Sealed Portion', book_title_short: 'TSP', lds_org: 'tsp' },
+  ];
+  const repo = { findAllBooks: async () => books, findIndexRowsByBook: async id => [{ verse_id: id * 100 }] };
+  const svc = new ReferenceService(repo);
+  test('whole names and aliases resolve to chapter 1', async () => {
+    expect(await svc.resolveBookOnly('Song of Solomon')).toEqual({ book: "Solomon's Song", verseIds: [2200] });
+    expect(await svc.resolveBookOnly('son')).toEqual({ book: "Solomon's Song", verseIds: [2200] });
+    expect(await svc.resolveBookOnly('Isaiah')).toEqual({ book: 'Isaiah', verseIds: [2300] });
+  });
+  test('a prefix of a book name does not', async () => {
+    expect(await svc.resolveBookOnly('the')).toBeNull();
+    expect(await svc.resolveBookOnly('is')).toBeNull();
+    expect(await svc.resolveBookOnly('and')).toBeNull();
   });
 });
