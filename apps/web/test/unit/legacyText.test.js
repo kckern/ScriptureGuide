@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   flattenText, splitVerseLines, arrayText, plainText, plainPassage,
-  stemText, transposeRef, baseVersion, highlightSearchTerm, escapeHtml,
+  stemText, transposeRef, baseVersion, highlightSearchTerm, escapeHtml, renderHeadingHtml,
 } from '../../src/domain/rules/legacyText.js';
 
 // Fixtures are KJV (public domain) or hand-written.
@@ -109,5 +109,14 @@ describe('highlightSearchTerm', () => {
 describe('escapeHtml', () => {
   it('escapes markup characters', () => {
     expect(escapeHtml(`<a href="x">'&`)).toBe('&lt;a href=&quot;x&quot;&gt;&#39;&amp;');
+  });
+});
+
+describe('renderHeadingHtml (scriptutil::renderHeadingHTML)', () => {
+  it('turns "/" into a line break and subscript digits into <sub>', () => {
+    expect(renderHeadingHtml('Salt/and Light')).toBe('Salt<br/>and Light');
+    expect(renderHeadingHtml('Lehi\u2081\u2019s Words to Joseph\u2082')).toBe('Lehi<sub>1</sub>\u2019s Words to Joseph<sub>2</sub>');
+    expect(renderHeadingHtml('A\u2083 B\u2084')).toBe('A<sub>3</sub> B<sub>4</sub>');
+    expect(renderHeadingHtml(null)).toBe('');
   });
 });

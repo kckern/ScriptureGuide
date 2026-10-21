@@ -26,4 +26,12 @@ describe('HtmlPresenter heading ref', () => {
     const refs = JSON.stringify(data).match(/"ref":"Genesis [^"]*"/g);
     expect(refs).toContain('"ref":"Genesis 29:31–30:3"');
   });
+
+  test('heading text renders subscripts and line breaks (renderHeadingHTML)', () => {
+    const result = crossChapter('Genesis 29:31-30:3', 31);
+    result.headings[0].text = 'Lehi\u2081/Sariah';
+    const data = new HtmlPresenter().serialize(result);
+    expect(data.h3ByVerse[1].textHtml).toBe('Lehi<sub>1</sub><br/>Sariah');
+    expect(data.h3ByVerse[1].text).toBe('Lehi\u2081/Sariah');
+  });
 });

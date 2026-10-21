@@ -83,6 +83,27 @@ export function transposeRef(ref, ver) {
   return r;
 }
 
+// scriptutil::renderHeadingHTML — heading text: "/" is a line break, subscript digits ₁–₄ are <sub>.
+export function renderHeadingHtml(text) {
+  return String(text ?? '')
+    .replace(/\//g, '<br/>')
+    .replace(/[\u2081-\u2084]/g, c => `<sub>${c.charCodeAt(0) - 0x2080}</sub>`);
+}
+
+// Heading fields scriptutil::buildHeading passes through renderHeadingHTML.
+export const RENDERED_HEADING_FIELDS = Object.freeze([
+  'pretitle', 'title', 'timeframe', 'subtitle', 'part_title', 'part_subtitle', 'book_title', 'book_subtitle',
+  'section_title', 'section_subtitle', 'headnote_heading', 'heading', 'subheading', 'section_footer', 'verse_head',
+]);
+
+// A heading record { type: text, ... } with those fields rendered; other fields are kept.
+export function renderHeadingFields(record) {
+  if (!record) return record;
+  const out = { ...record };
+  for (const f of RENDERED_HEADING_FIELDS) if (typeof out[f] === 'string') out[f] = renderHeadingHtml(out[f]);
+  return out;
+}
+
 // Strip a "*FMT" suffix: "NIV*KJV" → "NIV".
 export function baseVersion(ver) {
   return String(ver ?? '').replace(/\*.*$/, '');

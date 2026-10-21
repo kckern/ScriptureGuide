@@ -25,7 +25,7 @@ function buildH3(h, version) {
   const parallelAttr = h.parallel ? ` parallel="${h.parallel}"` : '';
   const faxAttr = h.fax ? ` fax="1"` : '';
   // A heading without text shows its reference (PHP "Reference Headings")
-  const text = (h.headless || !h.text) ? (h.ref || h.text || '') : h.text;
+  const text = (h.headless || !h.text) ? (h.ref || h.text || '') : (h.textHtml ?? h.text);
   let html = `<h3 class="heading" version="${h.headVersion || version}" heading_verse_id="${h.displayVerseId || h.verse_id}"${vc}${lv}${headless}${ref}${slug}${ver}${img}${parallelAttr}${faxAttr}${audioAttr}>${text}</h3>`;
   return html;
 }
@@ -133,7 +133,7 @@ function startPassage(h3, t, ellipsis) {
 // its heading is followed by an ellipsis paragraph for the omitted verses.
 if (data.prePassageH3) {
   const pph = data.prePassageH3;
-  startPassage(pph, ch || {}, `\n\t\t<p class="ellipses" heading_verse_id="${pph.verse_id}" verse_count="${pph.ellipsisVerseCount}" last_verse_id="${pph.ellipsisLast}">...</p>`);
+  startPassage(pph, data.chapterHeadingHtml || {}, `\n\t\t<p class="ellipses" heading_verse_id="${pph.verse_id}" verse_count="${pph.ellipsisVerseCount}" last_verse_id="${pph.ellipsisLast}">...</p>`);
 }
 
 const headerTypes = new Set(['headnote', 'summary', 'background', 'headnote_sub']);
@@ -141,13 +141,13 @@ paraGroups.forEach(group => {
   if (group.versebreak && current) current.body += `\n\t\t<hr class="versebreak"/>`;
   if (group.h3 || !current) {
     const id = group.h3 ? group.h3.verse_id : null;
-    const t = group.h3 ? (id === ch?.verse_id ? { ...types(id), ...ch } : types(id)) : {};
+    const t = group.h3 ? (id === ch?.verse_id ? { ...types(id), ...data.chapterHeadingHtml } : types(id)) : {};
     startPassage(group.h3, t, '');
   }
 
   group.inlineItems.forEach(h => {
     if (h.type === 'verse_head' && h.text) {
-      current.body += `\n\t\t<div class="verse_head">${h.text}</div>`;
+      current.body += `\n\t\t<div class="verse_head">${h.textHtml ?? h.text}</div>`;
     } else if (!group.h3 && headerTypes.has(h.type) && h.text) {
       current.body += `\n\t\t<div class="${h.type}" version="${version}">${h.text}</div>`;
     }

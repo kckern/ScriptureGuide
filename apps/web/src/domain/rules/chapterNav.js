@@ -1,5 +1,6 @@
 // Chapter navigation below a passage (scriptures::renderChapterNav in the PHP site).
 import { slugifyRef } from './legacyReference.js';
+import { renderHeadingHtml } from './legacyText.js';
 
 // Chapter nav is shown only for a single block whose reference names no verses.
 export function wantsChapterNav(normalizedRef) {
@@ -20,16 +21,13 @@ export function sectionRef(bookShort, first, last, lastChapterMax) {
   return `${bookShort} ${first.chapter}${minv}–${last.chapter}${maxv}`;
 }
 
-// scriptutil::renderHeadingHTML: "/" is a line break
-const headingHtml = text => String(text || '').replace(/\//g, '<br/>');
-
 /**
  * Section nav (scriptures::renderSectionNav), used when the passage is exactly one
  * heading section. prev/next: { ref, heading } of the neighbouring sections, or null.
  */
 export function sectionNavLinks({ prev, next, versionSpec = null }) {
   const base = versionSpec ? `/${versionSpec}` : '';
-  const link = s => (s && s.ref) ? { href: `${base}/${slugifyRef(s.ref)}`, label: headingHtml(s.heading) } : null;
+  const link = s => (s && s.ref) ? { href: `${base}/${slugifyRef(s.ref)}`, label: renderHeadingHtml(s.heading) } : null;
   return { sep: '&nbsp;', prev: link(prev), next: link(next) };
 }
 

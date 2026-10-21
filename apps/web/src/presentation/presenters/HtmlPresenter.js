@@ -2,6 +2,7 @@ import VerseSerializer from '../serializers/VerseSerializer.js';
 import { displayReference, blankHeading } from '../../domain/rules/referenceParsing.js';
 
 import { versionImg } from '../../domain/rules/legacyReference.js';
+import { renderHeadingHtml, renderHeadingFields, RENDERED_HEADING_FIELDS } from '../../domain/rules/legacyText.js';
 
 // versionImg takes lds_scriptures_volumes.volume_id; Reference.volume is a volume code.
 // Verses outside the five volumes (null) have no LDS cover: 0 gives "lds".
@@ -260,6 +261,8 @@ export class HtmlPresenter {
     // Index h3 headings by verse_id for EJS lookup
     const h3ByVerse = {};
     for (const h of h3Headings) {
+      // Heading text as the page shows it (renderHeadingHTML); h.text stays as stored
+      h.textHtml = renderHeadingHtml(h.text);
       h3ByVerse[h.verse_id] = h;
     }
 
@@ -338,6 +341,7 @@ export class HtmlPresenter {
       prePassageH3 = {
         verse_id: ch.verse_id,
         text: ch.heading || '',
+        textHtml: renderHeadingHtml(ch.heading),
         ref: preH3Ref,
         slug: preH3Slug,
         verse_count: chVerseCount,
@@ -369,6 +373,7 @@ export class HtmlPresenter {
     for (const h of result.headings) {
       if (h.type === 'heading') continue; // handled separately via h3ByVerse
       if (h.verse_id === chapterHeadVerseId && chapterTypes.has(h.type)) continue;
+      if (h.type === 'verse_head') h.textHtml = renderHeadingHtml(h.text);
       if (!inlineByVerse[h.verse_id]) inlineByVerse[h.verse_id] = [];
       inlineByVerse[h.verse_id].push(h);
     }
@@ -377,7 +382,7 @@ export class HtmlPresenter {
     const typesByVerse = {};
     for (const h of result.headings) {
       if (h.synthetic || h.preSectionSynthetic || !h.type || h.text == null) continue;
-      (typesByVerse[h.verse_id] ??= {})[h.type] = h.text;
+      (typesByVerse[h.verse_id] ??= {})[h.type] = RENDERED_HEADING_FIELDS.includes(h.type) ? renderHeadingHtml(h.text) : h.text;
     }
 
     return {
@@ -441,6 +446,8 @@ export class HtmlPresenter {
         Object.entries(h3ByVerse).map(([k, v]) => [k, [v]])
       ),
       chapterHeading: result.chapterHeading,
+      // chapterHeading with its title fields rendered (renderHeadingHTML), for the header rows
+      chapterHeadingHtml: renderHeadingFields(result.chapterHeading),
       chapterNav: result.chapterNav,
       img,
       chapterSlug: bookSlugForH3 && chapter ? `${version}/${bookSlugForH3}.${chapter}` : null,
