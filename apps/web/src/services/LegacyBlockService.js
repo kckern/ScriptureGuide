@@ -57,8 +57,9 @@ export function getRanges(input, lastBook) {
     const from = Number(chapters[0]);
     const to = Number(chapters[1]);
     for (let i = from; i <= to; i++) {
-      const start = String(i) === chapters[0] ? verses[0] : 'X';
-      const end = String(i) === chapters[1] ? verses[verses.length - 1] : 'Y';
+      // PHP's == compares numeric strings as numbers ("03" == "3")
+      const start = i === from ? verses[0] : 'X';
+      const end = i === to ? verses[verses.length - 1] : 'Y';
       ranges.push(`${i}: ${start}-${end}`);
       if (ranges.length > 200) return false;
     }
@@ -114,7 +115,8 @@ export class LegacyBlockService {
   }
 
   // scriptutil::listVerses + loadVerseIds: false without a book or titles, else the ids. The
-  // verses listed count against the request's verse budget.
+  // verses listed count against the request's verse budget. Not ported: the "subverses" key PHP
+  // added to a block for a verse letter ("3:16a"); the package reads such references itself.
   async verseIds(book, ranges, budget) {
     if (isPhpEmpty(book) || !ranges) return false;
     const titles = [];

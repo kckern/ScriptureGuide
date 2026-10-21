@@ -186,6 +186,10 @@ describe('getRanges (scriptutil::getRanges)', () => {
   test('more than 200 chapters is false', () => {
     expect(getRanges('John 1-500', 'John')).toBe(false);
   });
+
+  test('chapters compare loosely, as PHP\'s == did ("03" is chapter 3)', () => {
+    expect(getRanges('John 03:16-04:2', 'John')).toEqual(['3: 16-Y', '4: X-2']);
+  });
 });
 
 describe('allVerseIds (index.php array_merge over the blocks)', () => {
