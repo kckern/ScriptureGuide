@@ -160,3 +160,15 @@ test('errors log one JSON line with the message and stack', async () => {
   expect(rec.stack).toContain('kaboom');
   expect(rec.time).toMatch(/^\d{4}-\d\d-\d\dT/);
 });
+
+test('the error handler names an error without a message by its code', async () => {
+  const lines = [];
+  const app = express();
+  app.get('/db', () => {
+    const inner = [Object.assign(new Error('connect ECONNREFUSED ::1:3306'), { code: 'ECONNREFUSED' })];
+    throw Object.assign(new AggregateError(inner, ''), { code: 'ECONNREFUSED' });
+  });
+  app.use(createErrorHandler({ write: l => lines.push(l) }));
+  await request(app).get('/db').set('Accept', 'application/json');
+  expect(JSON.parse(lines[0])).toMatchObject({ msg: 'error', path: '/db', status: 500, error: 'ECONNREFUSED', code: 'ECONNREFUSED', errors: ['ECONNREFUSED'] });
+});

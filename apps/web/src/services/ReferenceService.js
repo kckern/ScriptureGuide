@@ -2,6 +2,7 @@ import { lookupReference, generateReference } from 'scripture-guide';
 import { Reference } from '../domain/entities/Reference.js';
 import verseRepository from '../data/repositories/VerseRepository.js';
 import { parseVerseIdList, splitBookReference, bookKey, bookAlias, formatReference } from '../domain/rules/referenceParsing.js';
+import { logError } from '../app/log.js';
 
 export class ReferenceService {
   constructor(verseRepo = verseRepository) {
@@ -17,7 +18,7 @@ export class ReferenceService {
       const result = lookupReference(referenceString);
       return Reference.fromLookup(result);
     } catch (error) {
-      console.error('Reference parsing error:', error.message);
+      logError(error, { where: 'reference.parse', ref: referenceString });
       return new Reference({
         query: referenceString,
         normalized: '',
@@ -34,7 +35,7 @@ export class ReferenceService {
     try {
       return (await this.resolveFromIndex(referenceString)) || parsed;
     } catch (error) {
-      console.error('Reference index lookup error:', error.message);
+      logError(error, { where: 'reference.index', ref: referenceString });
       return parsed;
     }
   }
@@ -104,7 +105,7 @@ export class ReferenceService {
     try {
       return generateReference(verseIds);
     } catch (error) {
-      console.error('Reference generation error:', error.message);
+      logError(error, { where: 'reference.format', verse_ids: verseIds.slice(0, 20), verse_count: verseIds.length });
       return '';
     }
   }

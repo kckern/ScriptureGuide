@@ -12,6 +12,7 @@ import { publicStatic, installPrivateFonts } from './app/middleware/static.js';
 import { notFoundHandler, errorHandler } from './app/middleware/error.js';
 import { requestLog } from './app/middleware/requestLog.js';
 import { TRUST_PROXY } from './app/trustProxy.js';
+import { logEvent } from './app/log.js';
 import db from './data/db/connection.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -90,8 +91,7 @@ app.use(errorHandler);
 const PORT = config.port;
 
 app.listen(PORT, () => {
-  console.log(`Scripture Guide running on http://localhost:${PORT}`);
-  console.log(`Environment: ${config.env}`);
+  logEvent('start', { port: PORT, env: config.env });
 });
 
 export default app;

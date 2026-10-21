@@ -1,5 +1,6 @@
 import { OutputFormat } from '../../domain/enums/OutputFormat.js';
 import HtmlPresenter from '../../presentation/presenters/HtmlPresenter.js';
+import { logError } from '../log.js';
 
 // Format registry: a format is implemented by src/presentation/presenters/formats/<format>.js,
 // whose default export has present(result, req, res). Formats without a module render HTML.
@@ -32,7 +33,7 @@ export function outputMiddleware(req, res) {
   presenterFor(format)
     .then(presenter => presenter.present(req.scriptureResult, req, res))
     .catch(err => {
-      console.error('Presenter error:', err);
+      logError(err, { where: 'presenter', format, method: req.method, path: req.originalUrl });
       if (!res.headersSent) res.status(500).send('Internal error');
     });
 }

@@ -5,13 +5,11 @@
 // bytes counts the body bytes written to the socket (nginx's $body_bytes_sent). Register this before
 // compression() so the count is the compressed size.
 
+import { writeLine } from '../log.js';
+
 const SKIP = new Set(['/health', '/healthz']);
 
-export function stdoutLine(line) {
-  process.stdout.write(line + '\n');
-}
-
-export function requestLog({ write = stdoutLine } = {}) {
+export function requestLog({ write = writeLine } = {}) {
   return function requestLogMiddleware(req, res, next) {
     if (SKIP.has(req.path)) return next();
     const start = process.hrtime.bigint();

@@ -13,6 +13,7 @@ import {
   flattenText, transposeRef, baseVersion, highlightSearchTerm,
 } from '../../domain/rules/legacyText.js';
 import { rowsReference, chapterRef, slugifyRef, versionImg } from '../../domain/rules/legacyReference.js';
+import { logError } from '../log.js';
 
 // The PHP site's AJAX endpoints: vbox (versebox.php), passage (passage_script.php),
 // versionselect (version_select.php), settings (settings.php) and save_prefs (save.php).
@@ -41,7 +42,8 @@ export class AjaxController {
   }
 
   fail(res, err) {
-    console.error('AJAX error:', err);
+    const req = res.req;
+    logError(err, { where: 'ajax', method: req?.method, path: req?.originalUrl });
     if (!res.headersSent) res.status(500).type('html').send('');
   }
 
