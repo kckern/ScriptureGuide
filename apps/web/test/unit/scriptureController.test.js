@@ -71,6 +71,13 @@ describe('ScriptureController: an html reference that found nothing', () => {
     expect(req.scriptureResult.title).toBe('x; 1');
   });
 
+  test('a found block is looked up by its reference when that finds the same verses', async () => {
+    const found = { reference: { isEmpty: false, verseIds: [5, 6] }, verses: [{}, {}], headings: [], config: {} };
+    const { req, ctl } = await run([{ orig: 'Lehi', book: 'Lehi', verse_ids: [5, 6] }], async ref => (ref === 'ref of 5,6' ? found : empty()));
+    expect(ctl.lookupService.lookup).toHaveBeenLastCalledWith('ref of 5,6', expect.objectContaining({ _block: true, _multiBlock: false }));
+    expect(req.scriptureResult.sections[0]).toBe(found);
+  });
+
   test('blocks PHP found by verse title are looked up by their verse ids; the title names them', async () => {
     const found = { reference: { isEmpty: false, verseIds: [5, 6] }, verses: [{}, {}], headings: [], config: {} };
     const blocks = [{ orig: 'Lehi', book: 'Lehi', verse_ids: [5, 6] }, { orig: 'Lehi 13', book: 'Lehi', verse_ids: [] }];

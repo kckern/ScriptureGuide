@@ -155,7 +155,8 @@ export class HtmlPresenter {
       h.ver = version;
       h.tver = version;
       // Audio: apply chapter-level audio to all h3s (PHP computes per-section but result is same for whole chapter)
-      h.audio = result.chapterHeading?.audio > 0 ? 1 : 0;
+      // (a book without chapter heading rows, e.g. TSP, keeps the flag on config._audio)
+      h.audio = (result.chapterHeading?.audio ?? result.config._audio) > 0 ? 1 : 0;
       // parallel is attached by ScriptureLookupService if significant cross-refs exist
     });
 
@@ -479,7 +480,7 @@ export class HtmlPresenter {
       chapterNav: result.chapterNav,
       img,
       chapterSlug: bookSlugForH3 && chapter ? `${version}/${bookSlugForH3}.${chapter}` : null,
-      audio: result.chapterHeading?.audio > 0 ? 1 : 0,
+      audio: (result.chapterHeading?.audio ?? result.config._audio) > 0 ? 1 : 0,
       canonicalRefSlug: result.config._canonicalRefSlug || ''
     };
   }

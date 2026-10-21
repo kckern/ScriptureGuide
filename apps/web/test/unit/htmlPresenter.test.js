@@ -91,3 +91,16 @@ describe('HtmlPresenter: a passage that skips chapters', () => {
     expect(h.slug).toBe('LDS/1.nephi.3.7-8;5.2;7.1');
   });
 });
+
+describe('HtmlPresenter: audio without a chapter heading', () => {
+  test('a passage with audio but no chapter heading row still marks its h3 (The Book of Lehi, TSP)', () => {
+    const verses = [1, 2].map(n => new Verse({ id: 82291 + n, verseNum: n, chapter: 1, text: '¶And it came to pass.', version: 'TSP' }));
+    const result = new ScriptureResult({
+      reference: new Reference({ query: 'The Book of Lehi 1', normalized: 'The Book of Lehi 1', verseIds: [82292, 82293] }),
+      verses,
+      headings: [{ verse_id: 82292, type: 'heading', text: '', last_verse_id: 82293, synthetic: true, _wholeChapter: true, _chapterNum: 1 }],
+      config: { version: 'TSP', _bookTitle: 'The Book of Lehi', _audio: 1 },
+    });
+    expect(new HtmlPresenter().serialize(result).h3ByVerse[82292].audio).toBe(1);
+  });
+});

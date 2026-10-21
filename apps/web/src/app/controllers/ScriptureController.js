@@ -89,11 +89,10 @@ export class ScriptureController {
     const found = blocks.flatMap(blockVerseIds);
     if (!found.length && all?.length) return null;
     const sections = [];
+    const options = { ...config, _block: true, _multiBlock: blocks.length > 1 };
     for (const block of blocks) {
       const ids = blockVerseIds(block);
-      sections.push(ids.length
-        ? await this.lookupService.lookup(ids.join(','), { ...config, _block: true, _multiBlock: blocks.length > 1 })
-        : blockSection(block, config));
+      sections.push(ids.length ? await this.lookupIds(ids, options) : blockSection(block, config));
     }
     const title = found.length && all ? await this.blockService.repo.referenceFromVerseIds(found) : config.reference;
     const withVerses = sections.filter(s => s.verses?.length);
@@ -107,6 +106,19 @@ export class ScriptureController {
     });
     page.title = title || config.reference;
     return page;
+  }
+
+  // The verses of a block PHP found by verse title: looked up by their reference
+  // (referenceFromVerseIds, "The Book of Lehi 1") when that finds the same verses, so headings
+  // read as for a typed reference; else by the ids themselves.
+  async lookupIds(ids, options) {
+    const ref = await this.blockService.repo.referenceFromVerseIds(ids);
+    if (ref) {
+      const result = await this.lookupService.lookup(ref, options);
+      const got = result.reference?.verseIds || [];
+      if (got.length === ids.length && got.every((id, i) => Number(id) === Number(ids[i]))) return result;
+    }
+    return this.lookupService.lookup(ids.join(','), options);
   }
 
   async home(req, res) {

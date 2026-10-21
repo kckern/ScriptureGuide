@@ -205,6 +205,7 @@ export class ScriptureLookupService {
 
         // Attach book slug and version audio to chapter heading for h3 attrs
         const audioFlag = await this.headingRepository.hasAudio(verseIds, version);
+        config._audio = audioFlag;
         // Always store bookTitle on config so HtmlPresenter can build slugs even when chapterHeading is null
         config._bookTitle = bookTitle;
         if (chapterHeading) {
