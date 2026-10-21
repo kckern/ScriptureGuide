@@ -8,6 +8,8 @@ import VerseSerializer from '../presentation/serializers/VerseSerializer.js';
 import { defaultVersions, versionOrder } from '../domain/rules/defaultVersions.js';
 import { applyFormatOverride } from '../domain/rules/formatOverride.js';
 import { getBook, splitRuns } from '../domain/rules/legacyReference.js';
+import { numericVerseIds } from '../domain/rules/cleanReference.js';
+import { parseVerseIdList } from '../domain/rules/referenceParsing.js';
 import { isCompoundLine } from '../domain/rules/legacyText.js';
 import { wantsChapterNav, chapterNavLinks, sectionNavLinks, sectionRef } from '../domain/rules/chapterNav.js';
 
@@ -71,9 +73,12 @@ export class ScriptureLookupService {
   async lookup(referenceString, config = {}) {
     const blocks = config._block ? null : this.splitBlocks(referenceString);
     if (blocks) {
+      // PHP read numbers as verse ids only when the whole reference was numeric
+      // (cleanReference); a number among words ("1999; 12; some-words") is not a verse id.
+      const idsAllowed = numericVerseIds(referenceString) !== null;
       const sections = [];
       for (const block of blocks) {
-        sections.push(await this.lookup(block, { ...config, _block: true, _multiBlock: true }));
+        sections.push(await this.lookup(block, { ...config, _block: true, _multiBlock: true, _noVerseIds: !idsAllowed }));
       }
       const found = sections.filter(r => !r.reference.isEmpty);
       const first = found[0] || sections[0];
@@ -114,7 +119,7 @@ export class ScriptureLookupService {
     }
 
     // Verse ids, JST books and collections the package does not know: the verse index
-    if (reference.isEmpty) {
+    if (reference.isEmpty && !(config._noVerseIds && parseVerseIdList(referenceString))) {
       reference = await this.referenceService.resolve(referenceString);
     }
 

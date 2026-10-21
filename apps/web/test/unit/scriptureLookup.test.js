@@ -71,3 +71,20 @@ describe('lookup: the parallel slug of a passage that skips chapters', () => {
     expect(ranges[0].dstSlugOverride).toBe('1.ne.3.7-8;5.2;7.1');
   });
 });
+
+describe('lookup: numbers among words are not verse ids', () => {
+  const empty = t => ({ isEmpty: true, book: '', normalized: '', verseIds: [], query: t });
+  const ids = t => (/^[\d;,\s-]+$/.test(t) ? { isEmpty: false, book: 'Genesis', normalized: 'Genesis 1:1', verseIds: [Number(t.split(/\D/)[0])], chapter: 1 } : empty(t));
+  const refs = { parse: empty, resolve: async t => ids(t) };
+  const verses = { findByIds: async () => [], findIndexByIds: async () => [], findChaptersByVerseIds: async () => [] };
+  const headings = { findBookId: async () => null, findByVerseIds: async () => [], findFaxVerseIds: async () => [] };
+  const svc = new ScriptureLookupService(refs, verses, headings);
+  test('PHP read numbers as verse ids only when the whole reference is numeric', async () => {
+    const r = await svc.lookup('1999; 12; 31; some-words', {});
+    expect(r.reference.verseIds).toEqual([]);
+  });
+  test('an all-numeric reference still is (PHP is_numeric with ";" and "-" removed)', async () => {
+    const r = await svc.lookup('1;5-6', {});
+    expect(r.reference.verseIds).toEqual([1, 5]);
+  });
+});
