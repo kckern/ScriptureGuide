@@ -28,9 +28,9 @@ export class SearchRepository {
     return rows.map(r => r.id);
   }
 
-  // The FULLTEXT index settings (search/fulltext.js), looked up once
+  // The FULLTEXT index settings (search/fulltext.js), looked up once; a failed lookup is retried
   fulltext() {
-    this.fulltextPending ??= fulltextSettings(this.db);
+    this.fulltextPending ??= fulltextSettings(this.db).catch(err => { this.fulltextPending = null; throw err; });
     return this.fulltextPending;
   }
 

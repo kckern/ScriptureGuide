@@ -60,8 +60,18 @@ describe('fulltextSettings', () => {
     expect(await fulltextSettings(db([[/information_schema\.TABLES/, [{ engine: 'InnoDB' }]], ...ok.slice(1)]))).toBeNull();
     expect(await fulltextSettings(db([ok[0], [/information_schema\.STATISTICS/, []], ok[2]]))).toBeNull();
   });
-  test('a failed lookup means no FULLTEXT', async () => {
-    expect(await fulltextSettings({ query: async () => { throw new Error('denied'); } })).toBeNull();
+  test('a database error is not read as "no index": it propagates', async () => {
+    await expect(fulltextSettings({ query: async () => { throw new Error('denied'); } })).rejects.toThrow('denied');
+  });
+  test('SearchRepository does not keep a failed lookup', async () => {
+    let fail = true;
+    const db = { query: vi.fn(async sql => {
+      if (fail) { fail = false; throw new Error('gone'); }
+      return ok.find(([re]) => re.test(sql))?.[1] ?? [];
+    }) };
+    const repo = new SearchRepository(db);
+    await expect(repo.fulltext()).rejects.toThrow('gone');
+    expect((await repo.fulltext()).minWordLen).toBe(4);
   });
 });
 

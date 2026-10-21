@@ -1,6 +1,11 @@
-// The built-in stopword list of MySQL's MyISAM full-text parser (ft_precompiled_stopwords in
-// storage/myisam/ft_static.cc, MySQL 8.0), used when ft_stopword_file is '(built-in)'. These
-// words are left out of a MyISAM FULLTEXT index, so the search fallback cannot find them through it.
+// MySQL's built-in MyISAM full-text stopword list: ft_precompiled_stopwords in
+// storage/myisam/ft_static.cc (MySQL 8.0), copied unchanged. That list derives from the SMART
+// information retrieval system's stopword list. LICENSING: MySQL's source is GPL-2.0 (with the
+// Universal FOSS Exception); the owner must confirm that carrying this word list here is fine
+// before it ships.
+//
+// Used when ft_stopword_file is '(built-in)'. These words are left out of a MyISAM FULLTEXT
+// index, so the search fallback cannot find them through it.
 export const MYISAM_STOPWORDS = `
 a's able about above according accordingly across actually after afterwards again against ain't all
 allow allows almost alone along already also although always am among amongst an and another any
