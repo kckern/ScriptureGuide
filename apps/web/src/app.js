@@ -12,12 +12,16 @@ import subdomainMiddleware from './app/middleware/subdomain.js';
 import { publicStatic, installPrivateFonts } from './app/middleware/static.js';
 import { notFoundHandler, errorHandler } from './app/middleware/error.js';
 import { requestLog } from './app/middleware/requestLog.js';
+import { TRUST_PROXY } from './app/trustProxy.js';
 import db from './data/db/connection.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const app = express();
+
+// req.ip is the visitor behind Cloudflare, the ALB and nginx-proxy-manager
+app.set('trust proxy', TRUST_PROXY);
 
 // Security headers
 app.use(helmet({
