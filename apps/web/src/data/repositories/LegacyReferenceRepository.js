@@ -15,6 +15,17 @@ export class LegacyReferenceRepository {
     return rows[0]?.c ?? null;
   }
 
+  // The last verse of every chapter of a book in one query: "<book> <chapter>" → its last verse
+  // (what chapterMax gives for each chapter; verse_title compares case-sensitively)
+  async chapterMaxima(book) {
+    const like = `${String(book).replace(/[\\%_]/g, '\\$&')} %`;
+    const rows = await this.db.query(
+      "SELECT SUBSTRING_INDEX(verse_title, ':', 1) AS ref, MAX(verse) AS c FROM lds_scriptures_verses WHERE verse_title LIKE ? GROUP BY ref",
+      [like]
+    );
+    return new Map(rows.map(r => [String(r.ref), r.c]));
+  }
+
   // Verse ids of "Book C:V" titles, in verse id order
   async verseIds(titles) {
     if (!titles.length) return [];

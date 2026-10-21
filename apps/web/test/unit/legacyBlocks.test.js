@@ -1,5 +1,7 @@
 import { describe, test, expect } from 'vitest';
+import { vi } from 'vitest';
 import { LegacyBlockService, getRanges, allVerseIds } from '../../src/services/LegacyBlockService.js';
+import { RequestBudget } from '../../src/domain/rules/requestBudget.js';
 
 // A tiny lds_scriptures_verses: verse_title → verse_id
 const TITLES = new Map([
@@ -15,6 +17,20 @@ const fakeRepo = {
     this.calls++;
     const verses = [...TITLES.keys()].filter(t => t.startsWith(`${ref}:`)).map(t => Number(t.slice(ref.length + 1)));
     return verses.length ? Math.max(...verses) : null;
+  },
+  maximaCalls: 0,
+  // One query for every chapter of a book: "<book> <chapter>" → its last verse
+  async chapterMaxima(book) {
+    this.maximaCalls++;
+    const out = new Map();
+    for (const t of TITLES.keys()) {
+      const m = t.match(/^(.*) (\d+):(\d+)$/);
+      if (m && m[1] === book) {
+        const key = `${m[1]} ${m[2]}`;
+        out.set(key, Math.max(out.get(key) ?? 0, Number(m[3])));
+      }
+    }
+    return out;
   },
   async verseIds(titles) {
     return titles.map(t => TITLES.get(t)).filter(id => id != null).sort((a, b) => a - b);
@@ -117,13 +133,39 @@ describe('LegacyBlockService.blocks (scriptures::loadMetaFromRef)', () => {
 });
 
 describe('LegacyBlockService.blocks: cost of a long junk reference', () => {
-  test('pieces past the first 100 are blocks without a lookup', async () => {
-    const ref = Array.from({ length: 150 }, (_, i) => `word${i}`).join('; ');
+  test('pieces past the request budget are blocks without a lookup', async () => {
+    const blocks = await service().blocks('x1;x2;x3;x4;x5', new RequestBudget({ pieces: 3 }));
+    expect(blocks.map(b => b.orig)).toEqual(['X 1', 'X X 2', 'X X 3', 'X X 4', 'X X 5']);
+    const spy = vi.spyOn(fakeRepo, 'verseIds');
+    await service().blocks('x1;x2;x3;x4;x5', new RequestBudget({ pieces: 3 }));
+    expect(spy).toHaveBeenCalledTimes(3);
+    spy.mockRestore();
+  });
+
+  test('chapter maxima: one query per book, whatever the number of chapters', async () => {
+    fakeRepo.maximaCalls = 0;
     fakeRepo.calls = 0;
-    const blocks = await service().blocks(ref);
-    expect(blocks).toHaveLength(150);
-    expect(fakeRepo.calls).toBeLessThanOrEqual(100);
-    expect(blocks[149]).toEqual({ orig: 'Word Word 149', book: 'Word', verse_ids: [] });
+    const blocks = await service().blocks('junk.1-200; junk.1-200; genesis.1-2');
+    expect(fakeRepo.maximaCalls).toBe(2);
+    expect(fakeRepo.calls).toBe(0);
+    expect(blocks[2].verse_ids).toEqual([1, 2, 3, 4, 5]);
+  });
+
+  test('a multi-book range looks up its two ends only', async () => {
+    const svc = service();
+    const spy = vi.spyOn(svc, 'firstVerseId');
+    await svc.blocks('a-b-c-d-e-f');
+    expect(spy).toHaveBeenCalledTimes(2);
+  });
+
+  test('a range counts against the verse budget of the request', async () => {
+    expect((await service().blocks('warrior-genesis2', new RequestBudget({ verses: 3 })))[0].verse_ids).toEqual([]);
+    expect((await service().blocks('warrior-genesis2', new RequestBudget({ verses: 7 })))[0].verse_ids).toHaveLength(6); // the end point's own verse counts too
+  });
+
+  test('database queries stop at the budget', async () => {
+    const budget = new RequestBudget({ queries: 0 });
+    expect(await service().blocks('genesis.1', budget)).toEqual([{ orig: 'Genesis 1', book: 'Genesis', verse_ids: [] }]);
   });
 });
 

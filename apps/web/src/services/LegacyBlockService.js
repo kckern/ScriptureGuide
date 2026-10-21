@@ -12,16 +12,12 @@
 import legacyReferenceRepository from '../data/repositories/LegacyReferenceRepository.js';
 import { cleanReference, numericVerseIds, phpTrim } from '../domain/rules/cleanReference.js';
 import { getBook } from '../domain/rules/legacyReference.js';
+import { RequestBudget } from '../domain/rules/requestBudget.js';
 
 // The scripture-guide package lists at most 1000 verses for a reference; so does a range here.
 export const MAX_MULTI_RANGE = 1000;
-// Verse titles listed for one block; no real reference comes close.
-const MAX_TITLES = 5000;
 // Nesting of multi-book ranges inside the ends of a multi-book range.
 const MAX_DEPTH = 3;
-// Pieces looked up per reference: later pieces of a long junk path are blocks without verses,
-// so one request cannot cost thousands of queries.
-const MAX_LOOKUP_PIECES = 100;
 
 const MULTI = /[—-](\d\s)*[A-Za-z]/;
 const trimChars = (s, chars) => s.replace(new RegExp(`^[${chars}]+|[${chars}]+$`, 'g'), '');
@@ -97,21 +93,29 @@ export class LegacyBlockService {
   }
 
   // cleanReference with its numeric branch: verse ids are turned into their reference first.
-  async clean(ref) {
+  async clean(ref, budget) {
     const ids = numericVerseIds(ref);
     if (!ids) return cleanReference(ref);
-    const text = ids.length ? await this.repo.referenceFromVerseIds(ids) : '';
+    const text = ids.length && budget.takeQuery() ? await this.repo.referenceFromVerseIds(ids) : '';
     return cleanReference(String(text || '').replace(/—/g, ' '));
   }
 
-  // scriptutil::loadChapterMax: the last verse of "<book> <chapter>", by verse title.
-  async chapterMax(book, chapter) {
-    const ref = await this.clean(`${book === false ? '' : book} ${chapter ?? ''}`);
-    return this.repo.chapterMax(ref === false ? '' : ref);
+  // scriptutil::loadChapterMax: the last verse of "<book> <chapter>", by verse title. The maxima
+  // of every chapter of a book come from one query, kept for the request.
+  async chapterMax(book, chapter, budget) {
+    const ref = await this.clean(`${book === false ? '' : book} ${chapter ?? ''}`, budget);
+    if (ref === false || ref === '') return null;
+    const m = ref.match(/^(.*\S)\s+\d+$/);
+    if (!m) {
+      return budget.memo(`max:${ref}`, async () => (budget.takeQuery() ? this.repo.chapterMax(ref) : null));
+    }
+    const maxima = await budget.memo(`book:${m[1]}`, async () => (budget.takeQuery() ? this.repo.chapterMaxima(m[1]) : new Map()));
+    return maxima.get(ref) ?? null;
   }
 
-  // scriptutil::listVerses + loadVerseIds: false without a book or titles, else the ids.
-  async verseIds(book, ranges) {
+  // scriptutil::listVerses + loadVerseIds: false without a book or titles, else the ids. The
+  // verses listed count against the request's verse budget.
+  async verseIds(book, ranges, budget) {
     if (isPhpEmpty(book) || !ranges) return false;
     const titles = [];
     for (const range of ranges) {
@@ -119,46 +123,50 @@ export class LegacyBlockService {
       let [, chapter, start, , end] = m;
       if (isPhpEmpty(chapter)) { chapter = '1'; start = '1'; end = 'Y'; }
       if (start === 'X') start = '1';
-      if (end === 'Y') end = await this.chapterMax(book, chapter);
+      if (end === 'Y') end = await this.chapterMax(book, chapter, budget);
       if (end == null || end === '') end = start;
-      for (let i = Number(start); i <= Number(end) && titles.length < MAX_TITLES; i++) titles.push(`${book} ${chapter}:${i}`);
+      for (let i = Number(start); i <= Number(end) && titles.length < budget.verses; i++) titles.push(`${book} ${chapter}:${i}`);
     }
     if (!titles.length) return false;
-    return this.repo.verseIds(titles);
+    if (!budget.takeQuery()) return [];
+    const ids = await this.repo.verseIds(titles);
+    return budget.takeVerses(ids.length) ? ids : [];
   }
 
   // The first verse id of a reference: scriptures::lookup($point, meta_only)[0]['verse_ids'][0]
-  async firstVerseId(point, depth) {
-    const blocks = await this.blocks(point, depth + 1);
+  async firstVerseId(point, budget, depth) {
+    const blocks = await this.blocks(point, budget, depth + 1);
     return (Array.isArray(blocks[0]?.verse_ids) ? blocks[0].verse_ids[0] : null) ?? null;
   }
 
-  async blocks(ref, depth = 0) {
+  // budget: the request's RequestBudget; a piece of the reference (not of a range's ends) takes
+  // one of its pieces, and pieces past it are blocks without a lookup.
+  async blocks(ref, budget = new RequestBudget(), depth = 0) {
     if (depth > MAX_DEPTH) return [];
-    const cleaned = await this.clean(ref);
+    const cleaned = await this.clean(ref, budget);
     const out = [];
     let book = '';
     let all; // $all_verse_ids: shared by every range of the reference, never reset
-    const pieces = (cleaned === false ? '' : cleaned).split(';');
-    for (const [index, piece] of pieces.entries()) {
+    for (const piece of (cleaned === false ? '' : cleaned).split(';')) {
       let orig = trimChars(piece, ';:');
-      const lookUp = index < MAX_LOOKUP_PIECES;
-      if (MULTI.test(orig) && !lookUp) {
-        out.push({ orig: phpTrim(orig), book: 'Multi', verse_ids: [] });
-        continue;
-      }
+      const lookUp = depth > 0 || budget.takePiece();
       if (MULTI.test(orig)) {
+        if (!lookUp) {
+          out.push({ orig: phpTrim(orig), book: 'Multi', verse_ids: [] });
+          continue;
+        }
         const range = orig.split('-');
         if (range[1] !== ':') {
           const m = (range[1] ?? '').match(/(.*?)\s(\d+)$/);
-          const max = m ? await this.chapterMax(await this.clean(m[1]), m[2]) : await this.chapterMax(false, null);
+          const max = m ? await this.chapterMax(await this.clean(m[1], budget), m[2], budget) : null;
           range[1] = `${range[1] ?? ''}:${max ?? ''}`;
         }
+        // PHP looked up every point between hyphens but used only the first two
         const ends = [];
-        for (const point of range) ends.push(await this.firstVerseId(point, depth));
+        for (const point of range.slice(0, 2)) ends.push(await this.firstVerseId(point, budget, depth));
         const [from, to] = ends.map(id => (id == null ? null : Number(id)));
         const count = from == null ? (to == null ? 1 : to + 1) : (to == null ? 0 : Math.max(0, to - from + 1));
-        if (count > this.maxRange) {
+        if (count > this.maxRange || !budget.takeVerses(count)) {
           out.push({ orig: phpTrim(orig), book: 'Multi', verse_ids: [] });
           continue;
         }
@@ -168,7 +176,7 @@ export class LegacyBlockService {
       }
       book = getBook(orig, book);
       if (orig.startsWith(' ')) orig = book + orig;
-      const ids = lookUp ? await this.verseIds(book, getRanges(orig, book)) : (isPhpEmpty(book) ? false : []);
+      const ids = lookUp ? await this.verseIds(book, getRanges(orig, book), budget) : (isPhpEmpty(book) ? false : []);
       out.push({ orig, book, verse_ids: ids });
     }
     return out;
