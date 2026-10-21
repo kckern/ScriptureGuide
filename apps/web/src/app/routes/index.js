@@ -38,7 +38,6 @@ FORMAT_PREFIXES.forEach(fmt => {
 // Express 4 turns every "*" into "(.*)", even inside a param pattern, so "{0,}" keeps the
 // version to the first segment. The dispatch reads req.config (parseRequest), not these params.
 router.get('/:version([A-Za-z][A-Za-z0-9]{0,})/:reference(*)',
-  (req, res, next) => { req.versionFromPath = req.params.version.toUpperCase(); next(); },
   configMiddleware,
   (req, res, next) => scriptureController.show(req, res, next),
   outputMiddleware

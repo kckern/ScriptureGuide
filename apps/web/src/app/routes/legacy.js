@@ -25,6 +25,8 @@ const PHP_PAGES = {
 // empty page (410 like hub.*); the rest were maintenance scripts or includes (script.php
 // rewrote verse text, mount.php ran a shell command). They are gone. Any other *.php name did
 // not exist, so Apache rewrote it to index.php?q=<name>.php: it goes on to the front controller.
+// Names match case-insensitively on purpose (/Mount.php is 410 too): Apache matched files
+// case-sensitively, so this is more conservative than live.
 const PHP_GONE = new Set([
   'hub.php', 'mount.php', 'script.php', 'scriptures.php', 'scriptutil.php',
   'inc_api.php', 'inc_cov.php', 'inc_img.php', 'inc_latex.php', 'inc_markdown.php', 'inc_mp3.php',
