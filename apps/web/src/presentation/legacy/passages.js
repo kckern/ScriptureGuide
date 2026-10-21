@@ -5,6 +5,7 @@ import rawRepository from '../../data/repositories/RawRepository.js';
 import { passageHtml } from './passageHtml.js';
 import { defaultVersions, blockReference } from './meta.js';
 import { blockVerseIds, isEmptyRange } from '../../domain/rules/blockIds.js';
+import { escapeHtml } from '../../domain/rules/legacyText.js';
 
 export { blockVerseIds, isEmptyRange };
 
@@ -31,7 +32,8 @@ export async function scripturesHtml(req, res, blocks, versions) {
     if (!resolved && isEmptyRange(block)) {
       // scriptureData of nothing: the section stays empty
     } else if (!resolved) {
-      html += `\n\t\t<div class='passage ver_'>\n\t\t\t<h3>\n\t\t\t${block.orig}\n\t\t\t</h3>` +
+      // escaped: orig echoes the request (the PHP site reflected it raw)
+      html += `\n\t\t<div class='passage ver_'>\n\t\t\t<h3>\n\t\t\t${escapeHtml(block.orig)}\n\t\t\t</h3>` +
         "\n\t\t\t<p>\n\t\t\t<span class='verse'>No scripture verses found.</span>\n\t\t\t</p>\n\t\t</div>";
     } else {
       for (const inner of await passageHtml(req, res, blockReference(block), resolved.version)) {
