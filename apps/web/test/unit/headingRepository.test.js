@@ -96,3 +96,25 @@ describe('findVersionLastVerseId', () => {
     expect(query).toHaveBeenCalledTimes(2);
   });
 });
+
+describe('findParallels', () => {
+  test('chapter sizes of every source chapter come from one query', async () => {
+    const refs = [
+      { src_verse_id: 100, dst_verse_id: 1, significant: 1, src_chapter: 1, src_verse: 1, src_book_id: 7, src_book_slug: 'Gen.', src_book_title: 'Genesis', vol_org: 'jsto' },
+      { src_verse_id: 101, dst_verse_id: 2, significant: 1, src_chapter: 1, src_verse: 2, src_book_id: 7, src_book_slug: 'Gen.', src_book_title: 'Genesis', vol_org: 'jsto' },
+      { src_verse_id: 200, dst_verse_id: 2, significant: 1, src_chapter: 2, src_verse: 1, src_book_id: 7, src_book_slug: 'Gen.', src_book_title: 'Genesis', vol_org: 'jsto' },
+    ];
+    query.mockImplementation(async (sql, params) => {
+      if (/FROM scripture_references r/.test(sql)) return refs;
+      if (/COUNT\(\*\) AS cnt FROM lds_scriptures_verses/.test(sql)) {
+        const sizes = { '7:1': 2, '7:2': 5 };
+        return params[0].map(([b, c]) => ({ book_id: b, chapter: c, cnt: sizes[`${b}:${c}`] }));
+      }
+      throw new Error(`unexpected query: ${sql}`);
+    });
+    const out = await repo.findParallels([{ from: 1, to: 2, ids: [1, 2], verseNums: [1, 2], bookSlug: 'gen', chapter: 1, firstVerse: 1, lastVerse: 2, wholeChapter: true }], 'KJV');
+    expect(query.mock.calls.filter(([sql]) => /COUNT\(\*\)/.test(sql))).toHaveLength(1);
+    // chapter 1 is whole (2 of 2 verses), chapter 2 is not (1 of 5)
+    expect(out[1]).toBe('JST*kjv/gen.1~gen.1;2.1');
+  });
+});

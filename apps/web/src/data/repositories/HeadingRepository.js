@@ -291,23 +291,17 @@ export class HeadingRepository {
       [allIds]
     );
 
-    // Batch-fetch chapter sizes for ALL src chapters referenced by any heading.
-    // Used to determine if a src verse range covers the full chapter (→ chapter-level slug).
+    // Chapter sizes of every src chapter, in one query. Used to determine if a src verse range
+    // covers the full chapter (→ chapter-level slug).
     const chapterSizeMap = {};
-    const chaptersToFetch = [];
-    for (const row of rows) {
-      const key = `${row.src_book_id}:${row.src_chapter}`;
-      if (!chapterSizeMap[key]) chaptersToFetch.push({ book_id: row.src_book_id, chapter: row.src_chapter, key });
-    }
-    if (chaptersToFetch.length) {
-      const uniquePairs = [...new Map(chaptersToFetch.map(p => [p.key, p])).values()];
-      for (const pair of uniquePairs) {
-        const [sizeRow] = await db.query(
-          'SELECT COUNT(*) AS cnt FROM lds_scriptures_verses WHERE book_id = ? AND chapter = ?',
-          [pair.book_id, pair.chapter]
-        );
-        chapterSizeMap[pair.key] = sizeRow?.cnt ?? 0;
-      }
+    const pairs = [...new Map(rows.map(r => [`${r.src_book_id}:${r.src_chapter}`, [r.src_book_id, r.src_chapter]])).values()];
+    if (pairs.length) {
+      const sizes = await db.query(
+        `SELECT book_id, chapter, COUNT(*) AS cnt FROM lds_scriptures_verses
+         WHERE (book_id, chapter) IN (?) GROUP BY book_id, chapter`,
+        [pairs]
+      );
+      for (const r of sizes) chapterSizeMap[`${r.book_id}:${r.chapter}`] = Number(r.cnt);
     }
 
     const result = {};
