@@ -75,6 +75,15 @@ export function parseVersionSpec(spec, { keepEmpty = false } = {}) {
   return list;
 }
 
+// The version a search is limited to: PHP's $forcever, the format of the last piece of the
+// version spec ("kjv.1830*rebom" → "REBOM"); null without a version spec or for an empty piece.
+export function searchVersion(versionSpec) {
+  if (versionSpec == null) return null;
+  const pieces = String(versionSpec).replace(/[;, -]+/g, '.').replace(/\.+/g, '.').split('.');
+  const [text, format] = pieces[pieces.length - 1].split('*');
+  return (format ?? text).toUpperCase() || null;
+}
+
 // Strip the /api/ /img/ /mp3/ shortcuts (they set the subdomain) and one /<format>/ prefix.
 function stripPathPrefixes(q, subdomain) {
   let pathFormat = null;

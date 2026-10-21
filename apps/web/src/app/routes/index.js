@@ -34,8 +34,10 @@ FORMAT_PREFIXES.forEach(fmt => {
   );
 });
 
-// Version-prefixed routes: /nrsv/john.18, /lds/d&c.84 (case-insensitive)
-router.get('/:version([A-Za-z][A-Za-z0-9]*)/:reference(*)',
+// Version-prefixed routes: /nrsv/john.18, /lds/d&c.84 (case-insensitive).
+// Express 4 turns every "*" into "(.*)", even inside a param pattern, so "{0,}" keeps the
+// version to the first segment. The dispatch reads req.config (parseRequest), not these params.
+router.get('/:version([A-Za-z][A-Za-z0-9]{0,})/:reference(*)',
   (req, res, next) => { req.versionFromPath = req.params.version.toUpperCase(); next(); },
   configMiddleware,
   (req, res, next) => scriptureController.show(req, res, next),

@@ -2,11 +2,14 @@ import parallelService from '../../services/ParallelService.js';
 import searchService from '../../services/SearchService.js';
 import { slugifyRef } from '../../domain/rules/legacyReference.js';
 import { OutputFormat } from '../../domain/enums/OutputFormat.js';
+import { searchVersion } from '../../domain/rules/requestParsing.js';
 
-// Routes the PHP front controller (lib.php.inc) sends to parallel.php and search.php:
-//   - any path with "~" after its first character: parallel view
-//   - /search/<query>: search
-//   - a reference with no digits: search, limited to the path's version if there is one
+// The html body of the PHP front controller (index.php), in its order, from the parsed request
+// (req.config), never from the Express route params:
+//   - any q with "~" after its first character: parallel view
+//   - an empty reference: the home page (checked before search, as PHP's empty($ref))
+//   - /search/<query> or a reference with no digits: search, limited to the format of the last
+//     version piece; the terms are PHP's $ref ("&" fragments removed), dots read as spaces
 export class SearchParallelController {
   constructor(parallel = parallelService, search = searchService) {
     this.parallel = parallel;
@@ -15,26 +18,26 @@ export class SearchParallelController {
 
   // Returns true when it handled the request.
   async dispatch(req, res) {
-    if ((req.config?.outputFormat || OutputFormat.HTML) !== OutputFormat.HTML) return false;
-    const reference = req.params.reference || '';
-    const version = req.params.version || '';
-    const q = version ? `${version}/${reference}` : reference;
+    const config = req.config || {};
+    if ((config.outputFormat || OutputFormat.HTML) !== OutputFormat.HTML) return false;
     const ogUrl = `http://${req.headers.host || ''}${req.originalUrl || ''}`;
 
-    if (q.indexOf('~') > 0) {
-      const page = await this.parallel.build(q);
+    if (config.parallel) {
+      const page = await this.parallel.build(config.reference);
       if (!page) return false;
-      res.render('parallel', { ...page, config: req.config || {}, ogUrl });
+      res.render('parallel', { ...page, config, ogUrl });
       return true;
     }
 
-    let query = null, forcedVersion = null;
-    if (version === 'search' && reference) query = reference;
-    else if (reference && !/[0-9]/.test(reference)) { query = reference; forcedVersion = version ? version.toUpperCase() : null; }
-    if (query === null) return false;
+    if (!config.reference) {
+      res.render('home', { config });
+      return true;
+    }
 
-    const result = await this.searchService.search(query, { forcedVersion });
-    res.render('search', { ...result, config: req.config || {}, slugref: slugifyRef(result.query), ogUrl });
+    if (!config.search) return false;
+    const query = String(config.legacy?.ref ?? config.reference).replace(/\./g, ' ');
+    const result = await this.searchService.search(query, { forcedVersion: searchVersion(config.versionSpec) });
+    res.render('search', { ...result, config, slugref: slugifyRef(result.query), ogUrl });
     return true;
   }
 }
