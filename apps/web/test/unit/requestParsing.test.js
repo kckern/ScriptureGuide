@@ -141,6 +141,12 @@ describe('q normalization', () => {
     expect(req('/john%2B3:16').reference).toBe('john 3:16');
     expect(req('/search/c%2b%2B').reference).toBe('c  ');
   });
+  test('a double-encoded plus is a plus: live decoded the path twice (checked on live 2026-10-20)', () => {
+    expect(req('/john%252B3:16').reference).toBe('john+3:16');
+    expect(req('/john%252B3:16', {}, 'api.scripture.guide').legacy.ref).toBe('john+3:16');
+    expect(req('/x%2520y.1').reference).toBe('x y.1');
+    expect(req('/kjv/50%25').reference).toBe('50%');
+  });
 });
 
 describe('legacy (what lib.php.inc saw: api input/config, meta, raw, plain)', () => {

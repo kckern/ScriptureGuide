@@ -55,9 +55,25 @@ export function randomVerseId(random = Math.random) {
 // Apache handed the path to PHP as the value of q (index.php?q=<path>), so a "+" in the
 // path arrived as a space. So did "%2B": Apache decoded it before the rewrite, which put it
 // back unescaped (live /john%2B3:16 is John 3:16, /search/c%2B%2B searches "c").
+// The path was decoded twice: once by Apache (a path: "+" stays), then as the q value (PHP
+// urldecode: "+" is a space), so "%252B" arrives as "+" (checked on live).
 function decode(path) {
-  const spaced = String(path).replace(/\+|%2B/gi, ' ');
-  try { return decodeURIComponent(spaced); } catch { return spaced; }
+  let once;
+  try { once = decodeURIComponent(String(path)); } catch { once = String(path); }
+  return urldecode(once);
+}
+
+// PHP urldecode: "+" is a space, valid %XX sequences are bytes (UTF-8), anything else stays.
+function urldecode(s) {
+  const spaced = s.replace(/\+/g, ' ');
+  if (!spaced.includes('%')) return spaced;
+  try { return decodeURIComponent(spaced); } catch { /* a stray "%": decode byte by byte */ }
+  const bytes = [];
+  for (let i = 0; i < spaced.length; i++) {
+    const hex = spaced.slice(i + 1, i + 3);
+    if (spaced[i] === '%' && /^[0-9a-f]{2}$/i.test(hex)) { bytes.push(parseInt(hex, 16)); i += 2; } else bytes.push(...Buffer.from(spaced[i]));
+  }
+  return Buffer.from(bytes).toString('utf8');
 }
 
 // Version spec "kjv.1830*rebom" → [{ version: 'KJV', format: 'KJV' }, { version: '1830', format: 'REBOM' }]
