@@ -7,6 +7,7 @@ import { Reference } from '../domain/entities/Reference.js';
 import VerseSerializer from '../presentation/serializers/VerseSerializer.js';
 import { defaultVersions, versionOrder } from '../domain/rules/defaultVersions.js';
 import { applyFormatOverride } from '../domain/rules/formatOverride.js';
+import { getBook } from '../domain/rules/legacyReference.js';
 import { wantsChapterNav, chapterNavLinks, sectionNavLinks, sectionRef } from '../domain/rules/chapterNav.js';
 
 // Verse rows grouped by chapter, in order, for one synthetic heading per chapter. A chapter whose
@@ -43,19 +44,24 @@ export class ScriptureLookupService {
   }
 
   // Split "john.3.16; gen.1.1" into blocks; a block without a book takes the previous one's.
+  // After a word that is not a book, a bare number goes with that word (scriptutil::getBook):
+  // "corianton; 38" is "corianton 38", not verse id 38.
   splitBlocks(referenceString) {
     const pieces = String(referenceString || '').split(';').map(p => p.trim()).filter(Boolean);
     if (pieces.length < 2) return null;
     const blocks = [];
-    let prevBook = null;
+    let book = null;
+    let resolved = false;
     for (const piece of pieces) {
       let text = piece;
       let ref = this.referenceService.parse(text);
-      if (ref.isEmpty && prevBook) {
-        text = `${prevBook} ${piece}`;
+      const words = /[a-z]/i.test(piece);
+      if (ref.isEmpty && book && (resolved || !words)) {
+        text = `${book} ${piece}`;
         ref = this.referenceService.parse(text);
       }
-      if (!ref.isEmpty) prevBook = ref.book;
+      if (!ref.isEmpty) { book = ref.book; resolved = true; }
+      else if (words) { book = getBook(piece, book); resolved = false; }
       blocks.push(text);
     }
     return blocks;

@@ -11,6 +11,15 @@ export function slugifyRef(ref) {
     .replace(/–/g, '-');
 }
 
+// scriptutil::getBook: the leading non-digit run, or the previous block's book.
+export function getBook(ref, lastBook) {
+  const t = ref.trim();
+  if (!/[a-z]/i.test(t) && lastBook) return lastBook;
+  const m = t.match(/^((?:JST\s*)*[1-4]*\D+)/i);
+  const book = m && m[0].trim() !== '' ? m[0].trim() : lastBook;
+  return book || ref.replace(/[\d:\-\s–]+$/u, '');
+}
+
 export function isConsecutive(ids) {
   if (ids.length === 1) return true;
   for (let i = 0; i < ids.length - 1; i++) if (Number(ids[i]) + 1 !== Number(ids[i + 1])) return false;

@@ -2,6 +2,9 @@
 // version fallback order from scriptures::defaultVersions.
 import { lookupReference } from 'scripture-guide';
 import { defaultVersions as defaultVersionList, versionOrder } from '../../domain/rules/defaultVersions.js';
+import { getBook } from '../../domain/rules/legacyReference.js';
+
+export { getBook };
 
 function lookupIds(ref) {
   try {
@@ -17,15 +20,6 @@ function normalize(ref) {
   } catch {
     return '';
   }
-}
-
-// scriptutil::getBook: the leading non-digit run, or the previous block's book.
-export function getBook(ref, lastBook) {
-  const t = ref.trim();
-  if (!/[a-z]/i.test(t) && lastBook) return lastBook;
-  const m = t.match(/^((?:JST\s*)*[1-4]*\D+)/i);
-  const book = m && m[0].trim() !== '' ? m[0].trim() : lastBook;
-  return book || ref.replace(/[\d:\-\s–]+$/u, '');
 }
 
 const trimChars = (s, chars) => s.replace(new RegExp(`^[${chars}]+|[${chars}]+$`, 'g'), '');
