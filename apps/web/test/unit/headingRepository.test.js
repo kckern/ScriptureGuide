@@ -7,6 +7,8 @@ const { HeadingRepository } = await import('../../src/data/repositories/HeadingR
 // A fake database: heading starts (footer = 0) per version, heading rows, and last verse ids.
 function fakeDb({ starts = {}, rows = [], last = {} } = {}) {
   return async (sql, params = []) => {
+    if (/SELECT DISTINCT version FROM scripture_headings/.test(sql)) return Object.keys(starts).map(version => ({ version }));
+    if (/SELECT DISTINCT version FROM scripture_verses/.test(sql)) return Object.keys(last).map(version => ({ version }));
     if (/SELECT DISTINCT verse_id, book_id FROM scripture_headings/.test(sql)) {
       return (starts[params[0]] ?? []).map(([verse_id, book_id]) => ({ verse_id, book_id }));
     }
@@ -15,7 +17,7 @@ function fakeDb({ starts = {}, rows = [], last = {} } = {}) {
       const [ids, version] = params;
       return rows.filter(r => r.version === version && ids.includes(r.verse_id));
     }
-    if (/FROM scripture_headings h\s+WHERE h\.version = \? AND h\.book_id = \? AND h\.verse_id = \?/.test(sql)) {
+    if (/FROM scripture_headings h FORCE INDEX \(verse_id\)\s+WHERE h\.version = \? AND h\.book_id = \? AND h\.verse_id = \?/.test(sql)) {
       const [version, bookId, verseId] = params;
       return rows.filter(r => r.version === version && r.book_id === bookId && r.verse_id === verseId);
     }
@@ -88,12 +90,39 @@ describe('heading ranges (scriptutil::loadHeading)', () => {
 
 describe('findVersionLastVerseId', () => {
   test('is queried once per version', async () => {
-    query.mockResolvedValue([{ last: 7 }]);
+    query.mockImplementation(fakeDb({ last: { MEMO1: 7, MEMO2: 9 } }));
     expect(await repo.findVersionLastVerseId('MEMO1')).toBe(7);
     expect(await repo.findVersionLastVerseId('MEMO1')).toBe(7);
-    expect(query).toHaveBeenCalledTimes(1);
-    await repo.findVersionLastVerseId('MEMO2');
-    expect(query).toHaveBeenCalledTimes(2);
+    expect(await repo.findVersionLastVerseId('memo2')).toBe(9); // MySQL compares versions case-insensitively
+    const maxQueries = query.mock.calls.filter(([sql]) => /MAX\(verse_id\)/.test(sql));
+    expect(maxQueries.map(c => c[1])).toEqual([['MEMO1'], ['MEMO2']]);
+  });
+});
+
+describe('per-version caches hold only versions that exist', () => {
+  test('1,000 unknown versions add no entries and no per-version queries', async () => {
+    query.mockImplementation(fakeDb({ starts: { KJV: [[10, 1]] }, last: { KJV: 42 } }));
+    expect(await repo.nextHeadingVerse('KJV', 5)).toBe(10);
+    expect(await repo.findVersionLastVerseId('KJV')).toBe(42);
+    for (let i = 0; i < 1000; i++) {
+      expect(await repo.findVersionLastVerseId(`BOGUS${i}`)).toBeNull();
+      expect(await repo.findChapterHeading(11, 1, `BOGUS${i}`)).toBeNull();
+      expect(await repo.nextHeadingVerse(`BOGUS${i}`, 5)).toBeNull();
+    }
+    expect(repo.starts.size).toBe(1);
+    expect(repo.lastVerseIds.size).toBe(1);
+    expect(query.mock.calls.filter(([sql]) => /DISTINCT version/.test(sql))).toHaveLength(2);
+    expect(query.mock.calls.length).toBeLessThan(10);
+  });
+  test('a failed lookup of the known versions is retried', async () => {
+    const ok = fakeDb({ last: { KJV: 42 } });
+    let fail = true;
+    query.mockImplementation((sql, params) => {
+      if (fail && /DISTINCT version/.test(sql)) { fail = false; return Promise.reject(new Error('gone')); }
+      return ok(sql, params);
+    });
+    await expect(repo.findVersionLastVerseId('KJV')).rejects.toThrow('gone');
+    expect(await repo.findVersionLastVerseId('KJV')).toBe(42);
   });
 });
 

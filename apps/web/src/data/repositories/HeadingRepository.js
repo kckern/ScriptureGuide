@@ -122,24 +122,44 @@ function upperBound(ids, verseId) {
   return lo;
 }
 
+// MySQL compares version ids case-insensitively, ignoring trailing spaces (utf8 *_ci collations)
+const versionKey = version => String(version ?? '').toUpperCase().trimEnd();
+const NO_STARTS = Object.freeze({ ids: new Int32Array(0), books: Object.freeze([]) });
+
 export class HeadingRepository {
+  // The versions present in a table, as version keys, loaded once (versions arrive in URLs, so
+  // the per-version caches below hold only these; anything else gets an empty answer and no
+  // entry). A failed load is retried next time.
+  knownVersions(table) {
+    this.known ??= new Map();
+    if (!this.known.has(table)) {
+      const pending = db.query(`SELECT DISTINCT version FROM ${table}`)
+        .then(rows => new Set(rows.map(r => versionKey(r.version))))
+        .catch(err => { this.known.delete(table); throw err; });
+      this.known.set(table, pending);
+    }
+    return this.known.get(table);
+  }
+
   // Where a version's sections start: the verse ids (ascending) and book ids of its headings,
   // footers excluded. A version has a few thousand at most and they do not change while the
   // process runs, so each version is loaded once; a failed load is retried next time.
   // Finding a section's start or end is then a binary search instead of a correlated subquery
   // over the version's headings.
-  headingStarts(version) {
+  async headingStarts(version) {
+    const key = versionKey(version);
+    if (!(await this.knownVersions('scripture_headings')).has(key)) return NO_STARTS;
     this.starts ??= new Map();
-    if (!this.starts.has(version)) {
+    if (!this.starts.has(key)) {
       const pending = db.query(
         'SELECT DISTINCT verse_id, book_id FROM scripture_headings WHERE version = ? AND footer = 0 ORDER BY verse_id',
-        [version]
+        [key]
       )
         .then(rows => ({ ids: Int32Array.from(rows, r => r.verse_id), books: rows.map(r => r.book_id) }))
-        .catch(err => { this.starts.delete(version); throw err; });
-      this.starts.set(version, pending);
+        .catch(err => { this.starts.delete(key); throw err; });
+      this.starts.set(key, pending);
     }
-    return this.starts.get(version);
+    return this.starts.get(key);
   }
 
   // Verse id of the version's first heading after verseId, in any book; null after the last one
@@ -181,17 +201,19 @@ export class HeadingRepository {
     return rows;
   }
 
-  // The highest verse id a version has text for. It does not change while the process runs,
-  // so each version is queried once (a failed query is retried next time).
-  findVersionLastVerseId(version) {
+  // The highest verse id a version has text for (null for a version without text). It does not
+  // change while the process runs, so each version is queried once (a failed query is retried).
+  async findVersionLastVerseId(version) {
+    const key = versionKey(version);
+    if (!(await this.knownVersions('scripture_verses')).has(key)) return null;
     this.lastVerseIds ??= new Map();
-    if (!this.lastVerseIds.has(version)) {
-      const pending = db.query('SELECT MAX(verse_id) AS last FROM scripture_verses WHERE version = ?', [version])
+    if (!this.lastVerseIds.has(key)) {
+      const pending = db.query('SELECT MAX(verse_id) AS last FROM scripture_verses WHERE version = ?', [key])
         .then(([row]) => row?.last ?? null)
-        .catch(err => { this.lastVerseIds.delete(version); throw err; });
-      this.lastVerseIds.set(version, pending);
+        .catch(err => { this.lastVerseIds.delete(key); throw err; });
+      this.lastVerseIds.set(key, pending);
     }
-    return this.lastVerseIds.get(version);
+    return this.lastVerseIds.get(key);
   }
 
   // Chapter-level heading: the book's latest heading at or before the first verse, with every
@@ -218,10 +240,15 @@ export class HeadingRepository {
     return headingVerse == null ? [] : this.findHeadingRows(version, bookId, headingVerse);
   }
 
-  // Every heading row (any type, footers included) of a book at one verse
+  // Every heading row (any type, footers included) of a book at one verse, in insertion order.
+  // Callers fold the rows into one object (a later row of the same type wins) and raw takes the
+  // first row's id, so the order matters. The PHP site's query read them through the verse_id
+  // index, whose entries for one verse follow the table's hidden row id (it has no primary key),
+  // i.e. insertion order. No column reproduces that order (ORDER BY id, seq changes the result
+  // for 354 of 82,837 verse groups), so the index is named to keep the plan, and the order, fixed.
   findHeadingRows(version, bookId, verseId) {
     return db.query(
-      `SELECT h.* FROM scripture_headings h
+      `SELECT h.* FROM scripture_headings h FORCE INDEX (verse_id)
        WHERE h.version = ? AND h.book_id = ? AND h.verse_id = ?`,
       [version, bookId, verseId]
     );
