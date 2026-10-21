@@ -81,3 +81,13 @@ describe('verse 0', () => {
     expect($('span.v_90103').attr('verse_label')).toBe('2');
   });
 });
+
+// Live (scriptures.php renderHTMLElement) wraps h3 content in "\n\t\t\t". main.js appends the
+// heading's buttons inside the h3, so the trailing whitespace renders as a space before them.
+describe('heading whitespace', () => {
+  test('the heading text sits between newline-tab runs, as on live', async () => {
+    const SECTION = fileURLToPath(new URL('../../src/presentation/views/partials/section.ejs', import.meta.url));
+    const html = await ejs.renderFile(SECTION, { data: new HtmlPresenter().serialize(chapter()) });
+    expect(html).toMatch(/<h3 class="heading"[^>]*>\n\t\t\tGenesis 1\n\t\t\t<\/h3>/);
+  });
+});

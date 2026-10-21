@@ -27,7 +27,7 @@ function buildH3(h, version) {
   const faxAttr = h.fax ? ` fax="1"` : '';
   // A heading without text shows its reference (PHP "Reference Headings")
   const text = (h.headless || !h.text) ? (h.ref || h.text || '') : (h.textHtml ?? h.text);
-  return `<h3 class="heading" version="${h.headVersion || version}" heading_verse_id="${h.displayVerseId || h.verse_id}"${vc}${lv}${headless}${ref}${slug}${ver}${img}${parallelAttr}${faxAttr}${audioAttr}>${text}</h3>`;
+  return `<h3 class="heading" version="${h.headVersion || version}" heading_verse_id="${h.displayVerseId || h.verse_id}"${vc}${lv}${headless}${ref}${slug}${ver}${img}${parallelAttr}${faxAttr}${audioAttr}>\n\t\t\t${text}\n\t\t\t</h3>`;
 }
 
 // Group verses into paragraphs based on the paraBreak flag.
