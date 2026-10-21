@@ -33,3 +33,17 @@ describe('error view escapes the message and stack', () => {
     expect(html).toContain('URI malformed: &lt;zzx&gt;');
   });
 });
+
+describe('page title', () => {
+  const title = html => html.match(/<title>(.*)<\/title>/)[1];
+  test('" | " follows any title given, an empty one too (PHP printed "<?=$title?> | ")', async () => {
+    expect(title(await render({ title: 'John 3:16' }))).toBe('John 3:16 | Scripture Guide');
+    expect(title(await render({ title: '' }))).toBe(' | Scripture Guide');
+    expect(title(await render({}))).toBe('Scripture Guide');
+  });
+  test('the home view takes a title, "Home" by default', async () => {
+    const view = path.join(path.dirname(LAYOUT), '../home.ejs');
+    expect(title(await ejs.renderFile(view, { config: {} }))).toBe('Home | Scripture Guide');
+    expect(title(await ejs.renderFile(view, { config: {}, title: '' }))).toBe(' | Scripture Guide');
+  });
+});

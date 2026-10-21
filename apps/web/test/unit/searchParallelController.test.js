@@ -80,6 +80,15 @@ describe('SearchParallelController.dispatch', () => {
     expect(search.search).not.toHaveBeenCalled();
   });
 
+  test('home is titled "Home", or "0" for the reference "0" (a lookup titled $ref on live)', async () => {
+    const { ctl, res, req } = setup();
+    const title = async path => { res.render.mockClear(); await ctl.dispatch(req(path), res); return res.render.mock.calls[0][1].title; };
+    expect(await title('/0')).toBe('0');
+    expect(await title('/kjv/0')).toBe('0');
+    expect(await title('/~/')).toBe('Home');
+    expect(await title('/x/')).toBe('Home');
+  });
+
   test('?q= replaces the path', async () => {
     const { ctl, search, res, req } = setup();
     expect(await ctl.dispatch(req('/search', { query: { q: 'call 12345' } }), res)).toBe(false);

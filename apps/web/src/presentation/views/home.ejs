@@ -1,5 +1,5 @@
 <%- include('layouts/main', {
-  title: 'Home',
+  title: typeof title !== 'undefined' ? title : 'Home',
   config: config,
   slugver: '',
   slugref: '',
