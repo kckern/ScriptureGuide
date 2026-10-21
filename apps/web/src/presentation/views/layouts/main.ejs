@@ -1,4 +1,6 @@
-<!DOCTYPE html>
+<%# No doctype on purpose: live sends none, so browsers lay it out in quirks mode, and the CSS
+    (tables not inheriting font size, the search box, the home buttons) depends on that.
+    Adding one changed 5 of 10 pages by 2-22% of pixels in the browser smoke suite. -%>
 <html lang="en">
 <head>
 <title><%= typeof title !== 'undefined' && title != null ? title + ' | ' : '' %>Scripture Guide</title>
