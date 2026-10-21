@@ -137,6 +137,19 @@ describe('/vbox', () => {
     const res = await request(app).post('/vbox').type('form').send({ verse_id: '26137', seq: "'><script>" });
     expect(res.text).not.toContain('<script>');
   });
+  // PHP put verse_id into SQL as a string, and MySQL read a non-numeric one as 0 (its leading
+  // digits otherwise), so live answers 200 with the box for verse id 0.
+  it.each([['/vbox?verse_id=abc', 0], ['/vbox?q=abc', 0], ['/vbox', 0], ['/vbox?verse_id=26137abc', 26137]])('%s looks up verse id %i', async (path, id) => {
+    const res = await request(app).get(path);
+    expect(res.status).toBe(200);
+    expect(repo.findVerse).toHaveBeenCalledWith(id);
+  });
+  it('an empty verse_id shows the not-found text as the original verse (live looked up "")', async () => {
+    for (const path of ['/vbox', '/vbox?verse_id=', '/vbox?verse_id=0']) {
+      const $ = cheerio.load((await request(app).get(path)).text);
+      expect($('.refpanel tr.original .gridtext').text()).toBe('No scripture verses found.');
+    }
+  });
   it('leads with references when the saved preference says so', async () => {
     repo.findPrefs.mockResolvedValue({ options: { verpanel: 'ref' } });
     const res = await request(app).get('/vbox?verse_id=26137').set('Cookie', 'sg_user=Someone; sg_mail=a@example.com');

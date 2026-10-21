@@ -1,3 +1,4 @@
+import { isEmptyReference } from '../../domain/rules/requestParsing.js';
 import scriptureLookupService from '../../services/ScriptureLookupService.js';
 import referenceService from '../../services/ReferenceService.js';
 import verseboxRepository from '../../data/repositories/VerseboxRepository.js';
@@ -90,7 +91,8 @@ export class AjaxController {
   async vbox(req, res) {
     try {
       const p = params(req);
-      const verseId = parseInt(str(p.verse_id), 10);
+      // MySQL read PHP's quoted verse_id by its leading digits, and a non-numeric one as 0.
+      const verseId = parseInt(str(p.verse_id), 10) || 0;
       const ver = baseVersion(str(p.ver) || 'LDS');
       const seq = str(p.seq);
       const prefs = req.cookies?.sg_user ? await this.repo.findPrefs(req.cookies.sg_mail) : null;
@@ -155,7 +157,8 @@ export class AjaxController {
           title: verse?.verse_title || '',
           titleShort: verse?.verse_title_short || '',
           chapter: chapterSlug(verseId),
-          text: flattenText(ownText[0]?.text || '').trim(),
+          // live looked the raw verse_id up as a reference: an empty one is the not-found text
+          text: isEmptyReference(str(p.verse_id)) ? 'No scripture verses found.' : flattenText(ownText[0]?.text || '').trim(),
         },
         refs,
         refslug: verse ? slugifyRef(rowsReference([metaById.get(verseId)].filter(Boolean), 'book_title')) : '',
