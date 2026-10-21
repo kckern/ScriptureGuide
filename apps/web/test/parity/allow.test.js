@@ -34,4 +34,11 @@ describe('allowReason', () => {
     expect(allowReason(a, 'markdown', '/Fatal error')).toBeUndefined();
     expect(allowReason(a, 'xml', '/x', '<b>Fatal error</b>')).toBeUndefined();
   });
+  test('a "<format> re:<regex> && live:<regex>" key needs both the path and the live body', () => {
+    const a = { 'html re:^/[a-z]+-[a-z]+\\d$ && live:<title>Genesis 1': 'both' };
+    expect(allowReason(a, 'html', '/abc-def1', '<title>Genesis 1–50')).toBe('both');
+    expect(allowReason(a, 'html', '/abc-def1', '<title>Exodus 1')).toBeUndefined();
+    expect(allowReason(a, 'html', '/gen.1', '<title>Genesis 1')).toBeUndefined();
+    expect(allowReason(a, 'html', '/abc-def1')).toBeUndefined();
+  });
 });

@@ -27,7 +27,7 @@ npm run parity -- [--format api,meta] [--only john] [--refresh] [--verbose]
 - The Node app is called at `NODE_BASE` (default `http://127.0.0.1:3101`) with the format's `Host` header, so subdomain routing is exercised.
 - `normalize.mjs` canonicalizes both sides: HTML as a tree of tags, sorted attributes and collapsed text (scoped to `#container` plus `<title>` for pages); JSON with sorted keys, with the `api` `output` HTML canonicalized too; text formats compared exactly apart from trailing spaces.
 - Differences are written to `.cache/diffs/<format>__<path>_<hash>.{live,node}.txt` (the hash keeps paths that flatten alike, such as `/` and `/~/`, apart).
-- `allow.json` records intentional differences: `{ "<format> <path>": "reason" }`. Allowed entries are reported but do not fail. A key `"<format> re:<regex>"` allows every path the regex matches (unanchored, JavaScript syntax), and `"* re:<regex>"` does so in every format; a key `"<format> live:<regex>"` allows every request whose live body the regex matches (for live responses broken whatever the path, such as PHP fatal errors); an exact key wins over a pattern (`allow.mjs`).
+- `allow.json` records intentional differences: `{ "<format> <path>": "reason" }`. Allowed entries are reported but do not fail. A key `"<format> re:<regex>"` allows every path the regex matches (unanchored, JavaScript syntax), and `"* re:<regex>"` does so in every format; a key `"<format> live:<regex>"` allows every request whose live body the regex matches (for live responses broken whatever the path, such as PHP fatal errors); a key `"<format> re:<regex> && live:<regex>"` needs both; an exact key wins over a pattern (`allow.mjs`).
 
 ## Traffic corpus
 
