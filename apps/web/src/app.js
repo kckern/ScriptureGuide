@@ -22,6 +22,12 @@ const app = express();
 // req.ip is the visitor behind Cloudflare, the ALB and nginx-proxy-manager
 app.set('trust proxy', TRUST_PROXY);
 
+// Logging: one JSON line per request on stdout. First, so bytes is measured after compression()
+// and duration covers every middleware.
+if (config.env !== 'test') {
+  app.use(requestLog());
+}
+
 // Security headers
 app.use(helmet({
   contentSecurityPolicy: false // Disable for now, configure properly later
@@ -29,11 +35,6 @@ app.use(helmet({
 
 // Compression
 app.use(compression());
-
-// Logging: one JSON line per request on stdout
-if (config.env !== 'test') {
-  app.use(requestLog());
-}
 
 // Body parsing
 app.use(express.json());
