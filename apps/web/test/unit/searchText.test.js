@@ -1,9 +1,10 @@
 import { describe, test, expect } from 'vitest';
-import { stem } from '../../src/services/search/stemEn.js';
+import { snowballStem as stem, SNOWBALL } from '../../src/services/search/snowballEnglish.js';
 import { tokenize, queryStems, matchesAll, stemPrefix, queryTerms, matchesTerms } from '../../src/services/search/matcher.js';
 
-// Expected stems come from Sphinx's own stem_en (sphinxstemen.cpp compiled and run on each word);
-// the port agrees with it on all 288,696 words of the full database and a dictionary.
+// The stemmer is written from Snowball's English (Porter2) description; every expected stem here
+// was printed by Sphinx's stem_en, compiled and run outside the repo, which agrees with
+// snowballStem on all 288,696 ASCII words of the full database and a dictionary.
 describe('Sphinx stem_en', () => {
   test.each([
     ['caresses', 'caress'], ['ponies', 'poni'], ['cats', 'cat'], ['agreed', 'agre'], ['plastered', 'plaster'],
@@ -35,6 +36,28 @@ describe('Sphinx stem_en', () => {
   });
   test('leaves words of two letters alone', () => {
     expect(stem('is')).toBe('is');
+  });
+});
+
+describe('where Sphinx stem_en differs from the Snowball description', () => {
+  // [word, Sphinx stem, Snowball (pre-3.0) stem]
+  test.each([
+    ['gas', 'ga', 'gas'], ['this', 'thi', 'this'],                        // any final s goes
+    ['demagogy', 'demagog', 'demagogi'],                                 // -ogi → -og after any letter
+    ['combative', 'comb', 'combat'],                                      // -ative goes in R1
+    ['anticonventionalism', 'anticonvention', 'anticonvent'],            // no Step 3 -tional
+    ['arsenal', 'arsen', 'arsenal'], ['communal', 'commun', 'communal'],  // only gener- sets R1
+    ['aquarelle', 'aquarel', 'aquarell'],                                // ll undoubled after e goes
+    ['atlas', 'atla', 'atlas'], ['bias', 'bia', 'bias'],                  // not exceptions
+    ['exceeds', 'exce', 'exceed'], ['herring', 'her', 'herring'],        // fewer invariant forms
+    ['conditionally', 'condit', 'condit'], ['relationally', 'relat', 'relat'], ['nationally', 'nation', 'nation'],
+  ])('%s → %s (Snowball: %s)', (word, sphinx, snowball) => {
+    expect(stem(word)).toBe(sphinx);
+    expect(stem(word, SNOWBALL)).toBe(snowball);
+  });
+  test('-ied/-ies: -ie only after exactly one letter', () => {
+    expect([stem('ties'), stem('cries'), stem('ies')]).toEqual(['tie', 'cri', 'i']);
+    expect(stem('ies', SNOWBALL)).toBe('ie');
   });
 });
 

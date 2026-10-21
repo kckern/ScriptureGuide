@@ -1,9 +1,9 @@
 // Emulates how the Sphinx index (infra/sphinx/sphinx.conf) tokenizes and matches verse text:
 // charset_table = 0..9, A..Z->a..z, _, a..z and Hangul; everything else separates words;
-// morphology = stem_en with min_stemming_len = 3 (stemEn.js). A plain query matches when every query
+// morphology = stem_en with min_stemming_len = 3 (snowballEnglish.js). A plain query matches when every query
 // word's stem occurs in the verse (Sphinx's implicit AND); a "quoted phrase" matches its words
 // in order and adjacent (Sphinx phrase operator), which the live site passed through unchanged.
-import { stem } from './stemEn.js';
+import { snowballStem as stem } from './snowballEnglish.js';
 
 const TOKEN = /[0-9a-z_가-힣ᄀ-ᅙᅡ-ᆢᆨ-ᇹ]+/g;
 

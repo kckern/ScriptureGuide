@@ -1,6 +1,6 @@
 // Comparison and report logic for sphinx-vs-fallback.mjs, kept free of I/O for unit tests.
 import { queryTerms, matchesTerms, tokenize, stemPrefix } from '../../src/services/search/matcher.js';
-import { stem } from '../../src/services/search/stemEn.js';
+import { snowballStem as stem } from '../../src/services/search/snowballEnglish.js';
 import { plainText } from '../../src/domain/rules/legacyText.js';
 
 export const MAX_SHOWN = 10;
