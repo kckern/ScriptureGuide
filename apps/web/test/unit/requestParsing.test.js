@@ -146,6 +146,7 @@ describe('q normalization', () => {
     expect(req('/john%252B3:16', {}, 'api.scripture.guide').legacy.ref).toBe('john+3:16');
     expect(req('/x%2520y.1').reference).toBe('x y.1');
     expect(req('/kjv/50%25').reference).toBe('50%');
+    expect(req('/x%F0%9F%98%80%25').reference).toBe('x\u{1F600}%');
   });
 });
 

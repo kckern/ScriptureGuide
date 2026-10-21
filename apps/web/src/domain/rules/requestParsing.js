@@ -69,9 +69,10 @@ function urldecode(s) {
   if (!spaced.includes('%')) return spaced;
   try { return decodeURIComponent(spaced); } catch { /* a stray "%": decode byte by byte */ }
   const bytes = [];
-  for (let i = 0; i < spaced.length; i++) {
-    const hex = spaced.slice(i + 1, i + 3);
-    if (spaced[i] === '%' && /^[0-9a-f]{2}$/i.test(hex)) { bytes.push(parseInt(hex, 16)); i += 2; } else bytes.push(...Buffer.from(spaced[i]));
+  const chars = [...spaced]; // code points, so a character outside the BMP stays whole
+  for (let i = 0; i < chars.length; i++) {
+    const hex = chars.slice(i + 1, i + 3).join('');
+    if (chars[i] === '%' && /^[0-9a-f]{2}$/i.test(hex)) { bytes.push(parseInt(hex, 16)); i += 2; } else bytes.push(...Buffer.from(chars[i]));
   }
   return Buffer.from(bytes).toString('utf8');
 }
