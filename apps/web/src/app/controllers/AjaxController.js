@@ -45,8 +45,10 @@ export class AjaxController {
     try {
       const p = params(req);
       const ver = baseVersion(str(p.ver));
-      const verseIds = this.references.parse(str(p.ref)).verseIds;
-      if (!verseIds.length) return this.send(res, '');
+      // A reference without verses: PHP queried verse_id = '', which MySQL compares as 0
+      // (scripture_verses has rows at verse id 0), so the covers for verse 0 are listed.
+      const parsed = this.references.parse(str(p.ref)).verseIds;
+      const verseIds = parsed.length ? parsed : [0];
       const [versions, volumeId] = await Promise.all([
         this.repo.findAvailableVersions(verseIds),
         this.repo.findVolumeId(verseIds),

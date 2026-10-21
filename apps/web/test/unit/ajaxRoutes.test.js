@@ -88,9 +88,12 @@ describe('/versionselect', () => {
     expect($('img.option[ver=LDS]').attr('src')).toBe('https://media.scripture.guide/covers/ldskjv.jpg');
     expect($('img.option').first().attr('seq')).toBe('2');
   });
-  it('is empty for an unknown reference', async () => {
-    const res = await request(app).get('/versionselect?ref=&ver=LDS');
-    expect(res.text).toBe('');
+  it('lists the versions of verse id 0 for a missing or unknown reference, as PHP did', async () => {
+    // version_select.php queried verse_id = '' for a reference without verses; MySQL reads '' as 0
+    const res = await request(app).get('/versionselect');
+    expect(repo.findAvailableVersions).toHaveBeenCalledWith([0]);
+    const $ = cheerio.load(res.text);
+    expect($('img.option').map((i, el) => $(el).attr('ver')).get()).toEqual(['LDS', 'KJV', 'ASV']);
   });
 });
 
