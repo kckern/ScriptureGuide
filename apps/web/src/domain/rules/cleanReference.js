@@ -8,6 +8,8 @@
 // undefined variable, so "([—-])h" became " H" (the dash is dropped); "$1" stayed a backreference.
 // Not ported: Dhammapada verses above 26 (a database lookup in PHP).
 
+// PHP ran the book table without /u, so its patterns matched bytes; on these ASCII patterns and
+// the BMP dashes in their classes, matching UTF-16 code units in JS gives the same results.
 /* eslint-disable no-useless-escape */
 const NORMALIZE = [
   [String.raw`(?:the[. ])*Joseph[ .]Smith[']*s*[ .]Trans[.]*(?:lation)*[ .]*o*f*[,.––—− ]*`, "JST "],
@@ -166,9 +168,18 @@ const BOOKS = [
 ];
 /* eslint-enable no-useless-escape */
 
-const compiled = (table, wrap) => table.map(([src, dst]) => [new RegExp(wrap(src), 'gi'), dst]);
+// Patterns that backtrack badly (\b3.*ne...*?acts is cubic, .*?moses quadratic) and can only
+// match when a word is present: skipped without it.
+const NEEDS = new Map([
+  [String.raw`s(?:ealed)*.*?moses`, /moses/i],
+  [String.raw`3.*ne(phi)*(te)*.*?acts`, /acts/i],
+  [String.raw`(?:the )*(?:book of )*(?:the )*Law of the Lord`, /law of the lord/i],
+]);
+const compiled = (table, wrap) => table.map(([src, dst]) => [new RegExp(wrap(src), 'gi'), dst, NEEDS.get(src)]);
 const NORMALIZE_RE = compiled(NORMALIZE, s => s);
 const BOOKS_RE = compiled(BOOKS, s => `\\b${s}\\.*\\b`);
+// For the backtracking audit in the tests
+export const REGEX_TABLES = { NORMALIZE: NORMALIZE_RE, BOOKS: BOOKS_RE };
 
 const SMALL_WORDS = new Set(['of', 'a', 'the', 'and', 'an', 'or', 'nor', 'but', 'is', 'if', 'then', 'else', 'when',
   'at', 'from', 'by', 'on', 'off', 'for', 'in', 'out', 'over', 'to', 'into', 'with']);
@@ -230,17 +241,22 @@ const isEmpty = ref => ref == null || ref === '' || ref === '0' || ref === false
  * reference (PHP empty()). An all-numeric reference was read as verse ids, turned into a
  * reference and cleaned again; callers check numericVerseIds() first (that needs the database).
  */
+// Longer references are not cleaned: several patterns backtrack super-linearly, and PHP gave up
+// on such input too (pcre.backtrack_limit made preg_replace return null, an empty reference).
+export const MAX_CLEAN_LENGTH = 500;
+
 export function cleanReference(input) {
   if (isEmpty(input)) return false;
+  if (String(input).length > MAX_CLEAN_LENGTH) return false;
   let ref = phpTrim(input).split('..').join(';').replace(/(\d+) (\d+)/gi, '$1.$2');
 
   ref = ref.split(' ').join(' ');
   // Leading zeros (applied before the table)
   ref = ref.replace(/([a-z])[ .-]*0+/gi, '$1 ').replace(/^(\d+)-/i, '$1 ');
-  for (const [re, dst] of NORMALIZE_RE) ref = ref.replace(re, dst);
+  for (const [re, dst, need] of NORMALIZE_RE) if (!need || need.test(ref)) ref = ref.replace(re, dst);
 
   ref = strToTitle(lower(ref));
-  for (const [re, dst] of BOOKS_RE) ref = ref.replace(re, dst);
+  for (const [re, dst, need] of BOOKS_RE) if (!need || need.test(ref)) ref = ref.replace(re, dst);
 
   // Default to the 1st chapter, then to the 1st book
   ref = ref.replace(/(Words of Mormon|Articles of Faith|4 Nephi|Jarom|Enos|Omni|Obadiah|2 John|3 John|Philemon|Jude|First Vision|Joseph Smith—.+)\s+([2-9]|(\d\d+))/gi, '$1 1:$2');

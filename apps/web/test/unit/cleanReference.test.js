@@ -1,5 +1,5 @@
 import { describe, test, expect } from 'vitest';
-import { cleanReference, numericVerseIds, strToTitle } from '../../src/domain/rules/cleanReference.js';
+import { cleanReference, numericVerseIds, strToTitle, REGEX_TABLES } from '../../src/domain/rules/cleanReference.js';
 
 // Expected values are what the PHP site showed for these references (block headings, meta "orig").
 describe('cleanReference (scriptutil::cleanReference)', () => {
@@ -71,5 +71,43 @@ describe('strToTitle (utils::strtotitle)', () => {
   });
   test('Jst and Tsp are upper-cased anywhere', () => {
     expect(strToTitle('jst genesis')).toBe('JST Genesis');
+  });
+});
+
+describe('cleanReference: cost of adversarial input', () => {
+  const time = fn => { const t = performance.now(); fn(); return performance.now() - t; };
+  // Fragments that drive the worst backtracking in the regex tables (found by an audit of every
+  // pattern): "3ne " (cubic: \b3.*ne...*?acts), "the " (Law of the Lord), "s " (.*?moses), ...
+  const FRAGMENTS = ['3ne ', '3ne 3ne ', 'the the ', 's ', 'of a ', ',', ',,', '0', '\t. ', ' ', 'jst ', 'al-', 'w o '];
+
+  test('a reference longer than 500 characters is not cleaned (PHP hit pcre.backtrack_limit): false, at once', () => {
+    const long = '3ne '.repeat(2000);
+    let out;
+    expect(time(() => { out = cleanReference(long); })).toBeLessThan(50);
+    expect(out).toBe(false);
+    expect(cleanReference('a'.repeat(501))).toBe(false);
+    expect(cleanReference('a'.repeat(500))).toBe('A'.padEnd(500, 'a'));
+  });
+
+  test.each(FRAGMENTS)('500 characters of %j clean in well under a second', frag => {
+    const s = frag.repeat(Math.ceil(500 / frag.length)).slice(0, 500);
+    expect(time(() => cleanReference(s))).toBeLessThan(100);
+  });
+
+  test('with "acts" or "moses" present the guarded patterns still apply', () => {
+    expect(cleanReference('3 nephites acts 2')).toBe('Acts of the Three Nephites 2');
+    expect(cleanReference('sealed book of moses 1')).toBe('Sealed Book of Moses 1');
+  });
+});
+
+describe('regex tables: no pattern backtracks badly on 500 characters', () => {
+  const FRAGMENTS = ['3ne ', '3ne 3ne ', 'the the ', 's ', 'of a ', ',', ',,', '0', '\t. ', ' ', 'jst ', 'al-', 'w o ', 'd c a ', 'surah a ', 'qur ', 'l o '];
+  test.each(Object.entries(REGEX_TABLES).flatMap(([t, list]) => list.map(([re], i) => [`${t} ${i}`, re])))('%s', (name, re) => {
+    for (const frag of FRAGMENTS) {
+      const s = frag.repeat(Math.ceil(500 / frag.length)).slice(0, 500);
+      const t = performance.now();
+      s.replace(re, 'X');
+      expect(performance.now() - t).toBeLessThan(25);
+    }
   });
 });
