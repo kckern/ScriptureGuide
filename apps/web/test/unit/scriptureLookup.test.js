@@ -88,3 +88,30 @@ describe('lookup: numbers among words are not verse ids', () => {
     expect(r.reference.verseIds).toEqual([1, 5]);
   });
 });
+
+describe('lookup: chapter nav follows the cleaned reference', () => {
+  const rows = [1, 2].map(n => ({ verse_id: 40000 + n, chapter: 2, verse: n, text: 'And it came to pass.' }));
+  const refs = { parse: t => ({ isEmpty: false, book: 'Abraham', normalized: 'Abraham 2', verseIds: rows.map(r => r.verse_id), chapter: 2, query: t }) };
+  const verses = {
+    findByIds: async () => rows.map(r => ({ ...r, version: 'LDS' })),
+    findChaptersByVerseIds: async ids => rows.filter(r => ids.includes(r.verse_id)).map(r => ({ verse_id: r.verse_id, chapter: r.chapter })),
+  };
+  const row = chapter => ({ volume_id: 5, book_title: 'Abraham', book_title_short: 'Abr.', chapter });
+  const headings = {
+    findBookId: async () => ({ book_id: 1, lds_org: 'abr', book_title: 'Abraham', book_title_short: 'Abr.' }),
+    findByVerseIds: async () => [],
+    findChapterHeading: async () => null,
+    findChapterNavRows: async () => ({ current: row(2), prev: row(1), next: row(3) }),
+    findChapterBounds: async () => ({ first: 40001, last: 40002 }),
+    hasAudio: async () => 0,
+    findParallels: async () => ({}),
+    findFaxVerseIds: async () => [],
+  };
+  const svc = new ScriptureLookupService(refs, verses, headings);
+  test('a chapter reference has it', async () => {
+    expect((await svc.lookup('abr.2', {})).chapterNav?.next?.href).toBe('/abr.3');
+  });
+  test('not when cleanReference reads verses into it ("abr.2.1-9.3-4" is "Abraham 2:1-9:3-4"), as PHP checked $meta[0][orig]', async () => {
+    expect((await svc.lookup('abr.2.1-9.3-4', {})).chapterNav).toBeNull();
+  });
+});

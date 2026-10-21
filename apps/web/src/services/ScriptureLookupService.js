@@ -8,7 +8,7 @@ import VerseSerializer from '../presentation/serializers/VerseSerializer.js';
 import { defaultVersions, versionOrder } from '../domain/rules/defaultVersions.js';
 import { applyFormatOverride } from '../domain/rules/formatOverride.js';
 import { getBook, splitRuns } from '../domain/rules/legacyReference.js';
-import { numericVerseIds } from '../domain/rules/cleanReference.js';
+import { numericVerseIds, cleanReference } from '../domain/rules/cleanReference.js';
 import { parseVerseIdList } from '../domain/rules/referenceParsing.js';
 import { isCompoundLine } from '../domain/rules/legacyText.js';
 import { wantsChapterNav, chapterNavLinks, sectionNavLinks, sectionRef } from '../domain/rules/chapterNav.js';
@@ -191,7 +191,9 @@ export class ScriptureLookupService {
         const firstVerseText = verseRows[0]?.text || '';
         const isNewSection = firstVerseText.startsWith('§¶');
         chapterHeading = await this.headingRepository.findChapterHeading(firstVerseId, bookId, headingVersion, isNewSection);
-        if (!config._multiBlock && wantsChapterNav(reference.normalized) && !/[,;:]/.test(referenceString)) {
+        // PHP tested the cleaned block ("abr.2.1-9.3-4" → "Abraham 2:1-9:3-4") for [,;:]
+        if (!config._multiBlock && wantsChapterNav(reference.normalized) && !/[,;:]/.test(referenceString) &&
+            !/[,;:]/.test(cleanReference(referenceString) || '')) {
           chapterNav = chapterNavLinks({
             ...(await this.headingRepository.findChapterNavRows(firstVerseId, lastVerseId)),
             versionSpec: config.versionSpec || null,
