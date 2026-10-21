@@ -56,5 +56,9 @@ jobs:
           # Generous for now; production times come from staging (Task 8)
           loved=$(median http://localhost:3001/search/loved)
           test "$loved" -lt 500 || { echo "Sphinx /search/loved took ${loved} ms (limit 500)"; exit 1; }
+      - name: Sphinx and MySQL fallback find the same verses
+        # web-sphinx has SPHINX_HOST=sphinx and MYSQL_HOST=db; the script runs SearchService's
+        # hits() through both backends and compares verse ids per version (KJV, ASV, WEB)
+        run: docker exec web-sphinx node test/integration/sphinx-vs-fallback.mjs
       - if: failure()
         run: docker compose -f infra/docker-compose.yml --profile search logs --tail 80
