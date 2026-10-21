@@ -112,29 +112,72 @@ function buildSrcSlug(labelRows, chapterSizeMap) {
   return result2.join(';');
 }
 
+// Index of the first id greater than verseId in a sorted array of verse ids.
+function upperBound(ids, verseId) {
+  let lo = 0, hi = ids.length;
+  while (lo < hi) {
+    const mid = (lo + hi) >> 1;
+    if (ids[mid] <= verseId) lo = mid + 1; else hi = mid;
+  }
+  return lo;
+}
+
 export class HeadingRepository {
-  // Inline headings for verses - filtered by version, includes last_verse_id via self-join
+  // Where a version's sections start: the verse ids (ascending) and book ids of its headings,
+  // footers excluded. A version has a few thousand at most and they do not change while the
+  // process runs, so each version is loaded once; a failed load is retried next time.
+  // Finding a section's start or end is then a binary search instead of a correlated subquery
+  // over the version's headings.
+  headingStarts(version) {
+    this.starts ??= new Map();
+    if (!this.starts.has(version)) {
+      const pending = db.query(
+        'SELECT DISTINCT verse_id, book_id FROM scripture_headings WHERE version = ? AND footer = 0 ORDER BY verse_id',
+        [version]
+      )
+        .then(rows => ({ ids: Int32Array.from(rows, r => r.verse_id), books: rows.map(r => r.book_id) }))
+        .catch(err => { this.starts.delete(version); throw err; });
+      this.starts.set(version, pending);
+    }
+    return this.starts.get(version);
+  }
+
+  // Verse id of the version's first heading after verseId, in any book; null after the last one
+  async nextHeadingVerse(version, verseId) {
+    const { ids } = await this.headingStarts(version);
+    const i = upperBound(ids, verseId);
+    return i < ids.length ? ids[i] : null;
+  }
+
+  // Verse id of the book's latest heading at or before verseId; null when there is none
+  // (a null book matches nothing, as in SQL)
+  async latestHeadingVerse(version, bookId, verseId) {
+    if (bookId == null) return null;
+    const { ids, books } = await this.headingStarts(version);
+    let i = upperBound(ids, verseId) - 1;
+    while (i >= 0 && books[i] !== bookId) i--;
+    return i < 0 ? null : ids[i];
+  }
+
+  // Last verse of the section starting at verseId: the verse before the version's next heading
+  // in any book, or the version's last verse (scriptutil::loadHeading)
+  async sectionLast(version, verseId) {
+    const next = await this.nextHeadingVerse(version, verseId);
+    return next != null ? next - 1 : this.findVersionLastVerseId(version);
+  }
+
+  // Inline headings for verses - filtered by version, with the last verse of each section
   async findByVerseIds(verseIds, version = 'LDS') {
     if (!verseIds || verseIds.length === 0) return [];
 
     const rows = await db.query(
-      `SELECT h.verse_id, h.version, h.type, h.text, h.style, h.level, h.seq, h.footer, h.book_id,
-        (SELECT MIN(h2.verse_id) - 1
-         FROM scripture_headings h2
-         WHERE h2.version = h.version
-           AND h2.verse_id > h.verse_id AND h2.footer = 0
-        ) AS last_verse_id
+      `SELECT h.verse_id, h.version, h.type, h.text, h.style, h.level, h.seq, h.footer, h.book_id
        FROM scripture_headings h
        WHERE h.verse_id IN (?) AND h.version = ?
        ORDER BY h.verse_id, h.seq`,
       [verseIds, version]
     );
-
-    // The version's last heading runs to its last verse (scriptutil::loadHeading)
-    if (rows.some(r => r.last_verse_id == null)) {
-      const last = await this.findVersionLastVerseId(version);
-      for (const r of rows) if (r.last_verse_id == null) r.last_verse_id = last;
-    }
+    for (const r of rows) r.last_verse_id = await this.sectionLast(version, r.verse_id);
     return rows;
   }
 
@@ -151,24 +194,13 @@ export class HeadingRepository {
     return this.lastVerseIds.get(version);
   }
 
-  // Chapter-level heading: find most recent heading record at or before first verse
-  // Mirrors PHP's loadHeading() logic
+  // Chapter-level heading: the book's latest heading at or before the first verse, with every
+  // type recorded at that verse. Mirrors PHP's loadHeading().
   // isNewSection: if first verse starts with §¶, PHP does NOT decrement verse_id
   async findChapterHeading(firstVerseId, bookId, version = 'LDS', isNewSection = false) {
     const lookupId = isNewSection ? firstVerseId : firstVerseId - 1;
 
-    const rows = await db.query(
-      `SELECT h.* FROM scripture_headings h
-       WHERE h.version = ?
-         AND h.book_id = ?
-         AND h.verse_id = (
-           SELECT MAX(verse_id) FROM scripture_headings
-           WHERE version = ? AND book_id = ? AND verse_id <= ? AND footer = 0
-         )
-       ORDER BY h.verse_id DESC`,
-      [version, bookId, version, bookId, lookupId]
-    );
-
+    const rows = await this.findHeadingRowsAtOrBefore(version, bookId, lookupId);
     if (!rows.length) return null;
 
     // Aggregate all types from matching rows into one object
@@ -176,18 +208,23 @@ export class HeadingRepository {
     for (const row of rows) {
       heading[row.type] = row.text;
     }
-
-    // Last verse covered: up to the version's next heading in any book, or its last verse
-    // (scriptutil::loadHeading)
-    const [next] = await db.query(
-      `SELECT verse_id FROM scripture_headings
-       WHERE version = ? AND verse_id > ? AND footer = 0
-       ORDER BY verse_id ASC LIMIT 1`,
-      [version, rows[0].verse_id]
-    );
-    heading.last = next ? next.verse_id - 1 : await this.findVersionLastVerseId(version);
-
+    heading.last = await this.sectionLast(version, rows[0].verse_id);
     return heading;
+  }
+
+  // Every heading row of the book's latest heading at or before verseId; [] when there is none
+  async findHeadingRowsAtOrBefore(version, bookId, verseId) {
+    const headingVerse = await this.latestHeadingVerse(version, bookId, verseId);
+    return headingVerse == null ? [] : this.findHeadingRows(version, bookId, headingVerse);
+  }
+
+  // Every heading row (any type, footers included) of a book at one verse
+  findHeadingRows(version, bookId, verseId) {
+    return db.query(
+      `SELECT h.* FROM scripture_headings h
+       WHERE h.version = ? AND h.book_id = ? AND h.verse_id = ?`,
+      [version, bookId, verseId]
+    );
   }
 
   // Verse-index rows around a passage, for chapter nav: the first verse, the verse

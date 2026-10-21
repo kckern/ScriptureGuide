@@ -1,9 +1,11 @@
 import db from '../db/connection.js';
+import defaultHeadings from './HeadingRepository.js';
 
 // Data for the LaTeX output (PHP renderRaw + inc_latex.php lookups).
 export class LatexRepository {
-  constructor(database = db) {
+  constructor(database = db, headings = defaultHeadings) {
     this.db = database;
+    this.headings = headings;
   }
 
   // PHP scriptures::renderRaw: the raw verse rows of one version, keyed and sorted by verse_id.
@@ -23,14 +25,7 @@ export class LatexRepository {
   async loadHeading(verseId, version) {
     const book = await this.db.query('SELECT book_id FROM lds_scriptures_verses WHERE verse_id = ? LIMIT 1', [verseId]);
     const bookId = book[0]?.book_id ?? null;
-    const items = await this.db.query(
-      `SELECT h.* FROM scripture_headings h
-       WHERE version = ? AND book_id = ? AND verse_id <= ?
-         AND verse_id = (SELECT max(verse_id) FROM scripture_headings
-                         WHERE version = ? AND book_id = ? AND verse_id <= ? AND footer = 0)
-       ORDER BY h.verse_id DESC`,
-      [version, bookId, verseId, version, bookId, verseId]
-    );
+    const items = await this.headings.findHeadingRowsAtOrBefore(version, bookId, verseId);
     const data = {};
     for (const item of items) data[item.type] = item.text;
     const headingVerseId = items[0]?.verse_id ?? null;

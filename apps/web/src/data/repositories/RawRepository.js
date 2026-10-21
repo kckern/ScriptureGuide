@@ -1,4 +1,5 @@
 import db from '../db/connection.js';
+import headingRepository from './HeadingRepository.js';
 
 // Queries behind the legacy data formats (api, meta, raw, plain), mirroring the PHP site's SQL.
 // Values come back as strings, as PHP's mysqli returned them, so the JSON encoders see the same types.
@@ -44,15 +45,9 @@ export class RawRepository {
     let version;
     for (version of versions) {
       const book = await db.query('SELECT book_id FROM lds_scriptures_verses WHERE verse_id = ? LIMIT 1', [id]);
-      const bookId = book[0]?.book_id ?? '';
-      items = await db.query(
-        `SELECT h.* FROM scripture_headings h
-          WHERE version = ? AND book_id = ? AND verse_id <= ?
-            AND verse_id = (SELECT max(verse_id) FROM scripture_headings
-                             WHERE version = ? AND book_id = ? AND verse_id <= ? AND footer = 0)
-          ORDER BY h.verse_id DESC`,
-        [version, bookId, id, version, bookId, id]
-      );
+      // PHP compared book_id = '' when the verse is missing, which MySQL reads as 0
+      const bookId = book[0]?.book_id ?? 0;
+      items = await headingRepository.findHeadingRowsAtOrBefore(version, bookId, id);
       if (items.length) break;
     }
 
@@ -60,15 +55,12 @@ export class RawRepository {
     const data = { id: first.id ?? null, version: first.version ?? null, verse_id: first.verse_id ?? null, prev_id: first.prev_id ?? null };
     for (const item of items) data[item.type] = item.text;
 
-    const next = await db.query(
-      'SELECT verse_id FROM scripture_headings WHERE version = ? AND verse_id > ? AND footer = 0 ORDER BY verse_id ASC LIMIT 1',
-      [version ?? '', id]
-    );
-    if (next.length) {
-      data.last = Number(next[0].verse_id) - 1;
+    const next = await headingRepository.nextHeadingVerse(version ?? '', id);
+    if (next != null) {
+      data.last = next - 1;
     } else {
-      const max = await db.query('SELECT max(verse_id) AS last FROM scripture_verses WHERE version = ?', [version ?? '']);
-      data.last = max[0]?.last == null ? null : String(max[0].last);
+      const max = await headingRepository.findVersionLastVerseId(version ?? '');
+      data.last = max == null ? null : String(max);
     }
 
     // PHP: if($verse_id != $data['verse_id'] && empty($data['heading'])) return [];
