@@ -23,6 +23,11 @@ export function logEvent(msg, fields = {}, write = writeLine) {
   write(JSON.stringify({ time: new Date().toISOString(), msg, ...fields }));
 }
 
+// A configuration warning as a JSON line, e.g. a font file missing under FONT_DIR.
+export function logWarning(message) {
+  logEvent('warn', { message });
+}
+
 // A readable message even for errors without one (mysql2's AggregateError has message '').
 export function errorText(err) {
   if (err == null) return String(err);

@@ -5,6 +5,7 @@
 import { existsSync } from 'node:fs';
 import path from 'node:path';
 import { PRIVATE_FONTS_PATH } from '../config/index.js';
+import { logWarning } from '../app/log.js';
 
 export const FAMILY = 'Goudy Scripture';
 const SAFE = /^[A-Za-z0-9._~:/?#@!$&*+,;=%-]*$/; // no quotes, parentheses, spaces or angle brackets
@@ -33,7 +34,7 @@ export function goudyFontFace({ base, goudyFile }) {
 
 // goudyFontFace, checked at startup: when the font is served from FONT_DIR, the file must be
 // there, or every page would request a 404. Missing: a warning and no @font-face.
-export function privateFontCss(fonts, { exists = existsSync, warn = console.warn } = {}) {
+export function privateFontCss(fonts, { exists = existsSync, warn = logWarning } = {}) {
   if (fonts.dir && fonts.base === PRIVATE_FONTS_PATH) {
     const file = path.join(fonts.dir, fonts.goudyFile);
     if (!exists(file)) {

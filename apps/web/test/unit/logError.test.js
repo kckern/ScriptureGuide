@@ -78,3 +78,18 @@ test('logEvent writes a JSON line with msg and fields (the startup line)', () =>
   logEvent('start', { port: 3000, env: 'production' });
   expect(records()[0]).toMatchObject({ msg: 'start', port: 3000, env: 'production' });
 });
+
+test('font configuration warnings default to JSON lines', async () => {
+  const { fontsFromEnv } = await import('../../src/config/index.js');
+  const { privateFontCss } = await import('../../src/presentation/fontFaces.js');
+  const lines = [];
+  const prev = setLogWriter(l => lines.push(l));
+  try {
+    fontsFromEnv({ FONT_BASE: '/' });
+    privateFontCss(fontsFromEnv({ FONT_DIR: '/nonexistent-font-dir' }), { exists: () => false });
+  } finally {
+    setLogWriter(prev);
+  }
+  expect(lines.length).toBe(2);
+  for (const line of lines) expect(JSON.parse(line)).toMatchObject({ msg: 'warn', message: expect.any(String) });
+});
