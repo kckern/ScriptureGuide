@@ -77,6 +77,8 @@ function joinPieces(pieces) {
 // so a long row of them makes the regex try every way of splitting each run it crosses (a query of
 // 'the', 1000 spaces and 'lord' took 40 s on one verse). Rows of more than MAX_GAP empty pieces
 // (more than MAX_GAP + 1 spaces or dots in a row, which no realistic query has) are cut to MAX_GAP.
+// An empty piece also matches any one word between its separators, so a row of k empty pieces
+// spans up to k words; the cap limits such a gap to MAX_GAP (8) words.
 const MAX_GAP = 8;
 function prefixPieces(pieces) {
   const out = [];
@@ -93,6 +95,10 @@ export function makeHighlighter(query) {
   const phrase = `\\b${joinPieces(pieces.map(escapeRegex))}[a-z]*`;
   const prefixes = `\\b${prefixPieces(pieces).map(p => `${escapeRegex(p.slice(0, 3))}[a-z]*`).join('\\W+')}[a-z]*`;
   const stages = [phrase, prefixes].map(src => ({ test: new RegExp(src, 'i'), all: new RegExp(src, 'gi') }));
+  // The per-word step's three-letter prefixes. PHP's preg_split('/[^a-z]+/i') gives an empty
+  // piece for a leading or trailing non-letter ('faith charity!'), and its pattern /\b[a-z]*/i
+  // wraps every word and puts an empty span at each word boundary (a live bug). Intended
+  // difference: Node drops empty pieces and wraps only words that start like a query word.
   const words = new Set(String(query).split(/[^a-z]+/i).filter(Boolean).map(q => q.slice(0, 3).toLowerCase()));
   const marked = w => {
     const l = w.toLowerCase();

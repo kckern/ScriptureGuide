@@ -212,6 +212,12 @@ describe('helpers', () => {
     expect(out).not.toMatch(/<span[^>]*>[^<]*<span/);
     expect(Date.now() - start).toBeLessThan(1000);
   });
+  test('leading or trailing punctuation highlights only the query words (intended difference from live)', () => {
+    // Live's empty preg_split piece wraps every word and adds empty spans; Node does not
+    const out = "<span class='searchterm'>charity</span> and <span class='searchterm'>faith</span>";
+    expect(highlight('charity and faith', 'faith charity!')).toBe(out);
+    expect(highlight('charity and faith', '!faith charity')).toBe(out);
+  });
   test('highlight treats repeated separators as live does', () => {
     expect(highlight('faith, hope', 'faith  hope')).toBe("<span class='searchterm'>faith, hope</span>");
     expect(highlight('faith hope', 'faith  hope')).toBe("<span class='searchterm'>faith</span> <span class='searchterm'>hope</span>");
