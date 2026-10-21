@@ -12,3 +12,12 @@ describe('intEnv', () => {
     expect(intEnv('abc', 3)).toBe(3);
   });
 });
+
+describe('no server-side sessions', () => {
+  test('config has no session block and express-session is not a dependency', async () => {
+    const { config } = await import('../../src/config/index.js');
+    expect(config).not.toHaveProperty('session');
+    const pkg = JSON.parse(await (await import('node:fs/promises')).readFile(new URL('../../package.json', import.meta.url), 'utf8'));
+    expect(pkg.dependencies).not.toHaveProperty('express-session');
+  });
+});

@@ -57,17 +57,7 @@ export const config = {
     assetHost: process.env.ASSET_HOST || 'https://assets.scripture.guide'
   },
 
-  fonts: fontsFromEnv(process.env),
-
-  session: {
-    secret: process.env.SESSION_SECRET || 'dev-secret-change-me',
-    resave: false,
-    saveUninitialized: false,
-    cookie: {
-      secure: process.env.NODE_ENV === 'production',
-      maxAge: 30 * 24 * 60 * 60 * 1000 // 30 days
-    }
-  }
+  fonts: fontsFromEnv(process.env)
 };
 
 export default config;

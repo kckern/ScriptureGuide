@@ -1081,7 +1081,6 @@ services:
       MYSQL_PASSWORD: dev
       MYSQL_DATABASE: scripture_guide
       SPHINX_API: http://sphinx:9312
-      SESSION_SECRET: dev
     ports: ["127.0.0.1:3000:3000"]
     depends_on: { db: { condition: service_healthy }, sphinx: { condition: service_started } }
 ```

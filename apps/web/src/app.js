@@ -2,7 +2,6 @@ import express from 'express';
 import helmet from 'helmet';
 import compression from 'compression';
 import cookieParser from 'cookie-parser';
-import session from 'express-session';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
@@ -40,9 +39,8 @@ if (config.env !== 'test') {
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Cookies and sessions
+// Cookies (preferences are client cookies; there are no server-side sessions)
 app.use(cookieParser());
-app.use(session(config.session));
 
 // Static files
 app.use(publicStatic());
