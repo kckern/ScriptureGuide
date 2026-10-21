@@ -76,6 +76,10 @@ export function parseVersionSpec(spec, { keepEmpty = false } = {}) {
   return list;
 }
 
+// PHP's empty() on a reference string: "" and "0" are both empty (index.php's empty($ref) → home,
+// cleanReference → false).
+export const isEmptyReference = ref => ref == null || ref === '' || ref === '0';
+
 // The version a search is limited to: PHP's $forcever, the format of the last piece of the
 // version spec ("kjv.1830*rebom" → "REBOM"); null without a version spec or for an empty piece.
 export function searchVersion(versionSpec) {

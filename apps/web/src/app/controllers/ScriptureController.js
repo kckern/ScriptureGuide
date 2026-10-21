@@ -3,6 +3,7 @@ import searchParallelController from './SearchParallelController.js';
 import outputMiddleware from '../middleware/output.js';
 import referenceService from '../../services/ReferenceService.js';
 import { bookOnlyQuery } from '../../domain/rules/referenceParsing.js';
+import { isEmptyReference } from '../../domain/rules/requestParsing.js';
 
 // Formats whose reference blocks ("meta") name a book given alone (scriptures::loadMetaFromRef)
 const BOOK_ONLY_FORMATS = new Set(['meta', 'api']);
@@ -35,9 +36,9 @@ export class ScriptureController {
       // A parallel q reached through ?q= has no route param: use the parsed q.
       const reference = config.parallel ? (req.params?.reference || config.reference) : (config.reference ?? req.params.reference);
 
-      if (!reference && !config.parallel && !answersEmpty(config)) return this.home(req, res);
+      if (isEmptyReference(reference) && !config.parallel && !answersEmpty(config)) return this.home(req, res);
 
-      const result = await this.lookupService.lookup(reference, config);
+      const result = await this.lookupService.lookup(isEmptyReference(reference) ? '' : reference, config);
       result.bookOnly = await this.bookOnly(result, config);
 
       // Attach result for output middleware

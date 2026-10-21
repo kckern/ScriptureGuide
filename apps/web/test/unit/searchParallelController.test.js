@@ -71,7 +71,7 @@ describe('SearchParallelController.dispatch', () => {
 
   test('an empty reference renders home, before search', async () => {
     const { ctl, search, res, req } = setup();
-    for (const path of ['/~/', '/__debug__/', '//feed/', '/x/', '/john.3.16']) {
+    for (const path of ['/~/', '/__debug__/', '//feed/', '/x/', '/0', '/kjv/0', '/john.3.16']) {
       res.render.mockClear();
       const query = path === '/john.3.16' ? { q: '' } : {};
       expect(await ctl.dispatch(req(path, { query }), res)).toBe(true);

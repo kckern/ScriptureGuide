@@ -40,6 +40,15 @@ describe('an empty reference on a non-HTML host', () => {
   });
 });
 
+// PHP's empty() is true for "0", so /0 is an empty reference too.
+describe('"0" is an empty reference (PHP empty)', () => {
+  test('meta and api give the empty block, plain the not-found text', async () => {
+    expect(JSON.parse((await get('meta.scripture.guide', '/0')).body)).toEqual([{ orig: '', book: '', verse_ids: false }]);
+    expect(JSON.parse((await get('api.scripture.guide', '/0')).body).meta).toEqual([{ orig: '', book: '', verse_ids: false, version: '' }]);
+    expect((await get('plain.scripture.guide', '/0')).body).toBe('No scripture verses found.');
+  });
+});
+
 describe('a parallel ?q= on a non-HTML host', () => {
   test('api answers 200 with an empty body, as live', async () => {
     const res = await get('api.scripture.guide', '/?q=john.3.16~gen.1.1');

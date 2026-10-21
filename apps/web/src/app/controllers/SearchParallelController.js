@@ -2,7 +2,7 @@ import parallelService from '../../services/ParallelService.js';
 import searchService from '../../services/SearchService.js';
 import { slugifyRef } from '../../domain/rules/legacyReference.js';
 import { OutputFormat } from '../../domain/enums/OutputFormat.js';
-import { searchVersion } from '../../domain/rules/requestParsing.js';
+import { searchVersion, isEmptyReference } from '../../domain/rules/requestParsing.js';
 
 // The html body of the PHP front controller (index.php), in its order, from the parsed request
 // (req.config), never from the Express route params:
@@ -29,7 +29,7 @@ export class SearchParallelController {
       return true;
     }
 
-    if (!config.reference) {
+    if (isEmptyReference(config.reference)) {
       res.render('home', { config });
       return true;
     }
