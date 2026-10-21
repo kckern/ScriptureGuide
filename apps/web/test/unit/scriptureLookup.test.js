@@ -28,3 +28,21 @@ describe('splitBlocks', () => {
     expect(svc.splitBlocks('1; 5-6')).toEqual(['1', '5-6']);
   });
 });
+
+describe('lookup: the short book title for compound refs', () => {
+  const rows = { 1: { verse_id: 1, verse: 1, chapter: 1, text: 'In the beginning.' }, 57: { verse_id: 57, verse: 1, chapter: 3, text: '*' } };
+  const refs = { parse: t => ({ isEmpty: false, book: 'Genesis', normalized: t, verseIds: t.includes('3') ? [57] : [1], chapter: 1 }) };
+  const verses = {
+    findByIds: async ids => ids.map(id => ({ ...rows[id], version: 'KJV' })),
+    findChaptersByVerseIds: async ids => ids.map(id => ({ verse_id: id, chapter: rows[id].chapter })),
+  };
+  const headings = {
+    findBookId: async () => ({ book_id: 1, lds_org: 'gen', book_title: 'Genesis', book_title_short: 'Gen.' }),
+    findFaxVerseIds: async () => [],
+  };
+  const svc = new ScriptureLookupService(refs, verses, headings);
+  test('is set on every block, with or without headings', async () => {
+    const r = await svc.lookup('gen.1.1; gen.3.1', { version: 'KJV', includeHeadings: false });
+    expect(r.sections.map(s => s.config._bookShort)).toEqual(['Gen.', 'Gen.']);
+  });
+});

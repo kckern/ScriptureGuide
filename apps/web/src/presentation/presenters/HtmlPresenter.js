@@ -2,7 +2,7 @@ import VerseSerializer from '../serializers/VerseSerializer.js';
 import { displayReference, blankHeading } from '../../domain/rules/referenceParsing.js';
 
 import { versionImg, formatReference as referenceFromVerseIds } from '../../domain/rules/legacyReference.js';
-import { renderHeadingHtml, renderHeadingFields, RENDERED_HEADING_FIELDS, segmentFormats, escapeHtml } from '../../domain/rules/legacyText.js';
+import { renderHeadingHtml, renderHeadingFields, RENDERED_HEADING_FIELDS, segmentFormats, escapeHtml, isCompoundLine } from '../../domain/rules/legacyText.js';
 
 // versionImg takes lds_scriptures_volumes.volume_id; Reference.volume is a volume code.
 // Verses outside the five volumes (null) have no LDS cover: 0 gives "lds".
@@ -18,7 +18,7 @@ export function foldCompounds(lines, bookShort) {
   let merged = null; // verse_id → { book, bookId, chapter, verse } of the host and its merged verses
   const at = line => ({ book: bookShort, bookId: 0, chapter: line.chapter, verse: line.num });
   for (const line of lines) {
-    if (String(line.text).trim() !== '*' || !host) {
+    if (!isCompoundLine(line.text) || !host) {
       out.push(line);
       host = line;
       merged = new Map([[line.id, at(line)]]);
@@ -456,7 +456,7 @@ export class HtmlPresenter {
             lbIndex: lbIdx
           }));
         });
-      }), result.config._bookShort || result.reference._bookShort || result.reference.book),
+      }), result.config._bookShort ?? ''),
       h3ByVerse,       // full h3 headings indexed by verse_id
       inlineByVerse,   // non-heading inline elements indexed by verse_id
       prePassageH3,    // chapter heading from prior section (renders before verses with ellipsis)

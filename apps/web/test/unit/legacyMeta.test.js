@@ -42,6 +42,17 @@ describe('metaFromRef (scriptures::loadMetaFromRef)', () => {
     expect(metaFromRef('john.3.16,18;gen.1.1').map(b => b.orig)).toEqual(['John 3:16, 18', 'Genesis Genesis 1:1']);
   });
 
+  test('a piece the package cannot read adds no block', () => {
+    expect(metaFromRef('xyzzy;john.3.16').map(b => b.orig)).toEqual(['John 3:16']);
+  });
+
+  test('many pieces skip the per-piece grouping', () => {
+    const ref = Array.from({ length: 60 }, (_, i) => `ps.${i + 1}.1`).join(';');
+    const t0 = performance.now();
+    expect(metaFromRef(ref)).toHaveLength(60);
+    expect(performance.now() - t0).toBeLessThan(250);
+  });
+
   test('unknown reference gives no blocks', () => {
     expect(metaFromRef('nothing')).toEqual([]);
   });

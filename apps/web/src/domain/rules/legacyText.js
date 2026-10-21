@@ -104,6 +104,12 @@ export function renderHeadingFields(record) {
   return out;
 }
 
+// scriptures::formattedData: a line of exactly "*" (2HRBOM, CTBOM, EARLIEST ...) is a verse merged
+// into the line before it.
+export function isCompoundLine(text) {
+  return String(text ?? '').trim() === '*';
+}
+
 // scriptures::formattedData: the format and paragraph class of each segment of a verse, from the
 // verse's own format and the marker before each segment. A marker's format holds for the rest of
 // the verse: ¶▼ poetry, ¶↪ indent, ¶► prose; ¶◄ starts a "flush" paragraph, ¶◤ a "linebreak"
@@ -111,7 +117,8 @@ export function renderHeadingFields(record) {
 // segments: [{ meta, text }] from VerseSerializer.splitSegments.
 export function segmentFormats(verseFormat, segments) {
   let format = verseFormat || 'prose';
-  return segments.map(({ meta, text }) => {
+  return segments.map(({ meta: rawMeta, text }) => {
+    const meta = String(rawMeta ?? '').replace(/^▲/, ''); // formattedData drops a verse head's ▲ first
     let paraClass = '';
     if (meta === '¶◄' || meta === '§¶◄') { paraClass = 'flush'; }
     else if (meta === '¶▼') format = 'poetry';

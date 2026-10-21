@@ -74,6 +74,7 @@ describe('displayReference', () => {
     expect(displayReference('2 Nephi 3:19-20; 2 Nephi 27:13; 2 Nephi 29:2')).toBe('2 Nephi 3:19–20; 27:13; 29:2');
     expect(displayReference('Abraham 2:11; Genesis 17:7; Genesis 18:18')).toBe('Abraham 2:11; Genesis 17:7; 18:18');
     expect(displayReference('1 Nephi 1-5; 1 Nephi 7-19')).toBe('1 Nephi 1–5; 7–19');
+    expect(displayReference('Genesis 1; Genesis 3')).toBe('Genesis 1; 3');
     expect(displayReference('Isaiah 9:12; Isaiah 9:17; 2 Nephi 15:25')).toBe('Isaiah 9:12,17; 2 Nephi 15:25');
   });
   test('a range from verse 1 into the next chapter drops the first verse', () => {

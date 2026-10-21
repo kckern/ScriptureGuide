@@ -8,6 +8,7 @@ import VerseSerializer from '../presentation/serializers/VerseSerializer.js';
 import { defaultVersions, versionOrder } from '../domain/rules/defaultVersions.js';
 import { applyFormatOverride } from '../domain/rules/formatOverride.js';
 import { getBook } from '../domain/rules/legacyReference.js';
+import { isCompoundLine } from '../domain/rules/legacyText.js';
 import { wantsChapterNav, chapterNavLinks, sectionNavLinks, sectionRef } from '../domain/rules/chapterNav.js';
 
 // Verse rows grouped by chapter, in order, for one synthetic heading per chapter. A chapter whose
@@ -22,7 +23,7 @@ export function chapterRuns(rows) {
   }
   const runs = [];
   for (const c of chapters) {
-    if (runs.length && c.rows.every(r => String(r.text).trim() === '*')) runs[runs.length - 1].rows.push(...c.rows);
+    if (runs.length && c.rows.every(r => isCompoundLine(r.text))) runs[runs.length - 1].rows.push(...c.rows);
     else runs.push(c);
   }
   return runs;
@@ -168,12 +169,16 @@ export class ScriptureLookupService {
     let chapterHeading = null;
     let chapterNav = null;
 
+    // Book of the first verse: its short title labels compound verses ("1 Ne. 1:1–3"), with or
+    // without headings
+    const bookInfo = verseIds.length ? await this.headingRepository.findBookId(verseIds[0]) : null;
+    if (bookInfo) config._bookShort = bookInfo.book_title_short;
+
     if (config.includeHeadings !== false && verseIds.length > 0) {
       headings = await this.headingRepository.findByVerseIds(verseIds, headingVersion);
 
       const firstVerseId = verseIds[0];
       const lastVerseId = verseIds[verseIds.length - 1];
-      const bookInfo = await this.headingRepository.findBookId(firstVerseId);
 
       if (bookInfo) {
         const { book_id: bookId, lds_org: bookSlug, book_title_short: bookTitleShort, book_title: bookTitle } = bookInfo;
@@ -202,7 +207,6 @@ export class ScriptureLookupService {
         const audioFlag = await this.headingRepository.hasAudio(verseIds, version);
         // Always store bookTitle on config so HtmlPresenter can build slugs even when chapterHeading is null
         config._bookTitle = bookTitle;
-        config._bookShort = bookTitleShort;
         if (chapterHeading) {
           chapterHeading.bookSlug = bookSlug;
           chapterHeading.bookTitle = bookTitle;

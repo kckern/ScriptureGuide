@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   flattenText, splitVerseLines, arrayText, plainText, plainPassage,
-  stemText, transposeRef, baseVersion, highlightSearchTerm, escapeHtml, renderHeadingHtml, segmentFormats,
+  stemText, transposeRef, baseVersion, highlightSearchTerm, escapeHtml, renderHeadingHtml, segmentFormats, isCompoundLine,
 } from '../../src/domain/rules/legacyText.js';
 
 // Fixtures are KJV (public domain) or hand-written.
@@ -136,7 +136,21 @@ describe('segmentFormats (scriptures::formattedData paragraph markers)', () => {
     expect(segmentFormats('poetry', [seg('‾¶')])).toEqual([{ format: 'prose', paraClass: 'nogap' }]);
     expect(segmentFormats('prose', [seg('¶▼◄')])).toEqual([{ format: 'prose', paraClass: 'flush' }]);
   });
+  it('a leading ▲ (verse head) is dropped before the marker is read', () => {
+    expect(segmentFormats('prose', [seg('▲¶▼')]).map(f => f.format)).toEqual(['poetry']);
+    expect(segmentFormats('poetry', [seg('▲¶◄')])).toEqual([{ format: 'poetry', paraClass: 'flush' }]);
+  });
   it('a line that starts with § (a subtitle) is prose', () => {
     expect(segmentFormats('poetry', [seg('¶', '§A Psalm of David.'), seg('/')]).map(f => f.format)).toEqual(['prose', 'poetry']);
+  });
+});
+
+describe('isCompoundLine', () => {
+  it('is a line of exactly "*", spaces aside', () => {
+    expect(isCompoundLine('*')).toBe(true);
+    expect(isCompoundLine(' * ')).toBe(true);
+    expect(isCompoundLine('**')).toBe(false);
+    expect(isCompoundLine('And *')).toBe(false);
+    expect(isCompoundLine(null)).toBe(false);
   });
 });
