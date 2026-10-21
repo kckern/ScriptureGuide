@@ -39,3 +39,11 @@ describe('an empty reference on a non-HTML host', () => {
     expect(res.body).toBe('');
   });
 });
+
+describe('a parallel ?q= on a non-HTML host', () => {
+  test('api answers 200 with an empty body, as live', async () => {
+    const res = await get('api.scripture.guide', '/?q=john.3.16~gen.1.1');
+    expect(res.status).toBe(200);
+    expect(res.body).toBe('');
+  });
+});

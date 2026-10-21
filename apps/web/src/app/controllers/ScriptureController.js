@@ -32,7 +32,8 @@ export class ScriptureController {
 
       const config = req.config || {};
       // req.config.reference is parsed from the whole path (version spec, shortcuts, =/, random).
-      const reference = config.parallel ? req.params.reference : (config.reference ?? req.params.reference);
+      // A parallel q reached through ?q= has no route param: use the parsed q.
+      const reference = config.parallel ? (req.params?.reference || config.reference) : (config.reference ?? req.params.reference);
 
       if (!reference && !config.parallel && !answersEmpty(config)) return this.home(req, res);
 
