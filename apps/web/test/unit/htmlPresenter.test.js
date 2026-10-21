@@ -34,4 +34,19 @@ describe('HtmlPresenter heading ref', () => {
     expect(data.h3ByVerse[1].textHtml).toBe('Lehi<sub>1</sub><br/>Sariah');
     expect(data.h3ByVerse[1].text).toBe('Lehi\u2081/Sariah');
   });
+
+  test('a "*" verse folds into the verse before it (compound verses)', () => {
+    const texts = ['¶And it came to pass.', '*', '*', '¶And again.'];
+    const verses = texts.map((text, i) => new Verse({ id: 10 + i, verseNum: i + 1, chapter: 2, text, version: '2HRBOM' }));
+    const result = new ScriptureResult({
+      reference: new Reference({ query: '1 Nephi 2:1-4', normalized: '1 Nephi 2:1-4', verseIds: [10, 11, 12, 13] }),
+      verses,
+      headings: [],
+      config: { version: '2HRBOM', _bookTitle: '1 Nephi', _bookShort: '1 Ne.' },
+    });
+    const data = new HtmlPresenter().serialize(result);
+    expect(data.verses.map(v => v.id)).toEqual([10, 13]);
+    expect(data.verses[0]).toMatchObject({ compound: 3, compoundRef: '1 Ne. 2:1–3', compoundLabel: '1–3', gapIds: [11, 12] });
+    expect(data.verses[1].compound).toBeUndefined();
+  });
 });

@@ -9,6 +9,24 @@ import { defaultVersions, versionOrder } from '../domain/rules/defaultVersions.j
 import { applyFormatOverride } from '../domain/rules/formatOverride.js';
 import { wantsChapterNav, chapterNavLinks, sectionNavLinks, sectionRef } from '../domain/rules/chapterNav.js';
 
+// Verse rows grouped by chapter, in order, for one synthetic heading per chapter. A chapter whose
+// verses are all "*" lines (merged into an earlier verse: 2HRBOM, CTBOM) joins the run before it.
+export function chapterRuns(rows) {
+  const chapters = [];
+  for (const row of rows) {
+    if (row.chapter == null) continue;
+    const last = chapters[chapters.length - 1];
+    if (last?.chapter === row.chapter) last.rows.push(row);
+    else chapters.push({ chapter: row.chapter, rows: [row] });
+  }
+  const runs = [];
+  for (const c of chapters) {
+    if (runs.length && c.rows.every(r => String(r.text).trim() === '*')) runs[runs.length - 1].rows.push(...c.rows);
+    else runs.push(c);
+  }
+  return runs;
+}
+
 export class ScriptureLookupService {
   constructor(refService, verseRepo, headingRepo) {
     this.referenceService = refService;
@@ -178,6 +196,7 @@ export class ScriptureLookupService {
         const audioFlag = await this.headingRepository.hasAudio(verseIds, version);
         // Always store bookTitle on config so HtmlPresenter can build slugs even when chapterHeading is null
         config._bookTitle = bookTitle;
+        config._bookShort = bookTitleShort;
         if (chapterHeading) {
           chapterHeading.bookSlug = bookSlug;
           chapterHeading.bookTitle = bookTitle;
@@ -233,12 +252,7 @@ export class ScriptureLookupService {
         if (!hasInlineHeadings) {
           if (reference.chapter == null) {
             // Multi-chapter request (e.g. gen.1-2): one synthetic heading per chapter
-            const seenChapters = [];
-            for (const row of verseRows) {
-              if (row.chapter != null && !seenChapters.includes(row.chapter)) seenChapters.push(row.chapter);
-            }
-            for (const chNum of seenChapters) {
-              const chVerses = verseRows.filter(r => r.chapter === chNum);
+            for (const { chapter: chNum, rows: chVerses } of chapterRuns(verseRows)) {
               headings.push({
                 verse_id: chVerses[0].verse_id,
                 type: 'heading',

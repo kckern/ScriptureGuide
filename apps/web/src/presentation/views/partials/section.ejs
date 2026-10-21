@@ -57,7 +57,7 @@ data.verses.forEach(verse => {
   // Skipped verses (e.g. "John 3:16,18") get an hr.versebreak and a new paragraph
   const firstPart = verse.segIndex === 0 && verse.lbIndex === 0;
   const versebreak = firstPart && prevVerseNum != null && verse.num - prevVerseNum > 1;
-  if (firstPart) prevVerseNum = verse.num;
+  if (firstPart || verse.lastNum != null) prevVerseNum = verse.lastNum ?? verse.num;
   const hasBreak = h3 || verse.paraBreak || !currentGroup || (inlineItems.length > 0) || versebreak;
   const fmt = verse.format || 'prose';
   const fmtChange = currentGroup && fmt !== currentGroup.fmt;
@@ -68,18 +68,20 @@ data.verses.forEach(verse => {
   }
 
   const vChapter = verse.chapter ?? data.chapter;
-  const ref = `${data.book || ''} ${vChapter || ''}:${verse.num}`.trim();
+  // A compound line (verses merged by "*" lines) carries the merged reference and label
+  const ref = verse.compoundRef ?? `${data.book || ''} ${vChapter || ''}:${verse.num}`.trim();
   const bookSlug = (data.book || '').toLowerCase().replace(/\s+/g, '-');
   const verseClass = `${bookSlug}-${vChapter}-${verse.num}`;
   // verse_label only on first segment and first linebreak part; second+ get no attr
   // Note: <sup class="vnum"> is NOT rendered server-side — JS adds it from verse_label attr
-  const verseLabel = (verse.segIndex === 0 && verse.lbIndex === 0) ? (verse.num === 1 ? `${vChapter}:${verse.num}` : verse.num) : null;
+  const verseLabel = verse.compoundLabel ?? ((verse.segIndex === 0 && verse.lbIndex === 0) ? (verse.num === 1 ? `${vChapter}:${verse.num}` : verse.num) : null);
   const verseLabelAttr = verseLabel !== null ? ` verse_label="${verseLabel}"` : '';
+  const compoundAttr = verse.compound ? ` compound="${verse.compound}"` : '';
   const lbClassStr = verse.lbClass ? ` ${verse.lbClass}` : '';
   const mixAttr = verse.mixmatch ? ` mixmatch="${verse.mixmatch}"` : '';
-  const span = `<span class="verse v_${verse.id} ${fmt}${lbClassStr} ${verseClass}" verse_id="${verse.id}" ref="${ref}"${mixAttr} version="${version}"${verseLabelAttr}>${verse.text}</span>`;
+  const span = `<span class="verse v_${verse.id} ${fmt}${lbClassStr} ${verseClass}" verse_id="${verse.id}" ref="${ref}"${mixAttr}${compoundAttr} version="${version}"${verseLabelAttr}>${verse.text}</span>`;
   currentGroup.spans.push(span);
-  currentGroup.ids.push(verse.id);
+  currentGroup.ids.push(verse.id, ...(verse.gapIds || []));
 });
 
 // Each heading starts a new passage (<div class="passage ver_X">), as in the PHP renderer.

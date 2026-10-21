@@ -37,6 +37,14 @@ describe('alignRows', () => {
     expect(sigs.has(10)).toBe(true);
   });
 
+  test('with an empty left side the right verses are numbered from 1 (PHP $i++ on an unset $i)', () => {
+    const { rows } = alignRows({ leftids: [], rightids: [100, 101], references: none });
+    expect(plain(rows)).toEqual([
+      { key: 1, left: [], right: [100] },
+      { key: 2, left: [], right: [101] },
+    ]);
+  });
+
   test('matched verses share a row keyed by the left verse id', () => {
     const { rows, found, index2d } = alignRows({
       leftids: [10, 11], rightids: [100, 101], references: { forward: [ref(10, 100), ref(11, 101)], backward: [] },

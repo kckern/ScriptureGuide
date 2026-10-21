@@ -1,13 +1,38 @@
 import VerseSerializer from '../serializers/VerseSerializer.js';
 import { displayReference, blankHeading } from '../../domain/rules/referenceParsing.js';
 
-import { versionImg } from '../../domain/rules/legacyReference.js';
+import { versionImg, formatReference as referenceFromVerseIds } from '../../domain/rules/legacyReference.js';
 import { renderHeadingHtml, renderHeadingFields, RENDERED_HEADING_FIELDS } from '../../domain/rules/legacyText.js';
 
 // versionImg takes lds_scriptures_volumes.volume_id; Reference.volume is a volume code.
 // Verses outside the five volumes (null) have no LDS cover: 0 gives "lds".
 const VOLUME_IDS = { OT: 1, NT: 2, BOM: 3, DC: 4, POGP: 5 };
 const volumeId = volume => VOLUME_IDS[volume] ?? 0;
+
+// scriptures::formattedData: a line of exactly "*" (2HRBOM, CTBOM, EARLIEST ...) is a verse merged
+// into the line before it. That line gets compound="N", the merged reference
+// (referenceFromVerseIds with book_title_short, "1 Ne. 1:1–3") and its verses as the label ("1–3").
+export function foldCompounds(lines, bookShort) {
+  const out = [];
+  let host = null;
+  let merged = null; // verse_id → { book, bookId, chapter, verse } of the host and its merged verses
+  const at = line => ({ book: bookShort, bookId: 0, chapter: line.chapter, verse: line.num });
+  for (const line of lines) {
+    if (String(line.text).trim() !== '*' || !host) {
+      out.push(line);
+      host = line;
+      merged = new Map([[line.id, at(line)]]);
+      continue;
+    }
+    merged.set(line.id, at(line));
+    host.gapIds = [...(host.gapIds || []), line.id];
+    host.lastNum = line.num;
+    host.compound = merged.size;
+    host.compoundRef = referenceFromVerseIds([...merged.keys()], merged, () => null);
+    host.compoundLabel = host.compoundRef.replace(/^.*?:/, '');
+  }
+  return out;
+}
 
 export class HtmlPresenter {
   present(result, req, res) {
@@ -400,7 +425,7 @@ export class HtmlPresenter {
       chapter,
       book: result.reference.book,
       verseCount: result.verseCount,
-      verses: result.verses.flatMap(v => {
+      verses: foldCompounds(result.verses.flatMap(v => {
         const segments = VerseSerializer.splitSegments(v.text);
         return segments.flatMap((seg, i) => {
           const lbParts = VerseSerializer.splitLinebreaks(seg.text);
@@ -437,7 +462,7 @@ export class HtmlPresenter {
             lbIndex: lbIdx
           }));
         });
-      }),
+      }), result.config._bookShort || result.reference._bookShort || result.reference.book),
       h3ByVerse,       // full h3 headings indexed by verse_id
       inlineByVerse,   // non-heading inline elements indexed by verse_id
       prePassageH3,    // chapter heading from prior section (renders before verses with ellipsis)

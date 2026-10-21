@@ -187,7 +187,10 @@ export function alignRows({ leftids, rightids, references, compounds = {}, lver,
       lids = out;
     }
     lids.forEach((lid, i) => rows.set(i, { left: new Map([[lid, lid]]), right: new Map([[rids2[i] ?? null, rids2[i] ?? null]]) }));
-    for (let i = lids.length; i < rids2.length; i++) rows.set(i, { left: null, right: new Map([[rids2[i], rids2[i]]]) });
+    // Right verses past the left ones get their own rows; with no left verses PHP's $i++ ran on an
+    // unset $i, so they are numbered from 1.
+    const offset = lids.length ? 0 : 1;
+    for (let i = lids.length; i < rids2.length; i++) rows.set(i + offset, { left: null, right: new Map([[rids2[i], rids2[i]]]) });
     for (const id of [...leftids, ...rightids]) sigs.add(id);
     rows.merged = merged;
   }
