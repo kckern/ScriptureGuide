@@ -10,6 +10,45 @@
 
 **Prerequisites:** local full database copy on `127.0.0.1:3310` (see `apps/web/test/parity/README.md`), app on `PORT=3101`.
 
+## Status (2026-10-21)
+
+| Task | State | Commits |
+|---|---|---|
+| 1. Asset parity in the harness | Done | `1c998bc`, `fd449c7`, `b59ccc6` |
+| 2. Sync code assets from live | Done | `da341b5` |
+| 3. Fonts | Done: OFL fonts committed, the licensed text font served privately (`FONT_DIR`/`FONT_BASE`) | `eab50b2`, `0c3c858`, `e923eda`, `9c88555`, `fb22865`, `d52575b`, `e7ca49a` |
+| 4. Traffic corpus | Done | `fc086ac`, `9e4c065`, `e3d9e49`, `02d8264` |
+| 5. Browser smoke tests | Done | `143815d`, `0888ab0`, `ca4caba`, `81b19e1`, `7d641c6`, `928d0d1` |
+| 6. Sphinx versus fallback in CI | Done | `7204599`, `8620705`, `7579e0c`, `3c7ec17`, `4126a23` |
+| 7. Structured request logs | Done | `bb93fa1`, `bef2cee`, `d2d52a6`, `032cf94`, `33e322b`, `c338eff`, `ecf5f68` |
+| 7b. Reader-facing traffic fixes | Done | `1487c7a` through `29c76ee` (for example `184b935`, `5451a22`, `27eace7`, `4a7c855`, `55f263d`) |
+| 7c. Performance parity | Done locally; the deciding run is on staging | `1590242`, `914fc3e`, `5bf0cc7`, `f6aa6d7`, `5560a2f`, `976c4a2`, `805a451`, `f585cd5`, `6ba1c7c`, `9ea73f5`, `7092ff3` |
+| 8. Staging run | Pending, owner-gated | |
+
+Current numbers (local app against the full database copy):
+
+- Built-in parity: 0 fail in every format.
+- Traffic corpus: 466 pass, 21 allowed, 3 fail. All three are explained: `/lds/d&` and `/_ignition` differ because the local run searches through the MySQL fallback while live uses Sphinx (settle on staging, which uses Sphinx); `/pr415…` waits on the owner's subverse-digit decision.
+- Browser suite: 10/10 pages at 0.000% pixel difference.
+- Response times: Node p50 10 ms against live 90 ms. Indicative only: live includes the network round trip and a laptop is not the production host; staging decides.
+
+Open owner decisions:
+
+1. Monitoring deploy, steps 1-4 of the private observability checklist (log store restart, host metrics publisher, alarms on silence, the scripture.guide health check). The staging gate needs the app's logs in the log store.
+2. X-Real-IP: the planned Cloudflare request-header rule, or a fix in the proxy host (scripture.guide resolves straight to the AWS load balancer, not through Cloudflare). Details in the private cutover runbook.
+3. Staging prerequisites: read-only database user, GHCR access from the host, the licensed font on the host, the `next.scripture.guide` proxy host.
+4. Audio: the bucket behind the audio links answers 403.
+5. The Google sign-in remnant in the layout (`apis.google.com` client script) and `public/js/main.js` (`googleUser`): keep or remove.
+6. getclicky analytics: keep or drop.
+7. The subverse-digit rule (`/pr415…` above): keep Node's reading or reproduce PHP.
+8. Owner questionnaire #1-25: not found in this repository (including the foundation plan) or in the private infrastructure repo. Commit it, or record where it lives, and link it here.
+
+Cutover itself (gate, switch, rollback, PHP retirement) is in the private infrastructure repo, `runbooks/2026-10-21-scripture-guide-cutover.md`.
+
+### Post-cutover queue
+
+1. Server-side URL canonicalization (decided 2026-10-20): one 301 to a clean lowercase slug, junk characters stripped from search URLs. Until cutover, URL behavior stays identical to live so parity stays measurable. Once it ships, the proxy's space-to-dot rewrite is removed.
+
 ---
 
 ### Task 1: Asset parity in the harness
