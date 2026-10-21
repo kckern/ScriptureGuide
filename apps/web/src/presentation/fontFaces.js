@@ -1,6 +1,7 @@
 // @font-face for the privately served text font, 'Goudy Scripture' (the first family in
 // style.css's body stack). Empty without a base, so no font request is made and pages use
-// Sorts Mill Goudy. The family name is unique so no system font can stand in for it.
+// Sorts Mill Goudy. No standard system font has this family name; a machine with the font
+// installed locally will still use it when nothing is configured.
 import { existsSync } from 'node:fs';
 import path from 'node:path';
 import { PRIVATE_FONTS_PATH } from '../config/index.js';

@@ -74,7 +74,7 @@ and `FONT_DIR/<FONT_GOUDY_FILE>` does not exist, the app logs a warning and emit
 The body stack in `style.css` is `'Goudy Scripture', 'Sorts Mill Goudy', Georgia, serif` (live:
 `'Sorts Mill Goudy', 'Goudy', Georgia, serif`). With the private font configured, it is the text
 font; without it, the browser has no `'Goudy Scripture'` face and uses Sorts Mill Goudy, as
-before. The family name is specific enough that no system font stands in for it. Notes:
+before. No standard system font has this family name, but a machine with Goudy Scripture installed locally uses that copy when nothing is configured, so test the Sorts Mill Goudy fallback on another machine. Notes:
 
 - Characters the file lacks (outside Latin, Latin Extended and Cyrillic) fall back per glyph to
   Sorts Mill Goudy, then Georgia.
