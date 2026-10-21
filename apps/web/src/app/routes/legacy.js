@@ -21,8 +21,15 @@ const PHP_PAGES = {
   'fax.php': q => `/${q}`,
   'notes.php': q => (q ? `/notes/${q}` : '/'),
 };
-// hub was an empty page (410 like hub.*); every other .php file was a maintenance script
-// or an include (script.php rewrote verse text, mount.php ran a shell command) and is gone.
+// The other .php files in the PHP docroot, which Apache executed when requested: hub was an
+// empty page (410 like hub.*); the rest were maintenance scripts or includes (script.php
+// rewrote verse text, mount.php ran a shell command). They are gone. Any other *.php name did
+// not exist, so Apache rewrote it to index.php?q=<name>.php: it goes on to the front controller.
+const PHP_GONE = new Set([
+  'hub.php', 'mount.php', 'script.php', 'scriptures.php', 'scriptutil.php',
+  'inc_api.php', 'inc_cov.php', 'inc_img.php', 'inc_latex.php', 'inc_markdown.php', 'inc_mp3.php',
+  'inc_plain.php', 'inc_raw.php', 'inc_slide.php', 'inc_slideh.php', 'inc_xml.php',
+]);
 
 function queryString(query, drop = []) {
   const params = new URLSearchParams();
@@ -40,7 +47,7 @@ const redirectStatus = req => (req.method === 'GET' || req.method === 'HEAD' ? 3
 export function legacyRouter({ checkDb = defaultCheckDb, checkSphinx = defaultCheckSphinx } = {}) {
   const router = Router();
 
-  router.all(/^\/([A-Za-z0-9_-]+\.php)$/, (req, res) => {
+  router.all(/^\/([A-Za-z0-9_-]+\.php)$/, (req, res, next) => {
     const file = req.params[0].toLowerCase();
     if (PHP_ROUTES[file]) {
       return res.redirect(redirectStatus(req), PHP_ROUTES[file] + queryString(req.query));
@@ -49,7 +56,8 @@ export function legacyRouter({ checkDb = defaultCheckDb, checkSphinx = defaultCh
       const q = typeof req.query.q === 'string' ? req.query.q.replace(/^\/+/, '') : '';
       return res.redirect(redirectStatus(req), PHP_PAGES[file](encodePath(q)) + queryString(req.query, ['q']));
     }
-    return res.status(410).type('text').send('Gone');
+    if (PHP_GONE.has(file)) return res.status(410).type('text').send('Gone');
+    return next();
   });
 
   // Liveness and readiness: 200 when the database answers, 503 when it does not.

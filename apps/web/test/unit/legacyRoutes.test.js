@@ -38,9 +38,21 @@ describe('legacy .php URLs', () => {
     expect(res.headers.location).toBe('/evil.example/x');
   });
 
-  it.each(['/hub.php', '/script.php', '/mount.php', '/inc_api.php'])('%s → 410', async path => {
+  // Files that existed in the PHP docroot: Apache executed them, which Node never reproduces.
+  it.each([
+    '/hub.php', '/script.php', '/mount.php', '/scriptures.php', '/scriptutil.php', '/Mount.php',
+    '/inc_api.php', '/inc_cov.php', '/inc_img.php', '/inc_latex.php', '/inc_markdown.php', '/inc_mp3.php',
+    '/inc_plain.php', '/inc_raw.php', '/inc_slide.php', '/inc_slideh.php', '/inc_xml.php',
+  ])('%s → 410', async path => {
     const res = await request(app).get(path);
     expect(res.status).toBe(410);
+  });
+
+  // Any other name did not exist, so Apache rewrote it to index.php?q=<name>.php: a reference
+  // or search like any other path.
+  it.each(['/hello_world.php', '/wp-login.php', '/inc_other.php', '/x.php?a=1'])('%s goes on to the front controller', async path => {
+    const res = await request(appWith({}).use((req, res) => res.status(299).send('front controller'))).get(path);
+    expect(res.status).toBe(299);
   });
 });
 
