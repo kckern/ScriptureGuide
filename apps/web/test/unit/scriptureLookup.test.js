@@ -147,12 +147,19 @@ describe('lookup: the request budget', async () => {
 
 describe('splitBlocks: cost of a long junk reference', async () => {
   const { ReferenceService } = await import('../../src/services/ReferenceService.js');
-  test('10,000 pieces with the default budget of 100 split in well under a second', () => {
-    const svc = new ScriptureLookupService(new ReferenceService(null), null, null);
+  test('10,000 pieces with the default budget of 100 parse only the first 100', () => {
+    const referenceService = new ReferenceService(null);
+    const parse = referenceService.parse.bind(referenceService);
+    let calls = 0;
+    referenceService.parse = text => { calls++; return parse(text); };
+    const svc = new ScriptureLookupService(referenceService, null, null);
     const ref = Array.from({ length: 10000 }, () => 'x1').join(';');
     const t = performance.now();
     const blocks = svc.splitBlocks(ref, 100);
-    expect(performance.now() - t).toBeLessThan(1000);
+    // A junk piece can be parsed twice (alone, then with the previous book).
+    expect(calls).toBeLessThanOrEqual(200);
+    // About 0.4 s locally; the bound only catches a return to parsing every piece.
+    expect(performance.now() - t).toBeLessThan(5000);
     expect(blocks).toHaveLength(10000);
   });
 });
