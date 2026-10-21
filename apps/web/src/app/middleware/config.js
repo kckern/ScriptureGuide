@@ -1,12 +1,14 @@
 import { parseRequest } from '../../domain/rules/requestParsing.js';
 
-function rawQuery(req) {
+// The query string as { key: value }, first value per key, except q: PHP kept the last q
+// (index.php?q=<path>&...&q=<x> → x), and parseRequest lets that q replace the path.
+export function rawQuery(req) {
   const url = req.originalUrl || req.url || '/';
   const i = url.indexOf('?');
   const query = {};
   if (i >= 0) {
     for (const [k, v] of new URLSearchParams(url.slice(i + 1))) {
-      if (!(k in query)) query[k] = v;
+      if (!(k in query) || k === 'q') query[k] = v;
     }
   }
   return query;

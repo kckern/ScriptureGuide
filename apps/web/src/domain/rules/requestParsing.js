@@ -182,7 +182,8 @@ function legacyRequest(rawPath, query) {
 export function parseRequest({ host = '', path = '/', query = {}, random = Math.random } = {}) {
   const { subdomain: hostSubdomain, flags: hostFlags } = parseHost(host);
   // A ?q= in the query wins over the path: Apache rewrote /<path>?<query> to
-  // index.php?q=<path>&<query> and PHP kept the last q.
+  // index.php?q=<path>&<query> and PHP kept the last q. query.q must be that last value
+  // (configMiddleware's rawQuery passes it).
   let q = (typeof query?.q === 'string' ? query.q : decode(String(path || '/'))).replace(/^\/+/, '');
 
   const stripped = stripPathPrefixes(q, hostSubdomain);
