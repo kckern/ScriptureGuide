@@ -139,7 +139,8 @@ function splitPathKeys(rawPath) {
  *   ref       PHP $ref: the subverse letter goes with the digit before it ("john.3.16a" → "john.3.1")
  *   versions  PHP $cfig['versions'], { VERSION: FORMAT } from the version path, or null
  *   config    PHP $cfig before lookup: path keys, then query keys (empty value → 1), then
- *             versions; null when empty
+ *             versions, then search (true for /search/<terms>, 1 when ref has no digit);
+ *             null when empty
  */
 function legacyRequest(rawPath, query) {
   const { q: flat, keys } = typeof query?.q === 'string'
@@ -154,7 +155,8 @@ function legacyRequest(rawPath, query) {
     if (key !== 'q') config[key] = value !== '' ? value : 1;
   }
 
-  const { reference, versionSpec } = splitInput(q);
+  const { search, reference, versionSpec } = splitInput(q);
+  if (search) config.search = true;
   let versions = null;
   if (versionSpec !== null) {
     versions = {};
@@ -163,6 +165,8 @@ function legacyRequest(rawPath, query) {
   }
   let ref = reference.replace(/\d[a-z]$/i, '');
   if (versions && 'JST' in versions) ref = withJst(ref);
+  // No digit in the reference means search (lib.php.inc:213), added last.
+  if (!/[0-9]/.test(ref)) config.search = 1;
   return { q, ref, versions, config: Object.keys(config).length ? config : null };
 }
 

@@ -68,7 +68,9 @@ export function bookOnlyBlock(bookTitle, verseIds) {
 
 // [{orig, book, verse_ids}] per ";"-separated block. A block after the first keeps the leading
 // space left by the split, so PHP prefixed the book to it: "Genesis Genesis 1:1". Reproduced.
+// An empty reference is one block whose verse_ids is false (cleanReference returned false).
 export function metaFromRef(ref) {
+  if (ref === '') return [{ orig: '', book: '', verse_ids: false }];
   const normalized = normalize(ref).replace(/—/g, ' ');
   if (!normalized) return [];
   const blocks = [];

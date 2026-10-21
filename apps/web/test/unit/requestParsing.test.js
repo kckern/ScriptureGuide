@@ -170,6 +170,14 @@ describe('legacy (what lib.php.inc saw: api input/config, meta, raw, plain)', ()
     expect(Object.keys(r.config)).toEqual(['meta_only', 'heads', 'x', 'versions']);
   });
 
+  test('search flag: 1 last when the ref has no digit, true for /search/ with digits', () => {
+    expect(legacy('/kjv/faith', { x: 'y' }).config).toEqual({ x: 'y', versions: { KJV: 'KJV' }, search: 1 });
+    expect(Object.keys(legacy('/kjv/faith', { x: 'y' }).config)).toEqual(['x', 'versions', 'search']);
+    expect(legacy('/', {}).config).toEqual({ search: 1 });
+    expect(legacy('/search/john3').config).toEqual({ search: true });
+    expect(legacy('/john.3.16').config).toBeNull();
+  });
+
   test('d&c in the path is rejoined as PHP flattenRequest did', () => {
     const r = legacy('/d&c.4');
     expect(r.ref).toBe('dc.4');

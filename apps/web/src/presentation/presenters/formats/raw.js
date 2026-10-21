@@ -10,7 +10,7 @@ const HEADING_SKIP = new Set(['id', 'version', 'prev_id', 'verse_id']);
 
 export async function rawData(lr, result, repo = rawRepository) {
   const version = Object.keys(lr.versions || {})[0] || 'LDS';
-  const ids = blocksFor(lr.ref, result).flatMap(b => b.verse_ids);
+  const ids = blocksFor(lr.ref, result).flatMap(b => b.verse_ids || []);
   const rows = await repo.findRawVerses(version, ids);
   if (!rows.length) return null;
 

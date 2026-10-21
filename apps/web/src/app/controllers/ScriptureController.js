@@ -6,6 +6,10 @@ import { bookOnlyQuery } from '../../domain/rules/referenceParsing.js';
 
 // Formats whose reference blocks ("meta") name a book given alone (scriptures::loadMetaFromRef)
 const BOOK_ONLY_FORMATS = new Set(['meta', 'api']);
+// Formats that answer an empty reference in their own format: index.php dispatched these
+// subdomains before its empty($ref) → home.php check.
+const EMPTY_REF_FORMATS = new Set(['api', 'meta', 'raw', 'plain', 'latex', 'markdown', 'xml']);
+const answersEmpty = config => EMPTY_REF_FORMATS.has(config?.outputFormat);
 
 export class ScriptureController {
   constructor(lookupService, references = referenceService) {
@@ -30,7 +34,7 @@ export class ScriptureController {
       // req.config.reference is parsed from the whole path (version spec, shortcuts, =/, random).
       const reference = config.parallel ? req.params.reference : (config.reference ?? req.params.reference);
 
-      if (!reference && !config.parallel) return this.home(req, res);
+      if (!reference && !config.parallel && !answersEmpty(config)) return this.home(req, res);
 
       const result = await this.lookupService.lookup(reference, config);
       result.bookOnly = await this.bookOnly(result, config);
@@ -44,8 +48,8 @@ export class ScriptureController {
   }
 
   async home(req, res) {
-    // "/?q=john.3.16" (index.php?q=...) is a lookup, not the home page
-    if (req.config?.reference && !req.params?.reference) {
+    // "/?q=john.3.16" (index.php?q=...) is a lookup, not the home page; nor is "/" on api, meta, ...
+    if ((req.config?.reference && !req.params?.reference) || answersEmpty(req.config)) {
       return this.show(req, res, err => (err ? res.status(500).send('Internal error') : outputMiddleware(req, res)));
     }
     res.render('home', {
