@@ -30,3 +30,14 @@ describe('heading ranges (scriptutil::loadHeading)', () => {
     expect(query.mock.calls[1][0]).not.toMatch(/book_id/);
   });
 });
+
+describe('findVersionLastVerseId', () => {
+  test('is queried once per version', async () => {
+    query.mockResolvedValue([{ last: 7 }]);
+    expect(await headingRepository.findVersionLastVerseId('MEMO1')).toBe(7);
+    expect(await headingRepository.findVersionLastVerseId('MEMO1')).toBe(7);
+    expect(query).toHaveBeenCalledTimes(1);
+    await headingRepository.findVersionLastVerseId('MEMO2');
+    expect(query).toHaveBeenCalledTimes(2);
+  });
+});

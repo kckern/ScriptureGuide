@@ -138,10 +138,17 @@ export class HeadingRepository {
     return rows;
   }
 
-  // The highest verse id a version has text for
-  async findVersionLastVerseId(version) {
-    const [row] = await db.query('SELECT MAX(verse_id) AS last FROM scripture_verses WHERE version = ?', [version]);
-    return row?.last ?? null;
+  // The highest verse id a version has text for. It does not change while the process runs,
+  // so each version is queried once (a failed query is retried next time).
+  findVersionLastVerseId(version) {
+    this.lastVerseIds ??= new Map();
+    if (!this.lastVerseIds.has(version)) {
+      const pending = db.query('SELECT MAX(verse_id) AS last FROM scripture_verses WHERE version = ?', [version])
+        .then(([row]) => row?.last ?? null)
+        .catch(err => { this.lastVerseIds.delete(version); throw err; });
+      this.lastVerseIds.set(version, pending);
+    }
+    return this.lastVerseIds.get(version);
   }
 
   // Chapter-level heading: find most recent heading record at or before first verse
