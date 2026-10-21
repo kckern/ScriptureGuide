@@ -57,3 +57,20 @@ describe('HtmlPresenter heading ref', () => {
     expect(data.h3ByVerse[1].textHtml).toBe('A section<br/><small>al-Dukh\u0101n</small>');
   });
 });
+
+describe('HtmlPresenter: sections from the PHP blocks of a reference that found nothing', () => {
+  const section = block => {
+    const r = new ScriptureResult({ reference: new Reference({ query: block.orig, normalized: '', verseIds: [] }), verses: [], config: {} });
+    r.legacyBlock = block;
+    return new HtmlPresenter().serialize(r);
+  };
+  test('a block without verses is headed with its cleaned text, escaped', () => {
+    expect(section({ orig: '1 Corianton 12', book: '1 Corianton', verse_ids: [] }).blank).toBe('1 Corianton 12');
+    expect(section({ orig: ' 30', book: '', verse_ids: false }).blank).toBe(' 30');
+    expect(section({ orig: '<B>', book: '<B>', verse_ids: [] }).blank).toBe('&lt;B&gt;');
+  });
+  test('a multi-book range whose ends matched nothing is an empty section', () => {
+    const data = section({ orig: 'Farewell-speech', book: 'Multi', verse_ids: [null] });
+    expect(data.emptySection).toBe(true);
+  });
+});

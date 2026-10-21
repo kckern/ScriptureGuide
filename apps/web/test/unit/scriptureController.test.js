@@ -36,12 +36,48 @@ describe('ScriptureController: the PHP blocks of a reference that found nothing'
     expect((await show('foo1', 'api', 'foo')).legacyBlocks).toEqual([{ orig: 'foo', book: 'foo', verse_ids: [] }]);
   });
   test('html builds them from the reference it looked up', async () => {
-    expect((await show('foo1', 'html', 'foo')).legacyBlocks).toEqual([{ orig: 'foo1', book: 'foo1', verse_ids: [] }]);
+    expect((await show('foo1', 'html', 'foo')).sections[0].legacyBlock).toEqual({ orig: 'foo1', book: 'foo1', verse_ids: [] });
   });
   test('not when the lookup found verses', async () => {
     blockService.blocks.mockClear();
     const found = new ScriptureController({ lookup: async () => ({ reference: { isEmpty: false, verseIds: [1] } }) }, references, blockService);
     expect((await show('gen.1.1', 'api', 'gen.1.1', found)).legacyBlocks).toBeUndefined();
     expect(blockService.blocks).not.toHaveBeenCalled();
+  });
+});
+
+describe('ScriptureController: an html reference that found nothing', () => {
+  const run = async (blocks, lookup = async () => empty()) => {
+    const blockService = { blocks: async () => blocks, repo: { referenceFromVerseIds: async ids => `ref of ${ids.join(',')}` } };
+    const ctl = new ScriptureController({ lookup: vi.fn(lookup) }, references, blockService);
+    const req = { config: { outputFormat: 'html', reference: 'x; 1', legacy: { ref: 'x; 1' } }, params: {}, headers: {} };
+    const res = { render: vi.fn() };
+    const next = vi.fn();
+    await ctl.show(req, res, next);
+    return { req, res, next, ctl };
+  };
+
+  test('ranges whose ends matched nothing: home with an empty title (live: referenceFromVerseIds([null]) is "")', async () => {
+    const { res, next } = await run([{ orig: 'A-b', book: 'Multi', verse_ids: [null] }, { orig: 'A 1', book: 'A', verse_ids: [] }]);
+    expect(res.render).toHaveBeenCalledWith('home', expect.objectContaining({ title: '' }));
+    expect(next).not.toHaveBeenCalled();
+  });
+
+  test('blocks without verses: one section per block, titled with the reference', async () => {
+    const blocks = [{ orig: 'A-b', book: 'Multi', verse_ids: [null] }, { orig: ' 1', book: '', verse_ids: false }];
+    const { req, next } = await run(blocks);
+    expect(next).toHaveBeenCalled();
+    expect(req.scriptureResult.sections.map(s => s.legacyBlock)).toEqual(blocks);
+    expect(req.scriptureResult.title).toBe('x; 1');
+  });
+
+  test('blocks PHP found by verse title are looked up by their verse ids; the title names them', async () => {
+    const found = { reference: { isEmpty: false, verseIds: [5, 6] }, verses: [{}, {}], headings: [], config: {} };
+    const blocks = [{ orig: 'Lehi', book: 'Lehi', verse_ids: [5, 6] }, { orig: 'Lehi 13', book: 'Lehi', verse_ids: [] }];
+    const { req, ctl } = await run(blocks, async ref => (ref === '5,6' ? found : empty()));
+    expect(ctl.lookupService.lookup).toHaveBeenLastCalledWith('5,6', expect.objectContaining({ _block: true, _multiBlock: true }));
+    expect(req.scriptureResult.sections[0]).toBe(found);
+    expect(req.scriptureResult.sections[1].legacyBlock).toEqual(blocks[1]);
+    expect(req.scriptureResult.title).toBe('ref of 5,6');
   });
 });

@@ -2,6 +2,7 @@ import VerseSerializer from '../serializers/VerseSerializer.js';
 import { displayReference, blankHeading } from '../../domain/rules/referenceParsing.js';
 
 import { versionImg, formatReference as referenceFromVerseIds } from '../../domain/rules/legacyReference.js';
+import { isEmptyRange } from '../../domain/rules/blockIds.js';
 import { renderHeadingHtml, renderHeadingFields, RENDERED_HEADING_FIELDS, segmentFormats, escapeHtml, isCompoundLine } from '../../domain/rules/legacyText.js';
 
 // versionImg takes lds_scriptures_volumes.volume_id; Reference.volume is a volume code.
@@ -37,8 +38,9 @@ export function foldCompounds(lines, bookShort) {
 export class HtmlPresenter {
   present(result, req, res) {
     const data = this.serialize(result);
-    // No verses: the title is the reference as requested (index.php)
-    const title = data.title || req?.config?.reference || result.reference.query || '';
+    // No verses: the title is the reference as requested (index.php); a page built from the PHP
+    // blocks carries its own (ScriptureController.notFoundPage)
+    const title = result.title ?? (data.title || req?.config?.reference || result.reference.query || '');
     const ogMeta = this._buildOgMeta(result, data, title, req);
     const sections = result.sections ? result.sections.map(r => this.serialize(r)) : null;
     res.render('scripture', {
@@ -420,7 +422,9 @@ export class HtmlPresenter {
       title: displayReference(result.reference.normalized),
       // Heading for a reference block that matched no verses (scriptures::blankData)
       // escaped: it echoes the request (the PHP site reflected it raw)
-      blank: result.verses.length ? null : escapeHtml(blankHeading(result.reference.query)),
+      blank: result.verses.length ? null : escapeHtml(result.legacyBlock ? result.legacyBlock.orig : blankHeading(result.reference.query)),
+      // A multi-book range whose ends matched nothing ([null]): PHP rendered an empty section
+      emptySection: !!result.legacyBlock && isEmptyRange(result.legacyBlock),
       startsSection: (result.verses[0]?.text || '').startsWith('§'),
       faxIds: result.config._faxIds || [],
       typesByVerse,

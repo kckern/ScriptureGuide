@@ -4,14 +4,11 @@
 import rawRepository from '../../data/repositories/RawRepository.js';
 import { passageHtml } from './passageHtml.js';
 import { defaultVersions, blockReference } from './meta.js';
+import { blockVerseIds, isEmptyRange } from '../../domain/rules/blockIds.js';
+
+export { blockVerseIds, isEmptyRange };
 
 // The first version, in fallback order, that has text for the block: { version, rows } or null.
-// verse_ids may be false (no book) or hold nulls (a multi-book range whose ends matched nothing).
-export const blockVerseIds = block => (Array.isArray(block.verse_ids) ? block.verse_ids.filter(id => id != null) : []);
-
-// A block PHP rendered as an empty section: verse ids listed, none of them a verse ([null]).
-export const isEmptyRange = block => Array.isArray(block.verse_ids) && block.verse_ids.length > 0 && !blockVerseIds(block).length;
-
 export async function resolveBlock(block, versions, repo = rawRepository) {
   if (!blockVerseIds(block).length) return null;
   for (const version of Object.keys(defaultVersions(versions, block.verse_ids))) {

@@ -3,6 +3,7 @@
 // bare: the passage_script.php form (wrapper_passage off, no chapter nav), for /passage.
 const bare = typeof locals.bare !== 'undefined' && locals.bare;
 const sectionHtml = (() => {
+if (data.emptySection) return '';
 if (data.blank != null) {
   return `\n      <div class="passage ver_">\n\t\t<h3>${data.blank}</h3>\n\t\t<p><span class="verse">No scripture verses found.</span></p>\n      </div>`;
 }
