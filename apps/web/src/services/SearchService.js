@@ -4,7 +4,7 @@
 import config from '../config/index.js';
 import searchRepository from '../data/repositories/SearchRepository.js';
 import { createSphinxClient } from '../data/external/sphinx.js';
-import { queryStems, matchesAll, stemPrefix } from './search/matcher.js';
+import { queryStems, queryTerms, matchesTerms, stemPrefix } from './search/matcher.js';
 import { plainText, flattenText } from '../domain/rules/legacyText.js';
 import { formatReference, slugifyRef, versionImg } from '../domain/rules/legacyReference.js';
 
@@ -85,6 +85,7 @@ export class SearchService {
   async hits(query, versions, { range = null, limit = 99999, stopAfter = Infinity } = {}) {
     if (this.sphinx) return this.sphinx.search(query, { versions, range, limit });
     const stems = queryStems(query);
+    const terms = queryTerms(query);
     if (!stems.length) return [];
     const prefixes = [...new Set(stems.map(stemPrefix))];
     const out = [];
@@ -93,7 +94,7 @@ export class SearchService {
       const rows = await this.repo.candidates(prefixes, versions, { range, afterId, limit: 5000 });
       if (!rows.length) break;
       for (const r of rows) {
-        if (matchesAll(r.text, stems)) out.push({ verse_id: Number(r.verse_id), version: r.version });
+        if (matchesTerms(r.text, terms)) out.push({ verse_id: Number(r.verse_id), version: r.version });
       }
       afterId = rows[rows.length - 1].id;
     }

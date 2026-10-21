@@ -31,6 +31,14 @@ function fakeRepo({ texts = { 'LDS': [28679, 29564, 1], 'WEB': [28679] } } = {})
   };
 }
 
+describe('SearchService (Sphinx)', () => {
+  test('a quoted phrase reaches Sphinx as a phrase query', async () => {
+    const sphinx = { search: vi.fn(async () => []) };
+    await new SearchService(fakeRepo(), sphinx).search('"hand.of.the.lord".upon');
+    expect(sphinx.search.mock.calls[0][0]).toBe('"hand of the lord" upon');
+  });
+});
+
 describe('SearchService (MySQL fallback)', () => {
   test('finds verses containing every word, one row per verse, best-priority version', async () => {
     const svc = new SearchService(fakeRepo(), null);
@@ -45,6 +53,13 @@ describe('SearchService (MySQL fallback)', () => {
     });
     expect(r.rows[0].highlighted).toContain("<span class='searchterm'>faith, hope, charity</span>");
     expect(r.vols).toEqual([{ key: 'nt', label: 'New Testament', count: 1 }]);
+  });
+
+  test('a quoted phrase matches the words together, in order', async () => {
+    const svc = new SearchService(fakeRepo(), null);
+    expect((await svc.search('"faith.hope.charity"')).count).toBe(1);
+    expect((await svc.search('"hope.faith"')).count).toBe(0);
+    expect((await svc.search('"work.of.faith".hope')).rows.map(r => r.verse_id)).toEqual([29564]);
   });
 
   test('orders rows by verse id and counts volumes in order', async () => {
