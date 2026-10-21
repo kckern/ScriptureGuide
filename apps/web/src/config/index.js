@@ -1,5 +1,11 @@
 import 'dotenv/config';
 
+// An integer environment value, 0 included; the default when unset or not a number
+export function intEnv(value, fallback) {
+  const n = parseInt(value, 10);
+  return Number.isFinite(n) ? n : fallback;
+}
+
 export const config = {
   env: process.env.NODE_ENV || 'development',
   port: parseInt(process.env.PORT, 10) || 3000,
@@ -26,8 +32,8 @@ export const config = {
   // this many rows, and show what was found so far as partial results. A full read of
   // scripture_verses is about 1.6 million rows and 2 s.
   search: {
-    fallbackMaxMs: parseInt(process.env.SEARCH_FALLBACK_MAX_MS, 10) || 1500,
-    fallbackMaxRows: parseInt(process.env.SEARCH_FALLBACK_MAX_ROWS, 10) || 1000000
+    fallbackMaxMs: intEnv(process.env.SEARCH_FALLBACK_MAX_MS, 1500),
+    fallbackMaxRows: intEnv(process.env.SEARCH_FALLBACK_MAX_ROWS, 1000000)
   },
 
   external: {

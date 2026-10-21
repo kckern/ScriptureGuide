@@ -91,7 +91,12 @@ export class SearchService {
   constructor(repo = searchRepository, sphinx = createSphinxClient(config.sphinx), limits = config.search) {
     this.repo = repo;
     this.sphinx = sphinx;
-    this.limits = { fallbackMaxMs: 1500, fallbackMaxRows: 1000000, fallbackScanChunk: SCAN_CHUNK, clock: Date.now, ...limits };
+    this.limits = {
+      fallbackMaxMs: limits?.fallbackMaxMs ?? 1500,
+      fallbackMaxRows: limits?.fallbackMaxRows ?? 1000000,
+      fallbackScanChunk: limits?.fallbackScanChunk ?? SCAN_CHUNK,
+      clock: limits?.clock ?? Date.now,
+    };
   }
 
   // A fresh budget for one fallback search: spent() once either limit is reached
@@ -147,10 +152,13 @@ export class SearchService {
 
     let results = await this.hits(query, versions, { stopAfter: REQUERY_OVER, budget });
     if (results.length > REQUERY_OVER) {
+      const firstPass = results;
       results = [];
       for (const range of BOOK_RANGES) {
         results.push(...await this.hits(query, ['LDS', 'KJV'], { range, limit: 5000, budget }));
       }
+      // The fallback ran out of budget before the requeries found anything: show the first pass
+      if (!results.length && budget.truncated) results = firstPass;
     }
 
     // verse_id → (version → verse_id)

@@ -110,6 +110,29 @@ describe('SearchService (MySQL fallback budget)', () => {
     expect(repo.candidates).toHaveBeenCalledTimes(3); // 400, 800, 1200 ms
     expect(r.truncated).toBe(true);
   });
+  test('keeps the first pass when the budget runs out before the volume requeries find anything', async () => {
+    let now = 0;
+    const repo = fakeRepo();
+    // the first pass finds 301 hits (over REQUERY_OVER) and takes the whole budget
+    repo.candidates = vi.fn(async (stems, versions, { afterId = 0, range } = {}) => {
+      now += 2000;
+      if (range) return { rows: [], through: afterId, done: true, scanned: 0 };
+      const rows = Array.from({ length: 301 }, (_, i) => ({ id: i + 1, verse_id: 28679, version: `V${i}`, text: VERSES[28679].text }));
+      return { rows, through: 301, done: true, scanned: 301 };
+    });
+    const svc = new SearchService(repo, null, { fallbackMaxMs: 1500, clock: () => now });
+    const r = await svc.search('charity');
+    expect(r.truncated).toBe(true);
+    expect(r.count).toBe(1);
+    expect(r.rows.map(x => x.verse_id)).toEqual([28679]);
+  });
+  test('a zero budget stops before the first query; an undefined limit takes its default', async () => {
+    const repo = fakeRepo();
+    expect((await new SearchService(repo, null, { fallbackMaxMs: 0 }).search('charity')).truncated).toBe(true);
+    expect(repo.candidates).not.toHaveBeenCalled();
+    const svc = new SearchService(fakeRepo(), null, { fallbackMaxMs: undefined, fallbackMaxRows: undefined });
+    expect(svc.limits).toMatchObject({ fallbackMaxMs: 1500, fallbackMaxRows: 1000000 });
+  });
   test('a search that finishes within the budget is not truncated', async () => {
     const r = await new SearchService(fakeRepo(), null).search('charity');
     expect(r.truncated).toBe(false);
