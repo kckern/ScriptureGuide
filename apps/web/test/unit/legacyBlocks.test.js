@@ -8,8 +8,8 @@ const TITLES = new Map([
   ['Genesis 1:1', 1], ['Genesis 1:2', 2], ['Genesis 1:3', 3],
   ['Genesis 2:1', 4], ['Genesis 2:2', 5],
   ['Lehi 1:1', 82292], ['Lehi 1:2', 82293],
-  ['Book of Commandments 13:1', 89527], ['Book of Commandments 13:0', 89528],
-  ['Book of Commandments 13:2', 89529], ['Book of Commandments 13:3', 89530],
+  ['Book of Commandments 27:1', 90101], ['Book of Commandments 27:0', 90102],
+  ['Book of Commandments 27:2', 90103], ['Book of Commandments 27:3', 90104],
 ]);
 const fakeRepo = {
   calls: 0,
@@ -79,8 +79,8 @@ describe('LegacyBlockService.blocks (scriptures::loadMetaFromRef)', () => {
   });
 
   test('comma lists keep their chapter, verse 0 included, in verse id order', async () => {
-    expect(await service().blocks('boc.13.1,0,3')).toEqual([
-      { orig: 'Book of Commandments 13:1, 0, 3', book: 'Book of Commandments', verse_ids: [89527, 89528, 89530] },
+    expect(await service().blocks('boc.27.1,0,3')).toEqual([
+      { orig: 'Book of Commandments 27:1, 0, 3', book: 'Book of Commandments', verse_ids: [90101, 90102, 90104] },
     ]);
   });
 

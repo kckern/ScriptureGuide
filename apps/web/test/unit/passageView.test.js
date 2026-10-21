@@ -56,28 +56,28 @@ describe('reference that matched nothing', () => {
   });
 });
 
-// Book of Commandments 13: verse 0 sits between verses 1 and 2 (verse id order)
+// Book of Commandments 27: verse 0 sits between verses 1 and 2 (verse id order)
 function withVerseZero() {
-  const rows = [[89527, 1], [89528, 0], [89529, 2]];
-  const verses = rows.map(([id, verseNum]) => new Verse({ id, verseNum, chapter: 13, text: '¶And it came to pass.', version: '1833' }));
+  const rows = [[90101, 1], [90102, 0], [90103, 2]];
+  const verses = rows.map(([id, verseNum]) => new Verse({ id, verseNum, chapter: 27, text: '¶And it came to pass.', version: '1833' }));
   return new ScriptureResult({
-    reference: new Reference({ query: 'boc.13.1,0,2', normalized: 'Book of Commandments 13:1,0,2', verseIds: rows.map(r => r[0]) }),
+    reference: new Reference({ query: 'boc.27.1,0,2', normalized: 'Book of Commandments 27:1,0,2', verseIds: rows.map(r => r[0]) }),
     verses,
-    headings: [{ verse_id: 89527, type: 'heading', text: '', last_verse_id: 89529, synthetic: true }],
-    config: { version: '1833', _bookTitle: 'Book of Commandments', _vChapterMap: Object.fromEntries(rows.map(r => [r[0], 13])) },
+    headings: [{ verse_id: 90101, type: 'heading', text: '', last_verse_id: 90103, synthetic: true }],
+    config: { version: '1833', _bookTitle: 'Book of Commandments', _vChapterMap: Object.fromEntries(rows.map(r => [r[0], 27])) },
   });
 }
 
 describe('verse 0', () => {
   test('stays in the heading ref and slug, in verse id order', () => {
-    const h = new HtmlPresenter().serialize(withVerseZero()).h3ByVerse[89527];
-    expect(h.ref).toBe('Book of Commandments 13:1,0,2');
-    expect(h.slug).toBe('1833/book.of.commandments.13.1,0,2');
+    const h = new HtmlPresenter().serialize(withVerseZero()).h3ByVerse[90101];
+    expect(h.ref).toBe('Book of Commandments 27:1,0,2');
+    expect(h.slug).toBe('1833/book.of.commandments.27.1,0,2');
   });
   test('has no verse_label (PHP dropped the empty() "0" attribute)', async () => {
     const data = new HtmlPresenter().serialize(withVerseZero());
     const $ = cheerio.load(await ejs.renderFile(VIEW, { data }));
-    expect($('span.v_89528').attr('verse_label')).toBeUndefined();
-    expect($('span.v_89529').attr('verse_label')).toBe('2');
+    expect($('span.v_90102').attr('verse_label')).toBeUndefined();
+    expect($('span.v_90103').attr('verse_label')).toBe('2');
   });
 });
