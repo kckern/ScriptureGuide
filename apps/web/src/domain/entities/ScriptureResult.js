@@ -10,6 +10,8 @@ export class ScriptureResult {
     // For several references separated by ";": one ScriptureResult per reference, in order.
     // The top-level fields then hold the combined reference, verses and headings.
     this.sections = sections;
+    // A word alone that names a whole book: { book, verseIds } of its first chapter (meta only)
+    this.bookOnly = undefined;
   }
 
   get isEmpty() {

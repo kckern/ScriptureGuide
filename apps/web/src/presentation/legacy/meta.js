@@ -3,8 +3,9 @@
 import { lookupReference } from 'scripture-guide';
 import { defaultVersions as defaultVersionList, versionOrder } from '../../domain/rules/defaultVersions.js';
 import { getBook } from '../../domain/rules/legacyReference.js';
+import { bookOnlyQuery } from '../../domain/rules/referenceParsing.js';
 
-export { getBook };
+export { getBook, bookOnlyQuery };
 
 function lookupIds(ref) {
   try {
@@ -48,13 +49,6 @@ function blockTexts(ref, normalized) {
     }
     return out;
   });
-}
-
-// A book named alone is its first chapter (scriptutil::getRanges): the name to resolve for
-// "Song.of.Solomon" is "Song of Solomon"; null when the text has digits or is empty.
-export function bookOnlyQuery(ref) {
-  const text = String(ref ?? '').replace(/[._]+/g, ' ').replace(/\s+/g, ' ').trim();
-  return text && !/\d/.test(text) && !text.includes(';') ? text : null;
 }
 
 // The block for a book named alone: its title (lds_scriptures_books) and first chapter.

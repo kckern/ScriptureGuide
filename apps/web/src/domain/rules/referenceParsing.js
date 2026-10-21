@@ -116,3 +116,11 @@ export function formatReference(bookTitle, rows, wholeChapters) {
     ? `${bookTitle} ${first.chapter}:${first.verse}`
     : `${bookTitle} ${first.chapter}:${first.verse}-${last.verse}`;
 }
+
+// A word alone (meta): a book named without a chapter is its first chapter (scriptutil::getRanges).
+// The name to resolve for "Song.of.Solomon" is "Song of Solomon"; null when the text has digits,
+// several blocks, or nothing.
+export function bookOnlyQuery(ref) {
+  const text = String(ref ?? '').replace(/[._]+/g, ' ').replace(/\s+/g, ' ').trim();
+  return text && !/\d/.test(text) && !text.includes(';') ? text : null;
+}

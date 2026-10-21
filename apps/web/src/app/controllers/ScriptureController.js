@@ -1,10 +1,24 @@
 import scriptureLookupService from '../../services/ScriptureLookupService.js';
 import searchParallelController from './SearchParallelController.js';
 import outputMiddleware from '../middleware/output.js';
+import referenceService from '../../services/ReferenceService.js';
+import { bookOnlyQuery } from '../../domain/rules/referenceParsing.js';
+
+// Formats whose reference blocks ("meta") name a book given alone (scriptures::loadMetaFromRef)
+const BOOK_ONLY_FORMATS = new Set(['meta', 'api']);
 
 export class ScriptureController {
-  constructor(lookupService) {
+  constructor(lookupService, references = referenceService) {
     this.lookupService = lookupService;
+    this.references = references;
+  }
+
+  // A word alone that matched no verses: when it is a whole book name (or alias), its first
+  // chapter, as { book, verseIds }; otherwise null. Only the meta blocks use it.
+  async bookOnly(result, config) {
+    if (!BOOK_ONLY_FORMATS.has(config.outputFormat) || !result.reference.isEmpty) return undefined;
+    const name = bookOnlyQuery(config.legacy?.ref);
+    return name ? this.references.resolveBookOnly(name) : undefined;
   }
 
   async show(req, res, next) {
@@ -19,6 +33,7 @@ export class ScriptureController {
       if (!reference && !config.parallel) return this.home(req, res);
 
       const result = await this.lookupService.lookup(reference, config);
+      result.bookOnly = await this.bookOnly(result, config);
 
       // Attach result for output middleware
       req.scriptureResult = result;

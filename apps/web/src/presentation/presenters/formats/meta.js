@@ -2,9 +2,8 @@
 // meta_only, returning only "meta"). JSON as PHP's json_encode(PRETTY_PRINT | NUMERIC_CHECK).
 import rawRepository from '../../../data/repositories/RawRepository.js';
 import { flag } from '../../formatOptions.js';
-import { metaFromRef, bookOnlyQuery, bookOnlyBlock } from '../../legacy/meta.js';
-import referenceService from '../../../services/ReferenceService.js';
-import { blankHeading } from '../../../domain/rules/referenceParsing.js';
+import { metaFromRef, bookOnlyBlock } from '../../legacy/meta.js';
+import { blankHeading, bookOnlyQuery } from '../../../domain/rules/referenceParsing.js';
 import { sendPhpJson } from '../../legacy/phpJson.js';
 
 // Fallback for references the package cannot parse but the lookup resolved (DB slugs).
@@ -16,16 +15,13 @@ function blocksFor(ref, result) {
 }
 
 // inc_api.php meta_only branch, including ?heads (heading verse ids of the first block).
-export async function metaOnly(req, result, repo = rawRepository, references = referenceService) {
+export async function metaOnly(req, result, repo = rawRepository) {
   const lr = req.config.legacy;
   const meta = blocksFor(lr.ref, result);
-  // A word alone: a whole book name (or cleanReference alias) is its first chapter; anything
-  // else is a block without verses, titled as cleanReference left it ("the" → "The").
-  // loadVerseIds matched verse_title exactly, so no prefixes ("is" is not Isaiah).
-  const bookQuery = !meta.length && bookOnlyQuery(lr.ref);
-  if (bookQuery) {
-    const r = await references.resolveBookOnly(bookQuery);
-    if (r) meta.push(bookOnlyBlock(r.book, r.verseIds));
+  // A word alone: a whole book name is its first chapter (result.bookOnly, resolved by the
+  // controller); anything else is a block without verses, titled as cleanReference left it.
+  if (!meta.length && bookOnlyQuery(lr.ref)) {
+    if (result?.bookOnly) meta.push(bookOnlyBlock(result.bookOnly.book, result.bookOnly.verseIds));
     else {
       const name = blankHeading(lr.ref);
       meta.push({ orig: name, book: name, verse_ids: [] });

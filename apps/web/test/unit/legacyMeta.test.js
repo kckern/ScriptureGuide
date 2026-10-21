@@ -79,13 +79,10 @@ describe('a book named alone (meta)', () => {
   test('is titled with the book title', () => {
     expect(bookOnlyBlock('Genesis', [1])).toEqual({ book: 'Genesis', orig: 'Genesis', verse_ids: [1] });
   });
-  // A stub of ReferenceService.resolveBookOnly: whole book names (or aliases) only, no prefixes
-  const BOOKS = { 'song of solomon': "Solomon's Song", son: "Solomon's Song", genesis: 'Genesis' };
-  const references = { resolveBookOnly: async t => (BOOKS[t.toLowerCase()] ? { book: BOOKS[t.toLowerCase()], verseIds: [17539] } : null) };
-  const meta = ref => metaOnly({ config: { legacy: { ref, versions: null } }, query: {}, headers: {} }, null, {}, references);
-  test('metaOnly resolves a whole book name or alias', async () => {
-    expect(await meta('Song.of.Solomon')).toEqual([{ book: "Solomon's Song", orig: "Solomon's Song", verse_ids: [17539] }]);
-    expect(await meta('son')).toEqual([{ book: "Solomon's Song", orig: "Solomon's Song", verse_ids: [17539] }]);
+  const meta = (ref, bookOnly = null) => metaOnly({ config: { legacy: { ref, versions: null } }, query: {}, headers: {} }, { reference: { verseIds: [] }, bookOnly }, {});
+  test('metaOnly lists the first chapter the controller resolved', async () => {
+    expect(await meta('Song.of.Solomon', { book: "Solomon's Song", verseIds: [17539] }))
+      .toEqual([{ book: "Solomon's Song", orig: "Solomon's Song", verse_ids: [17539] }]);
   });
   test('a word that is not a whole book name is a block without verses, as live', async () => {
     expect(await meta('the')).toEqual([{ orig: 'The', book: 'The', verse_ids: [] }]);
