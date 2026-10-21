@@ -47,3 +47,35 @@ falls back to MySQL (meant for development), which stops a search after
 query can run past it (a LIKE-only scan over all versions reads 100,000 ids per query, about
 150 ms; other queries are bounded by their FULLTEXT match or by the LDS/KJV rows of a verse
 range). Rows read are counted as the id span of such a scan, otherwise as the rows returned.
+
+## Browser smoke suite
+
+`test/browser/smoke.mjs` loads the pages in `test/browser/pages.mjs` in Chromium on the live site
+and on a Node app, compares screenshots and drives the reader (version box, copy, version
+selector) on the Node page. It is a manual check before a deploy or on staging, not part of CI:
+it needs the live site and a Node app running against a full copy of the database (setup in
+`test/parity/README.md`).
+
+```sh
+npx playwright install chromium     # once
+npm run browser -w @scripture-guide/web -- [--only <name|path>] [--reuse-live] [--font-mode native]
+```
+
+A page fails when more than `PIXEL_THRESHOLD` of its pixels differ (default 0.001), when one
+region of differing pixels holds more than `REGION_MAX_PIXELS` (default 100), or on a console
+error, failed request or interaction on the Node page. Screenshots, diffs and `report.json` go
+to `test/browser/.out/` (gitignored).
+
+| Variable | Default | |
+|---|---|---|
+| `NODE_BASE` | `http://127.0.0.1:3101` | Node app under test |
+| `LIVE_BASE` | `https://scripture.guide` | reference site |
+| `FONT_CHECK_BASE` | unset | a second Node app started with `FONT_DIR`/`FONT_BASE`: fails unless the private font is declared, fetched and used there |
+| `FONT_MODE` | `normalize` | `normalize` sets the text of both pages in one font, so the diff measures layout; `native` compares the real fonts |
+| `PIXEL_THRESHOLD`, `REGION_MAX_PIXELS`, `REGION_GAP` | 0.001, 100, 2 | the comparison gates |
+| `LIVE_MAX_AGE_DAYS` | 7 | oldest live screenshot `--reuse-live` accepts |
+
+Each page loads once on live per run, one after another. `--reuse-live` uses the live screenshot
+saved by an earlier run instead, when its sidecar (`<name>.live.json`: capture time, font mode,
+masks, viewport) matches this run and is recent enough; otherwise that page loads live again.
+Prefer it while iterating on the Node side.
