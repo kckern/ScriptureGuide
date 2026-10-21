@@ -1,7 +1,6 @@
 import express from 'express';
 import helmet from 'helmet';
 import compression from 'compression';
-import morgan from 'morgan';
 import cookieParser from 'cookie-parser';
 import session from 'express-session';
 import path from 'path';
@@ -12,6 +11,7 @@ import routes from './app/routes/index.js';
 import subdomainMiddleware from './app/middleware/subdomain.js';
 import { publicStatic, installPrivateFonts } from './app/middleware/static.js';
 import { notFoundHandler, errorHandler } from './app/middleware/error.js';
+import { requestLog } from './app/middleware/requestLog.js';
 import db from './data/db/connection.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -27,9 +27,9 @@ app.use(helmet({
 // Compression
 app.use(compression());
 
-// Logging
+// Logging: one JSON line per request on stdout
 if (config.env !== 'test') {
-  app.use(morgan(config.env === 'development' ? 'dev' : 'combined'));
+  app.use(requestLog());
 }
 
 // Body parsing
