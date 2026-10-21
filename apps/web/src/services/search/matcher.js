@@ -62,7 +62,7 @@ function termPrefixes(terms) {
 }
 
 // The longest prefix every word with this stem shares, for a coarse SQL prefilter.
-// stem_en may rewrite the stem's last letter (happy → happi, day → dai) or add an e (aging → age,
+// stem_en may rewrite the stem's last letter (happy → happi, cry → cri) or add an e (aging → age,
 // using → use), so drop the last letter when the stem is long enough, ends in that i, or is
 // vowel-consonant-e; dying, lying and tying stem to die, lie and tie, and skies to sky.
 // (Checked against every word of the full database: each starts with its stem's prefix.)

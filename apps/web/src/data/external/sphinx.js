@@ -13,14 +13,16 @@ const quoteList = list => list.map(v => `'${String(v).replace(/['\\]/g, '')}'`).
 
 /**
  * SELECT verse_id,version FROM sgindex WHERE MATCH('@(text) <q>') AND version IN (...)
- *   [AND verse_id BETWEEN a AND b] LIMIT n
+ *   [AND verse_id BETWEEN a AND b] LIMIT n [OPTION max_matches=m]
  */
-export function buildSearchSql(query, { versions = [], range = null, limit = 99999 } = {}) {
+export function buildSearchSql(query, { versions = [], range = null, limit = 99999, maxMatches = null } = {}) {
   let sql = `SELECT verse_id, version FROM sgindex WHERE MATCH('@(text) ${escapeMatch(query)}')`;
   if (versions.length) sql += ` AND version IN (${quoteList(versions)})`;
   if (range) sql += ` AND verse_id BETWEEN ${Number(range[0])} AND ${Number(range[1])}`;
-  // No OPTION max_matches: production sends none, so searchd's default cap applies there too.
   sql += ` LIMIT ${Number(limit)}`;
+  // Production sends no OPTION max_matches, so searchd's default cap (1000) applies there too;
+  // the Sphinx/fallback comparison raises it to read every hit.
+  if (maxMatches) sql += ` OPTION max_matches=${Number(maxMatches)}`;
   return sql;
 }
 

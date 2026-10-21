@@ -1,5 +1,5 @@
 import { describe, test, expect } from 'vitest';
-import { diffSets, hasDifference, isPhrase, diagnose, snippet, stemmedWords, formatQuery, shownPairs } from './sphinxDiff.mjs';
+import { diffSets, hasDifference, isPhrase, diagnose, snippet, stemmedWords, formatQuery, shownPairs, firstPass } from './sphinxDiff.mjs';
 
 const h = (version, ...ids) => ids.map(verse_id => ({ verse_id, version }));
 
@@ -36,6 +36,12 @@ describe('isPhrase', () => {
   test('quoted queries', () => {
     expect(isPhrase('"in the beginning"')).toBe(true);
     expect(isPhrase('in the beginning')).toBe(false);
+    expect(isPhrase(' "faith hope" "charity" ')).toBe(true);
+    expect(isPhrase('"the third day')).toBe(true);
+  });
+  test('a query with words outside the quotes is not a phrase query', () => {
+    expect(isPhrase('"faith hope" charity')).toBe(false);
+    expect(isPhrase('charity "faith hope"')).toBe(false);
   });
 });
 
@@ -96,5 +102,34 @@ describe('formatQuery', () => {
   test('no difference is one "same" line per query and a count line per version', () => {
     const out = formatQuery({ query: 'water', diff: diffSets(h('KJV', 1), h('KJV', 1), ['KJV']) });
     expect(out).toEqual(['same  "water"', '  KJV   sphinx      1  fallback      1']);
+  });
+});
+
+describe('firstPass', () => {
+  const many = (version, n, from = 1) => h(version, ...Array.from({ length: n }, (_, i) => from + i));
+  test('both past the requery threshold: the same decision, sets not compared (the fallback stops early)', () => {
+    const r = firstPass(many('KJV', 400), many('KJV', 301, 50), ['KJV'], 300);
+    expect(r.requery).toBe(true);
+    expect(hasDifference(r.diff)).toBe(false);
+    expect(r.notes).toEqual([]);
+  });
+  test('both under it: these are the results, so the sets must match', () => {
+    const r = firstPass(h('KJV', 1, 2), h('ASV', 1), ['KJV', 'ASV'], 300);
+    expect(r.requery).toBe(false);
+    expect(r.diff.get('KJV').onlyA).toEqual([1, 2]);
+    expect(r.diff.get('ASV').onlyB).toEqual([1]);
+  });
+  test('one side past it: a difference, with a note saying which side requeries', () => {
+    const r = firstPass(many('KJV', 301), many('KJV', 200), ['KJV'], 300);
+    expect(r.requery).toBe(true);
+    expect(hasDifference(r.diff)).toBe(true);
+    expect(r.notes).toEqual(['first pass: only sphinx went past 300 hits (sphinx 301, fallback 200)']);
+  });
+});
+
+describe('formatQuery label', () => {
+  test('names the comparison after the query', () => {
+    const out = formatQuery({ query: 'days', label: 'requery 1-23145', diff: diffSets(h('KJV', 1), h('KJV', 1), ['KJV']) });
+    expect(out[0]).toBe('same  "days"  [requery 1-23145]');
   });
 });

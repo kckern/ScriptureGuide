@@ -57,8 +57,10 @@ jobs:
           loved=$(median http://localhost:3001/search/loved)
           test "$loved" -lt 500 || { echo "Sphinx /search/loved took ${loved} ms (limit 500)"; exit 1; }
       - name: Sphinx and MySQL fallback find the same verses
-        # web-sphinx has SPHINX_HOST=sphinx and MYSQL_HOST=db; the script runs SearchService's
-        # hits() through both backends and compares verse ids per version (KJV, ASV, WEB)
+        # web-sphinx has SPHINX_HOST=sphinx and MYSQL_HOST=db. The script runs the same
+        # SearchService.hits() calls on a Sphinx-backed and a fallback instance and compares the
+        # verse ids: per version (KJV, ASV, WEB), the all-versions first pass, and the per-range
+        # LDS/KJV requery that search() makes past 300 hits
         run: docker exec web-sphinx node test/integration/sphinx-vs-fallback.mjs
       - if: failure()
         run: docker compose -f infra/docker-compose.yml --profile search logs --tail 80

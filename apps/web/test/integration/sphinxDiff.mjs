@@ -5,9 +5,10 @@ import { plainText } from '../../src/domain/rules/legacyText.js';
 
 export const MAX_SHOWN = 10;
 
-// A query with a quoted phrase: Sphinx's phrase operator and the fallback's adjacency check may
-// differ on purpose, so these differences are reported apart and do not fail the run.
-export const isPhrase = q => String(q).includes('"');
+// A query made only of quoted phrases: Sphinx's phrase operator and the fallback's adjacency check
+// may differ on purpose, so these differences are reported apart and do not fail the run. A query
+// with words outside the quotes ('"faith hope" charity') is a plain query.
+export const isPhrase = q => /^(\s*"[^"]*("|$))+\s*$/.test(String(q));
 
 const key = h => `${String(h.version).toUpperCase()}|${Number(h.verse_id)}`;
 
@@ -40,6 +41,22 @@ export function diffSets(a, b, versions = []) {
 }
 
 export const hasDifference = diff => [...diff.values()].some(d => d.onlyA.length || d.onlyB.length);
+
+/**
+ * Production's first pass over all versions (SearchService.search, stopAfter REQUERY_OVER): past
+ * `over` hits the results come from the per-range requery instead, and the fallback stops reading
+ * soon after `over`, so two passes that both go past it agree whatever their sets. Otherwise the
+ * first pass is the result, and its sets must match.
+ * @returns {{requery:boolean, diff:Map, notes:string[]}}
+ */
+export function firstPass(sphinx, fallback, versions, over) {
+  const a = sphinx.length > over, b = fallback.length > over;
+  const diff = diffSets(sphinx, fallback, versions);
+  const notes = [];
+  if (a && b) for (const d of diff.values()) { d.onlyA = []; d.onlyB = []; }
+  else if (a || b) notes.push(`first pass: only ${a ? 'sphinx' : 'fallback'} went past ${over} hits (sphinx ${sphinx.length}, fallback ${fallback.length})`);
+  return { requery: a || b, diff, notes };
+}
 
 // The text's words that could carry a query stem, with their stems: "loving→love, loveth→loveth"
 export function stemmedWords(text, query) {
@@ -79,13 +96,13 @@ export function diagnose(text, query, side) {
 
 /**
  * Report lines for one query.
- * @param {object} r { query, diff (diffSets(sphinx, fallback)), texts: Map 'VERSION|id' → text,
- *   notes: string[] }
+ * @param {object} r { query, label (which comparison), diff (diffSets(sphinx, fallback)),
+ *   texts: Map 'VERSION|id' → text, notes: string[] }
  */
-export function formatQuery({ query, diff, texts = new Map(), notes = [] }, max = MAX_SHOWN) {
+export function formatQuery({ query, label = '', diff, texts = new Map(), notes = [] }, max = MAX_SHOWN) {
   const lines = [];
   const differs = hasDifference(diff);
-  lines.push(`${differs ? 'DIFF' : 'same'}  ${JSON.stringify(query)}`);
+  lines.push(`${differs ? 'DIFF' : 'same'}  ${JSON.stringify(query)}${label ? `  [${label}]` : ''}`);
   for (const [v, d] of diff) {
     const n = d.onlyA.length + d.onlyB.length;
     lines.push(`  ${v.padEnd(5)} sphinx ${String(d.a).padStart(6)}  fallback ${String(d.b).padStart(6)}${n ? `  only sphinx ${d.onlyA.length}, only fallback ${d.onlyB.length}` : ''}`);

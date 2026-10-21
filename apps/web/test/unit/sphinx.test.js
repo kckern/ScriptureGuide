@@ -10,6 +10,10 @@ describe('buildSearchSql', () => {
     expect(buildSearchSql('faith', { versions: ['LDS', 'KJV'], range: [1, 23145], limit: 5000 }))
       .toBe("SELECT verse_id, version FROM sgindex WHERE MATCH('@(text) faith') AND version IN ('LDS','KJV') AND verse_id BETWEEN 1 AND 23145 LIMIT 5000");
   });
+  test('maxMatches raises searchd\'s cap (production sends none)', () => {
+    expect(buildSearchSql('faith', { versions: ['KJV'], limit: 100000, maxMatches: 100000 }))
+      .toBe("SELECT verse_id, version FROM sgindex WHERE MATCH('@(text) faith') AND version IN ('KJV') LIMIT 100000 OPTION max_matches=100000");
+  });
   test('escapes only what would end the string literal', () => {
     expect(escapeMatch("lord's -house")).toBe("lord\\'s -house");
     expect(escapeMatch('a\\b')).toBe('a\\\\b');

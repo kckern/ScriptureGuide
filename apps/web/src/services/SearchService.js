@@ -8,7 +8,7 @@ import { queryStems, queryTerms, matchesTerms } from './search/matcher.js';
 import { plainText, flattenText } from '../domain/rules/legacyText.js';
 import { formatReference, slugifyRef, versionImg } from '../domain/rules/legacyReference.js';
 
-const REQUERY_OVER = 300;
+export const REQUERY_OVER = 300;
 const TOP = 5000;
 // Candidate rows per fallback query. Without a (version, verse_id) index each page of a range
 // query reads every row of its versions again, so those pages are large; the first query over all
@@ -18,7 +18,7 @@ const FIRST_PAGE = 5000;
 // Ids read per query by a LIKE-only scan over all versions (about 150 ms each)
 const SCAN_CHUNK = 100000;
 // Requery ranges (OT, NT, BoM, D&C+PGP) for LDS and KJV when the first query is too broad
-const BOOK_RANGES = [[1, 23145], [23146, 31102], [31103, 37706], [37707, 41995]];
+export const BOOK_RANGES = [[1, 23145], [23146, 31102], [31103, 37706], [37707, 41995]];
 const BOC = [89431, 90772];
 const DC1835 = [90773, 91462];
 
