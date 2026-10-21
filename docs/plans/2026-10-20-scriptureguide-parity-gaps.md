@@ -41,7 +41,7 @@ Open owner decisions:
 5. The Google sign-in remnant in the layout (`apis.google.com` client script) and `public/js/main.js` (`googleUser`): keep or remove.
 6. getclicky analytics: keep or drop.
 7. The subverse-digit rule (`/pr415…` above): keep Node's reading or reproduce PHP.
-8. Owner questionnaire #1-25: not found in this repository (including the foundation plan) or in the private infrastructure repo. Commit it, or record where it lives, and link it here.
+8. Owner questionnaire: kept in the private infrastructure repo (`runbooks/2026-10-21-owner-decisions.md`), because several items concern host security.
 
 Cutover itself (gate, switch, rollback, PHP retirement) is in the private infrastructure repo, `runbooks/2026-10-21-scripture-guide-cutover.md`.
 
