@@ -133,7 +133,9 @@ function splitPathKeys(rawPath) {
  *             versions; null when empty
  */
 function legacyRequest(rawPath, query) {
-  const { q: flat, keys } = splitPathKeys(String(rawPath || '/').replace(/^\/+/, ''));
+  const { q: flat, keys } = typeof query?.q === 'string'
+    ? { q: query.q.replace(/^\/+/, '').replace(/\. /g, ' '), keys: [] }
+    : splitPathKeys(String(rawPath || '/').replace(/^\/+/, ''));
   let q = stripPathPrefixes(flat, '').q;
   if (q.startsWith('=/')) q = q.slice(2);
   q = q.replace(/\.(jpg|png)/gi, '');
@@ -165,9 +167,9 @@ function legacyRequest(rawPath, query) {
  */
 export function parseRequest({ host = '', path = '/', query = {}, random = Math.random } = {}) {
   const { subdomain: hostSubdomain, flags: hostFlags } = parseHost(host);
-  let q = decode(String(path || '/')).replace(/^\/+/, '');
-  // index.php?q=... reaches the front controller without a rewritten path
-  if (!q && typeof query?.q === 'string') q = query.q.replace(/^\/+/, '');
+  // A ?q= in the query wins over the path: Apache rewrote /<path>?<query> to
+  // index.php?q=<path>&<query> and PHP kept the last q.
+  let q = (typeof query?.q === 'string' ? query.q : decode(String(path || '/'))).replace(/^\/+/, '');
 
   const stripped = stripPathPrefixes(q, hostSubdomain);
   const subdomain = stripped.subdomain;

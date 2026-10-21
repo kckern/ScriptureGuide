@@ -117,7 +117,12 @@ describe('q normalization', () => {
   });
   test('?q= on the bare path is the request (index.php?q=...)', () => {
     expect(req('/', { q: 'kjv/john.3.16' }).reference).toBe('john.3.16');
-    expect(req('/john.3.16', { q: 'gen.1.1' }).reference).toBe('john.3.16');
+  });
+  test('?q= wins over the path (Apache QSA put it after q=<path>; PHP kept the last)', () => {
+    expect(req('/john.3.16', { q: 'gen.1.1' }).reference).toBe('gen.1.1');
+    expect(req('/search', { q: 'gen.1.1 spam' }).search).toBe(false);
+    expect(req('/john.3.16', { q: '' }).reference).toBe('');
+    expect(req('/api/john.3.16', { q: 'gen.1.1' }).outputFormat).toBe('html');
   });
   test('empty path is home', () => {
     const r = req('/');
@@ -191,6 +196,11 @@ describe('legacy (what lib.php.inc saw: api input/config, meta, raw, plain)', ()
 
   test('decodes the path', () => {
     expect(legacy('/John%203:16').ref).toBe('John 3:16');
+  });
+
+  test('?q= wins over the path', () => {
+    expect(legacy('/john.3.16', { q: 'kjv/gen.1.1' })).toEqual({ q: 'kjv/gen.1.1', ref: 'gen.1.1', versions: { KJV: 'KJV' }, config: { versions: { KJV: 'KJV' } } });
+    expect(legacy('/', { q: 'john.3.16' }).ref).toBe('john.3.16');
   });
 
   test('+ in the path is a space', () => {
