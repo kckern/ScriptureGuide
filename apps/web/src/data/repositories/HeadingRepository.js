@@ -121,7 +121,7 @@ export class HeadingRepository {
       `SELECT h.verse_id, h.version, h.type, h.text, h.style, h.level, h.seq, h.footer, h.book_id,
         (SELECT MIN(h2.verse_id) - 1
          FROM scripture_headings h2
-         WHERE h2.version = h.version AND h2.book_id = h.book_id
+         WHERE h2.version = h.version
            AND h2.verse_id > h.verse_id AND h2.footer = 0
         ) AS last_verse_id
        FROM scripture_headings h
@@ -130,7 +130,18 @@ export class HeadingRepository {
       [verseIds, version]
     );
 
+    // The version's last heading runs to its last verse (scriptutil::loadHeading)
+    if (rows.some(r => r.last_verse_id == null)) {
+      const last = await this.findVersionLastVerseId(version);
+      for (const r of rows) if (r.last_verse_id == null) r.last_verse_id = last;
+    }
     return rows;
+  }
+
+  // The highest verse id a version has text for
+  async findVersionLastVerseId(version) {
+    const [row] = await db.query('SELECT MAX(verse_id) AS last FROM scripture_verses WHERE version = ?', [version]);
+    return row?.last ?? null;
   }
 
   // Chapter-level heading: find most recent heading record at or before first verse
@@ -159,14 +170,15 @@ export class HeadingRepository {
       heading[row.type] = row.text;
     }
 
-    // Find last verse covered by this heading
+    // Last verse covered: up to the version's next heading in any book, or its last verse
+    // (scriptutil::loadHeading)
     const [next] = await db.query(
       `SELECT verse_id FROM scripture_headings
-       WHERE version = ? AND book_id = ? AND verse_id > ? AND footer = 0
+       WHERE version = ? AND verse_id > ? AND footer = 0
        ORDER BY verse_id ASC LIMIT 1`,
-      [version, bookId, rows[0].verse_id]
+      [version, rows[0].verse_id]
     );
-    heading.last = next ? next.verse_id - 1 : null;
+    heading.last = next ? next.verse_id - 1 : await this.findVersionLastVerseId(version);
 
     return heading;
   }
