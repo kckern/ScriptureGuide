@@ -20,7 +20,9 @@ export function parseVerseIdList(ref) {
 // "jst john.3.16" → { book: 'jst john', chapter: 3, verseStart: 16, verseEnd: 16, chapterEnd: null }
 export function splitBookReference(ref) {
   const s = String(ref || '').trim().toLowerCase().replace(/\s+/g, ' ');
-  const m = s.match(/^((?:\d\s*)?[^\d]*[^\d\s.:])[\s.]*(\d+)(?:[.:](\d+)(?:-(\d+))?)?(?:-(\d+))?$/);
+  // The book is everything before the trailing chapter/verse numbers, digits included
+  // ("jst.1.kgs.7.30", "1835.doctrine.and.covenants.2:11").
+  const m = s.match(/^(.*?[a-z&][^\d]*?)[\s.]*(\d+)(?:[.:](\d+)(?:-(\d+))?)?(?:-(\d+))?$/);
   if (!m) return null;
   const book = m[1].replace(/[.\s]+$/, '').trim();
   if (!/[a-z]/.test(book)) return null;

@@ -19,6 +19,10 @@ describe('splitBookReference', () => {
     expect(splitBookReference('1ne 2')).toEqual({ book: '1ne', chapter: 2, verseStart: null, verseEnd: null, chapterEnd: null });
     expect(splitBookReference('jst gen 1-2')).toEqual({ book: 'jst gen', chapter: 1, verseStart: null, verseEnd: null, chapterEnd: 2 });
   });
+  test('book names with numbers in them', () => {
+    expect(splitBookReference('jst.1.kgs.7.30')).toEqual({ book: 'jst.1.kgs', chapter: 7, verseStart: 30, verseEnd: 30, chapterEnd: null });
+    expect(splitBookReference('1835.doctrine.and.covenants.2:11')).toEqual({ book: '1835.doctrine.and.covenants', chapter: 2, verseStart: 11, verseEnd: 11, chapterEnd: null });
+  });
   test('not a reference', () => {
     expect(splitBookReference('faith')).toBeNull();
     expect(splitBookReference('3')).toBeNull();
@@ -32,6 +36,7 @@ describe('bookKey', () => {
     expect(bookKey('1 Ne.')).toBe('1 ne');
     expect(bookKey('1ne')).toBe('1 ne');
     expect(bookKey('TSP.')).toBe('tsp');
+    expect(bookKey('1835.doctrine.and.covenants')).toBe('1835 doctrine and covenants');
   });
 });
 
