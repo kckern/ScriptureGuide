@@ -31,7 +31,9 @@ cached; it is retried on the next request (a database error is reported, not rea
 
 The licensed text font is not in the repository or the image. Set `FONT_DIR` to a directory
 holding `scripture.woff2` (served at `/private-fonts`), or `FONT_BASE` to where it is hosted;
-`FONT_GOUDY_FILE` renames the file. Unset, pages use Sorts Mill Goudy. See
+`FONT_GOUDY_FILE` renames the file (use a new name when replacing the font: it is cached 30
+days). Unset, or `FONT_DIR` without the file (a warning at start-up), pages use Sorts Mill
+Goudy. See
 [docs/fonts.md](docs/fonts.md#served-privately), which also has the bom mount.
 
 ### Search

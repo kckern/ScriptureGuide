@@ -1,6 +1,6 @@
 
 /*  FONT IMPORT */
-/*  'Goudy' (the licensed text font) is not here: the layout declares it only when FONT_BASE or
+/*  'Goudy Scripture' (the licensed text font) is not here: the layout declares it only when FONT_BASE or
     FONT_DIR is set (apps/web/docs/fonts.md). Without it, body text falls back to Sorts Mill Goudy. */
 
 
@@ -56,7 +56,7 @@
 }
 
  body {
-     font-family: 'Goudy', 'Sorts Mill Goudy', Georgia, serif;
+     font-family: 'Goudy Scripture', 'Sorts Mill Goudy', Georgia, serif;
      font-size: 1.5em;
      line-height: 1.5em;
      background-color: #333;

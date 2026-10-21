@@ -38,36 +38,56 @@ committed or built into the image, and the app only points at it.
 
 | Env | Meaning |
 |---|---|
-| `FONT_BASE` | URL or path the font is fetched from, e.g. `https://media.scripture.guide/fonts` or `/private-fonts`. A trailing slash is dropped. |
-| `FONT_DIR` | A directory on the app's file system, served at `/private-fonts` (only when set; no directory listing, `Cache-Control: max-age=30d`). With `FONT_DIR` and no `FONT_BASE`, `FONT_BASE` defaults to `/private-fonts`. |
+| `FONT_BASE` | URL or path the font is fetched from, e.g. `https://media.scripture.guide/fonts` or `/private-fonts`. A trailing slash is dropped; a value that is empty without it (`/`) is ignored with a warning. |
+| `FONT_DIR` | A directory on the app's file system, served at `/private-fonts` (only when set; no directory listing, `Cache-Control: public, max-age=2592000`, 30 days). With `FONT_DIR` and no `FONT_BASE`, `FONT_BASE` defaults to `/private-fonts`. |
 | `FONT_GOUDY_FILE` | File name under `FONT_BASE`. Default `scripture.woff2`. The `format()` follows the extension (`woff2`, `woff`, `ttf`, `otf`). |
 
 With `FONT_BASE` or `FONT_DIR` set, the layout (`src/presentation/views/layouts/main.ejs`)
-emits, after the stylesheets:
+emits, after the stylesheets, a `<style id="private-fonts">` with two faces:
 
 ```css
 @font-face {
-  font-family: 'Goudy';
+  font-family: 'Goudy Scripture';
   src: url('<FONT_BASE>/scripture.woff2') format('woff2');
   font-weight: 400;
   font-style: normal;
   font-display: swap;
 }
+@font-face {
+  font-family: 'Goudy Scripture';
+  src: url('/css/webfont/SortsMillGoudy-Italic.woff') format('woff');
+  font-weight: 400;
+  font-style: italic;
+  font-display: swap;
+}
 ```
 
-Neither set: no `@font-face` for `'Goudy'`, so the page requests no font that would 404.
+The licensed file is upright only, so italic text (prompts, headnotes, summaries, backgrounds,
+`parallel.css`) uses Sorts Mill Goudy Italic, a real italic, instead of an oblique the browser
+would synthesize. Bold text is still synthesized from the regular face.
 
-The body stack in `style.css` is `'Goudy', 'Sorts Mill Goudy', Georgia, serif` (live has
-Sorts Mill Goudy first). With the private font configured, `'Goudy'` is the text font; without
-it, the browser has no `'Goudy'` face and uses Sorts Mill Goudy, as before. A system font whose
-family is exactly "Goudy" would also match; that is accepted. Notes:
+Neither set: no `@font-face` for `'Goudy Scripture'`, so the page requests no font that would
+404. At startup, when the font comes from `FONT_DIR` (`FONT_BASE` unset or `/private-fonts`)
+and `FONT_DIR/<FONT_GOUDY_FILE>` does not exist, the app logs a warning and emits no
+`@font-face` either. An external `FONT_BASE` is not checked.
 
-- The file has only a regular face. Bold and italic text in `'Goudy'` is synthesized by the
-  browser from it; it does not fall back to Sorts Mill Goudy Italic.
+The body stack in `style.css` is `'Goudy Scripture', 'Sorts Mill Goudy', Georgia, serif` (live:
+`'Sorts Mill Goudy', 'Goudy', Georgia, serif`). With the private font configured, it is the text
+font; without it, the browser has no `'Goudy Scripture'` face and uses Sorts Mill Goudy, as
+before. The family name is specific enough that no system font stands in for it. Notes:
+
 - Characters the file lacks (outside Latin, Latin Extended and Cyrillic) fall back per glyph to
   Sorts Mill Goudy, then Georgia.
 - From another origin (`FONT_BASE=https://…`), that host must send
   `Access-Control-Allow-Origin` for the site's origins, or browsers refuse the font.
+- Replacing the font: browsers and proxies may keep the old file for 30 days, so give the new
+  file a new name (e.g. `scripture-2.woff2`) and set `FONT_GOUDY_FILE` to it instead of
+  overwriting `scripture.woff2`.
+- Content Security Policy is off (`helmet({ contentSecurityPolicy: false })` in `src/app.js`).
+  When it is turned on, it has to allow the font and the block that declares it: `font-src
+  'self'` plus the `FONT_BASE` origin when that is external, and `style-src` that permits this
+  inline `<style>` (`'unsafe-inline'`, which the layout's other inline styles already need, or a
+  nonce/hash).
 - The home page search box keeps its own `'Sorts Mill Goudy', serif` (`home.ejs`), as live does.
 
 Deploying on bom: put the file in a host directory outside the repository and the image, mount
@@ -82,11 +102,14 @@ it read-only into the web container and point `FONT_DIR` at it:
 ```
 
 Then check `curl -sI https://scripture.guide/private-fonts/scripture.woff2` returns 200 with
-`Content-Type: font/woff2`, and a page's `<head>` has `<style id="private-fonts">`.
+`Content-Type: font/woff2`, a page's `<head>` has `<style id="private-fonts">`, and the
+start-up log has no `FONT_DIR: … not found` warning.
 
 `.gitignore` and the root `.dockerignore` (the image's build context is the repository root)
-exclude `apps/web/public/css/webfont/goudy*` (any case) and `scripture*.woff2` anywhere, so
-a copy dropped into the tree is neither committed nor built into the image.
+exclude, in any case and anywhere in the tree, `goudy*` and `scripture*` font files
+(`.woff`, `.woff2`, `.ttf`, `.otf`, `.eot`), so a copy dropped into the tree is neither committed
+nor built into the image. Source files named `scripture*` (e.g. `scripture.ejs`,
+`scriptures.mjs`) are not matched.
 
 ### History: Goudy Old Style (removed)
 

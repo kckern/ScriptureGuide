@@ -7,6 +7,11 @@ node_modules/
 *.zip
 
 # Licensed fonts are served privately from FONT_BASE / FONT_DIR (apps/web/docs/fonts.md).
-# Never commit them. Case-insensitive; SortsMillGoudy-* and ShadowsIntoLight.woff2 (OFL) are not matched.
-apps/web/public/css/webfont/[Gg][Oo][Uu][Dd][Yy]*
-**/[Ss][Cc][Rr][Ii][Pp][Tt][Uu][Rr][Ee]*.woff2
+# Never commit them. Any case: goudy* anywhere, and scripture* font files (woff/woff2/ttf/otf/eot)
+# only, so source files named scripture* stay tracked. SortsMillGoudy-* and ShadowsIntoLight.woff2 are not matched.
+**/[Gg][Oo][Uu][Dd][Yy]*
+**/[Ss][Cc][Rr][Ii][Pp][Tt][Uu][Rr][Ee]*.[Ww][Oo][Ff][Ff]
+**/[Ss][Cc][Rr][Ii][Pp][Tt][Uu][Rr][Ee]*.[Ww][Oo][Ff][Ff]2
+**/[Ss][Cc][Rr][Ii][Pp][Tt][Uu][Rr][Ee]*.[Tt][Tt][Ff]
+**/[Ss][Cc][Rr][Ii][Pp][Tt][Uu][Rr][Ee]*.[Oo][Tt][Ff]
+**/[Ss][Cc][Rr][Ii][Pp][Tt][Uu][Rr][Ee]*.[Ee][Oo][Tt]

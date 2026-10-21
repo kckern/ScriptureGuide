@@ -6,14 +6,19 @@ export function intEnv(value, fallback) {
   return Number.isFinite(n) ? n : fallback;
 }
 
+// Where FONT_DIR is served, and FONT_BASE's default when only FONT_DIR is set.
+export const PRIVATE_FONTS_PATH = '/private-fonts';
+
 // The licensed text font, served privately (never in the repository or the image; see docs/fonts.md).
 //   FONT_BASE        URL or path the font is fetched from (no trailing slash needed)
 //   FONT_DIR         a local directory to serve at /private-fonts; FONT_BASE defaults to that path
 //   FONT_GOUDY_FILE  the file name under FONT_BASE (default scripture.woff2)
-// Neither FONT_BASE nor FONT_DIR set: no @font-face for 'Goudy'; pages use Sorts Mill Goudy.
-export function fontsFromEnv(env) {
+// Neither FONT_BASE nor FONT_DIR set: no @font-face for 'Goudy Scripture'; pages use Sorts Mill Goudy.
+export function fontsFromEnv(env, warn = console.warn) {
   const dir = env.FONT_DIR || '';
-  const base = (env.FONT_BASE || (dir ? '/private-fonts' : '')).replace(/\/+$/, '');
+  let base = (env.FONT_BASE || '').replace(/\/+$/, '');
+  if (env.FONT_BASE && !base) warn(`FONT_BASE=${JSON.stringify(env.FONT_BASE)} is empty without its trailing slash; ignored`);
+  if (!base && dir) base = PRIVATE_FONTS_PATH;
   return { base, dir, goudyFile: env.FONT_GOUDY_FILE || 'scripture.woff2' };
 }
 
