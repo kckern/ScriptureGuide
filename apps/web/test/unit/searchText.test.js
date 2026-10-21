@@ -46,4 +46,20 @@ describe('Sphinx-style matcher', () => {
     expect('happy'.startsWith(stemPrefix(stem('happiness')))).toBe(true);
     expect('charity'.startsWith(stemPrefix(stem('charities')))).toBe(true);
   });
+  test('short words ending in y: the stem ends in i ("day" → "dai", "eyed" → "ei")', () => {
+    for (const w of ['day', 'may', 'say', 'joy', 'eyed']) expect(w.startsWith(stemPrefix(stem(w)))).toBe(true);
+    expect(stemPrefix('the')).toBe('the');
+  });
+  test('words that cannot have a query stem are not stemmed, with the same verdicts', () => {
+    const text = '¶And it came to pass in the third day, that the LORD said unto Moses, Go and say to the people';
+    for (const q of ['third day', '"the third day"', 'lord say', 'says', 'people moses', 'cometh', '"said unto"', '"unto said"']) {
+      const terms = queryTerms(q);
+      const naive = (() => {
+        const words = tokenize(text).map(t => queryStems(t)[0]);
+        const have = new Set(words);
+        return terms.every(term => (term.length === 1 ? have.has(term[0]) : words.some((w, i) => term.every((s, j) => words[i + j] === s))));
+      })();
+      expect(matchesTerms(text, terms), q).toBe(naive);
+    }
+  });
 });

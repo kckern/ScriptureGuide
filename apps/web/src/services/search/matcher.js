@@ -11,7 +11,20 @@ export function tokenize(text) {
   return String(text ?? '').toLowerCase().match(TOKEN) || [];
 }
 
-const stemToken = t => (/^[a-z]+$/.test(t) && t.length >= 3 ? stem(t) : t);
+// Stemming dominates the fallback's CPU time (every candidate verse is tokenized and stemmed), and
+// the vocabulary is small, so stems are memoized; the memo is cleared if it ever grows past STEM_MEMO.
+const STEM_MEMO = 200000;
+const stems = new Map();
+const stemToken = t => {
+  if (t.length < 3 || !/^[a-z]+$/.test(t)) return t;
+  let s = stems.get(t);
+  if (s === undefined) {
+    if (stems.size >= STEM_MEMO) stems.clear();
+    s = stem(t);
+    stems.set(t, s);
+  }
+  return s;
+};
 
 export function queryStems(query) {
   return [...new Set(tokenize(query).map(stemToken))];
@@ -34,13 +47,23 @@ export function matchesAll(text, stems) {
 
 export function matchesTerms(text, terms) {
   if (!terms.length) return false;
-  const words = tokenize(text).map(stemToken);
+  // A word can only have a query stem if it starts with that stem's prefix, so other words are
+  // not stemmed: null never equals a stem.
+  const prefixes = termPrefixes(terms);
+  const words = tokenize(text).map(t => (prefixes.some(p => t.startsWith(p)) ? stemToken(t) : null));
   const have = new Set(words);
   return terms.every(term => (term.length === 1 ? have.has(term[0]) : words.some((w, i) => term.every((s, j) => words[i + j] === s))));
 }
 
+const prefixCache = new WeakMap();
+function termPrefixes(terms) {
+  if (!prefixCache.has(terms)) prefixCache.set(terms, [...new Set(terms.flat().map(stemPrefix))]);
+  return prefixCache.get(terms);
+}
+
 // The longest prefix every word with this stem shares, for a coarse SQL prefilter.
-// Porter may rewrite the stem's last letter (happy → happi), so drop it when the stem is long enough.
+// Porter may rewrite the stem's last letter (happy → happi, day → dai), so drop it when the stem
+// is long enough or ends in that i.
 export function stemPrefix(s) {
-  return s.length > 3 ? s.slice(0, -1) : s;
+  return s.length > 3 || (s.length > 1 && s.endsWith('i')) ? s.slice(0, -1) : s;
 }
