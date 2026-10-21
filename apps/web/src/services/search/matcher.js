@@ -1,9 +1,9 @@
 // Emulates how the Sphinx index (infra/sphinx/sphinx.conf) tokenizes and matches verse text:
 // charset_table = 0..9, A..Z->a..z, _, a..z and Hangul; everything else separates words;
-// morphology = stem_en with min_stemming_len = 3. A plain query matches when every query
+// morphology = stem_en with min_stemming_len = 3 (stemEn.js). A plain query matches when every query
 // word's stem occurs in the verse (Sphinx's implicit AND); a "quoted phrase" matches its words
 // in order and adjacent (Sphinx phrase operator), which the live site passed through unchanged.
-import { stem } from './porterStemmer.js';
+import { stem } from './stemEn.js';
 
 const TOKEN = /[0-9a-z_가-힣ᄀ-ᅙᅡ-ᆢᆨ-ᇹ]+/g;
 
@@ -62,8 +62,14 @@ function termPrefixes(terms) {
 }
 
 // The longest prefix every word with this stem shares, for a coarse SQL prefilter.
-// Porter may rewrite the stem's last letter (happy → happi, day → dai), so drop it when the stem
-// is long enough or ends in that i.
+// stem_en may rewrite the stem's last letter (happy → happi, day → dai) or add an e (aging → age,
+// using → use), so drop the last letter when the stem is long enough, ends in that i, or is
+// vowel-consonant-e; dying, lying and tying stem to die, lie and tie, and skies to sky.
+// (Checked against every word of the full database: each starts with its stem's prefix.)
+const RESPELLED = new Map([['die', 'd'], ['lie', 'l'], ['tie', 't'], ['sky', 'sk']]);
 export function stemPrefix(s) {
-  return s.length > 3 || (s.length > 1 && s.endsWith('i')) ? s.slice(0, -1) : s;
+  if (RESPELLED.has(s)) return RESPELLED.get(s);
+  if (s.length > 3 || (s.length > 1 && s.endsWith('i'))) return s.slice(0, -1);
+  if (s.length === 3 && /^[aeiou][^aeiou]e$/.test(s)) return s.slice(0, -1);
+  return s;
 }

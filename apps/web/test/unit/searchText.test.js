@@ -1,15 +1,36 @@
 import { describe, test, expect } from 'vitest';
-import { stem } from '../../src/services/search/porterStemmer.js';
+import { stem } from '../../src/services/search/stemEn.js';
 import { tokenize, queryStems, matchesAll, stemPrefix, queryTerms, matchesTerms } from '../../src/services/search/matcher.js';
 
-describe('porter stemmer', () => {
+// Expected stems come from Sphinx's own stem_en (sphinxstemen.cpp compiled and run on each word);
+// the port agrees with it on all 288,696 words of the full database and a dictionary.
+describe('Sphinx stem_en', () => {
   test.each([
     ['caresses', 'caress'], ['ponies', 'poni'], ['cats', 'cat'], ['agreed', 'agre'], ['plastered', 'plaster'],
     ['motoring', 'motor'], ['hopping', 'hop'], ['hoping', 'hope'], ['happy', 'happi'], ['relational', 'relat'],
-    ['hopeful', 'hope'], ['goodness', 'good'], ['generalizations', 'gener'], ['adoption', 'adopt'],
+    ['hopeful', 'hope'], ['goodness', 'good'], ['generalizations', 'general'], ['adoption', 'adopt'],
     ['controlling', 'control'], ['charity', 'chariti'], ['charities', 'chariti'], ['faith', 'faith'],
     ['faithful', 'faith'], ['faithfulness', 'faith'], ['faithfully', 'faith'], ['faithless', 'faithless'],
-  ])('%s → %s', (word, expected) => {
+  ])('%s → %s (as Porter)', (word, expected) => {
+    expect(stem(word)).toBe(expected);
+  });
+  // Step 2 deletes -li after c d e g h k m n r t, with the stem's R1 at least two letters long
+  test.each([
+    ['godly', 'god'], ['earthly', 'earth'], ['heavenly', 'heaven'], ['godliness', 'godli'],
+    ['lovingly', 'love'], ['exceedingly', 'exceed'],
+  ])('-ly: %s → %s', (word, expected) => {
+    expect(stem(word)).toBe(expected);
+  });
+  test.each([
+    ['holy', 'holi'], ['fly', 'fli'], ['reply', 'repli'], ['family', 'famili'], ['daily', 'daili'],
+  ])('-ly kept: %s → %s', (word, expected) => {
+    expect(stem(word)).toBe(expected);
+  });
+  test.each([
+    ['only', 'onli'], ['early', 'earli'], ['ugly', 'ugli'], ['idly', 'idl'], ['gently', 'gentl'], ['singly', 'singl'],
+    ['was', 'wa'], ['his', 'hi'], ['dying', 'die'], ['lying', 'lie'], ['tying', 'tie'], ['skies', 'sky'],
+    ['sky', 'sky'], ['news', 'news'], ['proceed', 'proceed'], ['aging', 'age'], ['using', 'use'],
+  ])('Sphinx exceptions and short stems: %s → %s', (word, expected) => {
     expect(stem(word)).toBe(expected);
   });
   test('leaves words of two letters alone', () => {
@@ -40,15 +61,26 @@ describe('Sphinx-style matcher', () => {
     expect(matchesTerms('upon the hand of the Lord', queryTerms('"hand of the lord" upon'))).toBe(true);
   });
   test('an unclosed quote reads the rest as a phrase', () => {
-    expect(queryTerms('"the third day')).toEqual([['the', 'third', 'dai']]);
+    expect(queryTerms('"the third day')).toEqual([['the', 'third', 'day']]);
   });
   test('stem prefixes cover the words that share the stem', () => {
     expect('happy'.startsWith(stemPrefix(stem('happiness')))).toBe(true);
     expect('charity'.startsWith(stemPrefix(stem('charities')))).toBe(true);
   });
-  test('short words ending in y: the stem ends in i ("day" → "dai", "eyed" → "ei")', () => {
-    for (const w of ['day', 'may', 'say', 'joy', 'eyed']) expect(w.startsWith(stemPrefix(stem(w)))).toBe(true);
+  test('short words ending in y keep a prefix of their words ("eyed" → "eye", "cried" → "cri")', () => {
+    for (const w of ['day', 'may', 'say', 'joy', 'eyed', 'cried', 'cry']) expect(w.startsWith(stemPrefix(stem(w)))).toBe(true);
     expect(stemPrefix('the')).toBe('the');
+  });
+  test('stems Sphinx shortens or respells keep a prefix of their words', () => {
+    for (const w of ['aging', 'using', 'eying', 'dying', 'lying', 'tying', 'skies', 'earthly', 'godly', 'only', 'was']) {
+      expect(w.startsWith(stemPrefix(stem(w))), w).toBe(true);
+    }
+  });
+  test('-ly words match their stem the way Sphinx does', () => {
+    expect(matchesAll('Godly sorrow worketh repentance', queryStems('god'))).toBe(true);
+    expect(matchesAll('if I have told you earthly things', queryStems('earth'))).toBe(true);
+    expect(matchesAll('the heavenly host', queryStems('heaven'))).toBe(true);
+    expect(matchesAll('Holy, holy, holy', queryStems('hole'))).toBe(false);
   });
   test('words that cannot have a query stem are not stemmed, with the same verdicts', () => {
     const text = '¶And it came to pass in the third day, that the LORD said unto Moses, Go and say to the people';

@@ -21,7 +21,7 @@ import { diffSets, hasDifference, isPhrase, formatQuery, shownPairs } from './sp
 const QUERIES = [
   'loved', 'love', 'loving', 'charity', 'faith hope charity', 'in the beginning', 'beginning',
   'water', 'waters', 'lord god', "lord's", 'days', 'begat', 'unto', 'went up', 'jesus wept',
-  'heaven and earth', 'children of israel',
+  'heaven and earth', 'children of israel', 'godly', 'earthly things', 'holy', 'only', 'daily',
   '"in the beginning"', '"faith hope"', '"the lord"',
 ];
 const SPHINX_DEFAULT_MAX_MATCHES = 1000;

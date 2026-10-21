@@ -8,7 +8,7 @@ const myisam = { minWordLen: 4, stopwords: ['believe', 'accordingly', "a's"] };
 
 describe('fulltextPlan: which stems the MyISAM FULLTEXT index can prefilter', () => {
   test('a stem at least ft_min_word_len long can go to MATCH, as a prefix of every word with that stem', () => {
-    // faith → stem "faith", prefix "fait" (Porter may rewrite a stem's last letter)
+    // faith → stem "faith", prefix "fait" (stem_en may rewrite a stem's last letter)
     expect(fulltextPlan(queryStems('faith'), myisam)).toEqual({ match: '+fait*', like: [] });
   });
   test('one stem goes to MATCH, the one with the longest prefix: intersecting broad prefixes is slow', () => {
@@ -25,7 +25,7 @@ describe('fulltextPlan: which stems the MyISAM FULLTEXT index can prefilter', ()
   });
   test('the stem of a stopword stays with LIKE: stopwords are not indexed', () => {
     // "believe" and "accordingly" are MyISAM stopwords; "believer" shares the stem of "believe"
-    expect(fulltextPlan(queryStems('believer accordingly'), myisam)).toEqual({ match: null, like: ['belie', 'accordingl'] });
+    expect(fulltextPlan(queryStems('believer accordingly'), myisam)).toEqual({ match: null, like: ['belie', 'accor'] });
   });
   test('with the built-in MyISAM list', () => {
     const builtin = { minWordLen: 4, stopwords: MYISAM_STOPWORDS };

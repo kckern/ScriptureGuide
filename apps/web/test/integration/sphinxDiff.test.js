@@ -56,7 +56,7 @@ describe('diagnose', () => {
 
 describe('stemmedWords and snippet', () => {
   test('words that could carry a query stem, with their stems', () => {
-    expect(stemmedWords('Beloved, let us love one another; lovers of days', 'loving days')).toBe('love, lovers→lover, days→dai');
+    expect(stemmedWords('Beloved, let us love one another; lovers of days', 'loving days')).toBe('love, lovers→lover, days→day');
   });
   test('short text is shown whole', () => {
     expect(snippet('Jesus wept.', 'wept')).toBe('Jesus wept.');
