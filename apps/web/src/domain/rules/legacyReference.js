@@ -253,3 +253,32 @@ export function formatReference(verseIds, info, chapterMax) {
 
   return reference.replace(/\b(Tao( Te Ching)*.*\d+):1\b/, '$1');
 }
+
+// A passage whose verses skip from one chapter to a later one ("1 Nephi 3:7–8; 5:2; 7:1"):
+// rows { id, chapter, verse } in order, split where the chapter changes and the ids do not follow
+// on (referenceFromVerseIds' segments). Each part is "C:V", "C:V–W" or "C:V,W" (gaps within a
+// chapter), or "C:V–D:W" for consecutive verses across a chapter end; parts are joined with "; ".
+// { ref, slug } ("3.7-8;5.2;7.1"), or null for a single part.
+export function splitRuns(rows) {
+  const segments = [];
+  let prev = null;
+  for (const row of rows) {
+    if (!prev || (row.chapter !== prev.chapter && row.id !== prev.id + 1)) segments.push([]);
+    segments[segments.length - 1].push(row);
+    prev = row;
+  }
+  if (segments.length < 2) return null;
+  const parts = segments.map(seg => {
+    const first = seg[0];
+    const last = seg[seg.length - 1];
+    if (first.chapter !== last.chapter) return { ref: `${first.chapter}:${first.verse}–${last.chapter}:${last.verse}`, slug: `${first.chapter}.${first.verse}-${last.chapter}.${last.verse}` };
+    const ranges = [];
+    for (const { verse } of seg) {
+      const r = ranges[ranges.length - 1];
+      if (r && verse === r[1] + 1) r[1] = verse; else ranges.push([verse, verse]);
+    }
+    const list = sep => ranges.map(([a, b]) => (a === b ? `${a}` : `${a}${sep}${b}`)).join(',');
+    return { ref: `${first.chapter}:${list('–')}`, slug: `${first.chapter}.${list('-')}` };
+  });
+  return { ref: parts.map(p => p.ref).join('; '), slug: parts.map(p => p.slug).join(';') };
+}

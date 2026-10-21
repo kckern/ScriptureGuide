@@ -1,7 +1,7 @@
 import VerseSerializer from '../serializers/VerseSerializer.js';
 import { displayReference, blankHeading } from '../../domain/rules/referenceParsing.js';
 
-import { versionImg, formatReference as referenceFromVerseIds } from '../../domain/rules/legacyReference.js';
+import { versionImg, formatReference as referenceFromVerseIds, splitRuns } from '../../domain/rules/legacyReference.js';
 import { isEmptyRange } from '../../domain/rules/blockIds.js';
 import { renderHeadingHtml, renderHeadingFields, RENDERED_HEADING_FIELDS, segmentFormats, escapeHtml, isCompoundLine } from '../../domain/rules/legacyText.js';
 
@@ -222,7 +222,14 @@ export class HtmlPresenter {
           // vChapterMap only contains chapters for verses in the current passage, so if h.last is
           // beyond the passage it won't be in the map and we safely fall back to h3Chapter (no false trigger).
           const hLastChapter = vChapterMap[h.last] ?? h3Chapter;
-          if (hLastChapter !== h3Chapter) {
+          // Verses that skip chapters ("John 3:16; 4:2"): one part per run
+          const runs = hLastChapter !== h3Chapter ? splitRuns(result.verses
+            .filter((v, i, all) => v.id >= h.verse_id && v.id <= h.last && v.id !== all[i - 1]?.id)
+            .map(v => ({ id: v.id, chapter: vChapterMap[v.id] ?? v.chapter, verse: v.verseNum }))) : null;
+          if (runs) {
+            h.slug = `${version}/${bookSlugForH3}.${runs.slug}`;
+            h.ref = `${bookName} ${runs.ref}`;
+          } else if (hLastChapter !== h3Chapter) {
             // Cross-chapter section heading: use chapter-range ref/slug format
             const endChap = hLastChapter;
             // Use h.lastVerseNum (computed above with nextMid extension) as the end verse number

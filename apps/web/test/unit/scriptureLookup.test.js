@@ -46,3 +46,28 @@ describe('lookup: the short book title for compound refs', () => {
     expect(r.sections.map(s => s.config._bookShort)).toEqual(['Gen.', 'Gen.']);
   });
 });
+
+describe('lookup: the parallel slug of a passage that skips chapters', () => {
+  const rows = [[31200, 3, 7], [31201, 3, 8], [31250, 5, 2], [31300, 7, 1]]
+    .map(([verse_id, chapter, verse]) => ({ verse_id, chapter, verse, text: 'And it came to pass.' }));
+  const normalized = '1 Nephi 3:7-8; 5:2; 7:1';
+  const refs = { parse: () => ({ isEmpty: false, book: '1 Nephi', normalized, verseIds: rows.map(r => r.verse_id), chapter: 3 }) };
+  const verses = {
+    findByIds: async () => rows.map(r => ({ ...r, version: 'LDS' })),
+    findChaptersByVerseIds: async ids => rows.filter(r => ids.includes(r.verse_id)).map(r => ({ verse_id: r.verse_id, chapter: r.chapter })),
+  };
+  let ranges;
+  const headings = {
+    findBookId: async () => ({ book_id: 66, lds_org: '1-ne', book_title: '1 Nephi', book_title_short: '1 Ne.' }),
+    findByVerseIds: async () => [],
+    findChapterHeading: async () => null,
+    findChapterBounds: async () => ({ first: 31194, last: 31224 }),
+    hasAudio: async () => 1,
+    findParallels: async r => { ranges = r; return {}; },
+    findFaxVerseIds: async () => [],
+  };
+  test('names each run ("1.ne.3.7-8;5.2;7.1")', async () => {
+    await new ScriptureLookupService(refs, verses, headings).lookup('1.nephi.3:7–8,.5:2,.7:1', { version: 'LDS' });
+    expect(ranges[0].dstSlugOverride).toBe('1.ne.3.7-8;5.2;7.1');
+  });
+});

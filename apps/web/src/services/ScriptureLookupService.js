@@ -7,7 +7,7 @@ import { Reference } from '../domain/entities/Reference.js';
 import VerseSerializer from '../presentation/serializers/VerseSerializer.js';
 import { defaultVersions, versionOrder } from '../domain/rules/defaultVersions.js';
 import { applyFormatOverride } from '../domain/rules/formatOverride.js';
-import { getBook } from '../domain/rules/legacyReference.js';
+import { getBook, splitRuns } from '../domain/rules/legacyReference.js';
 import { isCompoundLine } from '../domain/rules/legacyText.js';
 import { wantsChapterNav, chapterNavLinks, sectionNavLinks, sectionRef } from '../domain/rules/chapterNav.js';
 
@@ -399,7 +399,11 @@ export class ScriptureLookupService {
             const verseNums = actualIds.map(id => vNumMap[id]).filter(v => v != null);
             // endChapter: chapter of the last verse in the range (for cross-chapter DST slug detection)
             const endChapter = vChapterMap[extendedEnd] ?? hChapter;
-            return { from: h.verse_id, to: queryTo, ids: actualIds, verseNums, bookSlug: bookPart, chapter: hChapter, endChapter, firstVerse: fv, lastVerse: lv, rangeLastVerse, zeroLength: isZeroLength, synthetic: !!h.synthetic, wholeChapter: isWholeChapter, dstSlugOverride: endChapter !== hChapter ? dstSlugOverride : null };
+            // Verses that skip chapters ("John 3:16; 4:2"): one part per run
+            const runs = endChapter !== hChapter
+              ? splitRuns(actualIds.map(id => ({ id, chapter: vChapterMap[id], verse: vNumMap[id] })))
+              : null;
+            return { from: h.verse_id, to: queryTo, ids: actualIds, verseNums, bookSlug: bookPart, chapter: hChapter, endChapter, firstVerse: fv, lastVerse: lv, rangeLastVerse, zeroLength: isZeroLength, synthetic: !!h.synthetic, wholeChapter: isWholeChapter, dstSlugOverride: runs ? `${bookPart}.${runs.slug}` : (endChapter !== hChapter ? dstSlugOverride : null) };
           });
 
           const parallelMap = await this.headingRepository.findParallels(ranges, version);

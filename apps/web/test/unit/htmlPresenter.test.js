@@ -74,3 +74,20 @@ describe('HtmlPresenter: sections from the PHP blocks of a reference that found 
     expect(data.emptySection).toBe(true);
   });
 });
+
+describe('HtmlPresenter: a passage that skips chapters', () => {
+  test('the heading names each run, not one range from the first chapter to the last', () => {
+    const rows = [[31200, 3, 7], [31201, 3, 8], [31250, 5, 2], [31300, 7, 1]];
+    const verses = rows.map(([id, chapter, verseNum]) => new Verse({ id, chapter, verseNum, text: 'And it came to pass.', version: 'LDS' }));
+    const normalized = '1 Nephi 3:7-8; 5:2; 7:1';
+    const result = new ScriptureResult({
+      reference: new Reference({ query: normalized, normalized, verseIds: rows.map(r => r[0]) }),
+      verses,
+      headings: [{ verse_id: 31200, type: 'heading', text: '', last_verse_id: 31300, synthetic: true, book_id: 1 }],
+      config: { version: 'LDS', _vChapterMap: Object.fromEntries(rows.map(r => [r[0], r[1]])), _bookTitle: '1 Nephi' },
+    });
+    const h = new HtmlPresenter().serialize(result).h3ByVerse[31200];
+    expect(h.ref).toBe('1 Nephi 3:7–8; 5:2; 7:1');
+    expect(h.slug).toBe('LDS/1.nephi.3.7-8;5.2;7.1');
+  });
+});

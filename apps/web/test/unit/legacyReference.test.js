@@ -1,5 +1,6 @@
 import { describe, it, test, expect } from 'vitest';
 import {
+  splitRuns,
   formatReference, rowsReference, chapterRef, slugifyRef, versionImg, isConsecutive,
 } from '../../src/domain/rules/legacyReference.js';
 
@@ -92,4 +93,22 @@ test('isConsecutive', () => {
   expect(isConsecutive([5])).toBe(true);
   expect(isConsecutive([5, 6, 7])).toBe(true);
   expect(isConsecutive([5, 7])).toBe(false);
+});
+
+describe('splitRuns (a passage that skips chapters)', () => {
+  const row = (id, chapter, verse) => ({ id, chapter, verse });
+  test('verses in chapters that do not follow each other: one part per run, "; " between', () => {
+    const rows = [row(31200, 3, 7), row(31201, 3, 8), row(31250, 5, 2), row(31300, 7, 1)];
+    expect(splitRuns(rows)).toEqual({ ref: '3:7–8; 5:2; 7:1', slug: '3.7-8;5.2;7.1' });
+  });
+  test('gaps in one chapter are commas', () => {
+    expect(splitRuns([row(1, 3, 16), row(3, 3, 18), row(40, 4, 2)])).toEqual({ ref: '3:16,18; 4:2', slug: '3.16,18;4.2' });
+  });
+  test('consecutive verses across a chapter end stay one range', () => {
+    expect(splitRuns([row(10, 3, 36), row(11, 4, 1), row(12, 4, 2), row(50, 6, 1)])).toEqual({ ref: '3:36–4:2; 6:1', slug: '3.36-4.2;6.1' });
+  });
+  test('one consecutive run: null (the caller keeps its own format)', () => {
+    expect(splitRuns([row(10, 3, 36), row(11, 4, 1)])).toBeNull();
+    expect(splitRuns([row(1, 3, 16), row(3, 3, 18)])).toBeNull();
+  });
 });
