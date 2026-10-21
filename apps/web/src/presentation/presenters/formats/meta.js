@@ -3,34 +3,32 @@
 import rawRepository from '../../../data/repositories/RawRepository.js';
 import { flag } from '../../formatOptions.js';
 import { metaFromRef, bookOnlyBlock } from '../../legacy/meta.js';
-import { blankHeading, bookOnlyQuery } from '../../../domain/rules/referenceParsing.js';
+import { bookOnlyQuery } from '../../../domain/rules/referenceParsing.js';
 import { sendPhpJson } from '../../legacy/phpJson.js';
 
-// Fallback for references the package cannot parse but the lookup resolved (DB slugs).
+// The blocks of a request: the package's reading of the reference; else the verses the lookup
+// resolved (DB slugs); else, for a word alone that is a whole book name, its first chapter
+// (result.bookOnly, resolved by the controller); else the PHP site's blocks for a reference
+// that found nothing (result.legacyBlocks, built by the controller).
 function blocksFor(ref, result) {
   const blocks = metaFromRef(ref);
-  if (blocks.length || !result?.reference?.verseIds?.length) return blocks;
-  const r = result.reference;
-  return [{ orig: (r.normalized || '').replace(/—/g, ' '), book: (r.book || '').replace(/—/g, ' '), verse_ids: [...r.verseIds] }];
+  if (blocks.length) return blocks;
+  const r = result?.reference;
+  if (r?.verseIds?.length) {
+    return [{ orig: (r.normalized || '').replace(/—/g, ' '), book: (r.book || '').replace(/—/g, ' '), verse_ids: [...r.verseIds] }];
+  }
+  if (result?.bookOnly && bookOnlyQuery(ref)) return [bookOnlyBlock(result.bookOnly.book, result.bookOnly.verseIds)];
+  return result?.legacyBlocks ?? [];
 }
 
 // inc_api.php meta_only branch, including ?heads (heading verse ids of the first block).
 export async function metaOnly(req, result, repo = rawRepository) {
   const lr = req.config.legacy;
   const meta = blocksFor(lr.ref, result);
-  // A word alone: a whole book name is its first chapter (result.bookOnly, resolved by the
-  // controller); anything else is a block without verses, titled as cleanReference left it.
-  if (!meta.length && bookOnlyQuery(lr.ref)) {
-    if (result?.bookOnly) meta.push(bookOnlyBlock(result.bookOnly.book, result.bookOnly.verseIds));
-    else {
-      const name = blankHeading(lr.ref);
-      meta.push({ orig: name, book: name, verse_ids: [] });
-    }
-  }
   if (flag(req, 'heads', { hostLabels: true }) && meta[0]) {
     const versions = (lr.versionList ?? Object.entries(lr.versions || {})).map(([v]) => v);
     const heads = new Map();
-    for (const id of meta[0].verse_ids || []) {
+    for (const id of Array.isArray(meta[0].verse_ids) ? meta[0].verse_ids : []) {
       const h = await repo.loadHeading(id, versions, '§¶');
       const vid = h?.verse_id ?? null;
       heads.set(vid ?? '', vid);

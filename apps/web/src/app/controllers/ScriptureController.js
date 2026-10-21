@@ -2,6 +2,7 @@ import scriptureLookupService from '../../services/ScriptureLookupService.js';
 import searchParallelController from './SearchParallelController.js';
 import outputMiddleware from '../middleware/output.js';
 import referenceService from '../../services/ReferenceService.js';
+import legacyBlockService from '../../services/LegacyBlockService.js';
 import { bookOnlyQuery } from '../../domain/rules/referenceParsing.js';
 import { isEmptyReference } from '../../domain/rules/requestParsing.js';
 
@@ -13,9 +14,19 @@ const EMPTY_REF_FORMATS = new Set(['api', 'meta', 'raw', 'plain', 'latex', 'mark
 const answersEmpty = config => EMPTY_REF_FORMATS.has(config?.outputFormat);
 
 export class ScriptureController {
-  constructor(lookupService, references = referenceService) {
+  constructor(lookupService, references = referenceService, blockService = legacyBlockService) {
     this.lookupService = lookupService;
     this.references = references;
+    this.blockService = blockService;
+  }
+
+  // A reference that found no verses: the blocks the PHP site built for it (cleanReference, one
+  // per ";" piece, multi-book ranges), from the reference PHP saw on the legacy formats and the
+  // one looked up on html. The meta/api/plain/raw blocks and the html headings come from these.
+  async legacyBlocks(result, config) {
+    if (result.reference?.verseIds?.length || config.parallel) return undefined;
+    const ref = config.outputFormat === 'html' || !config.outputFormat ? config.reference : config.legacy?.ref;
+    return this.blockService.blocks(isEmptyReference(ref) ? '' : ref ?? '');
   }
 
   // A word alone that matched no verses: when it is a whole book name (or alias), its first
@@ -40,6 +51,7 @@ export class ScriptureController {
 
       const result = await this.lookupService.lookup(isEmptyReference(reference) ? '' : reference, config);
       result.bookOnly = await this.bookOnly(result, config);
+      result.legacyBlocks = await this.legacyBlocks(result, config);
 
       // Attach result for output middleware
       req.scriptureResult = result;

@@ -3,20 +3,21 @@
 // with one, a lookup per version (by its format name, as PHP iterated the values) joined by "\n".
 // PHP called lookup with only {versions, plain}, so ?plain_reference never added the "Ref. " prefix.
 import rawRepository from '../../../data/repositories/RawRepository.js';
-import { resolveBlock } from '../../legacy/passages.js';
+import { resolveBlock, blockVerseIds, isEmptyRange } from '../../legacy/passages.js';
 import { plainLine, plainPassage } from '../../../domain/rules/legacyText.js';
 import { blocksFor } from './meta.js';
 
 
 async function blockText(block, versions, repo) {
-  if (!block.verse_ids.length) {
+  if (isEmptyRange(block)) return '';
+  if (!blockVerseIds(block).length) {
     // blankData: an h3 with the reference and a "not found" paragraph.
     return plainLine(' ' + block.orig) + '\n\n' + plainLine('No scripture verses found.');
   }
   const resolved = await resolveBlock(block, versions, repo);
   if (resolved) return plainPassage(resolved.rows);
   // plainData: the verse index text, one paragraph per verse.
-  const rows = await repo.findIndexVerses(block.verse_ids);
+  const rows = await repo.findIndexVerses(blockVerseIds(block));
   return rows.map(r => plainLine(String(r.verse_scripture).replace(/--/g, '&mdash;'))).join('');
 }
 

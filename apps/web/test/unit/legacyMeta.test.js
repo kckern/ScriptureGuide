@@ -90,16 +90,15 @@ describe('a book named alone (meta)', () => {
   test('is titled with the book title', () => {
     expect(bookOnlyBlock('Genesis', [1])).toEqual({ book: 'Genesis', orig: 'Genesis', verse_ids: [1] });
   });
-  const meta = (ref, bookOnly = null) => metaOnly({ config: { legacy: { ref, versions: null } }, query: {}, headers: {} }, { reference: { verseIds: [] }, bookOnly }, {});
+  const meta = (ref, bookOnly = null, legacyBlocks = undefined) =>
+    metaOnly({ config: { legacy: { ref, versions: null } }, query: {}, headers: {} }, { reference: { verseIds: [] }, bookOnly, legacyBlocks }, {});
   test('metaOnly lists the first chapter the controller resolved', async () => {
-    expect(await meta('Song.of.Solomon', { book: "Solomon's Song", verseIds: [17539] }))
+    expect(await meta('Song.of.Solomon', { book: "Solomon's Song", verseIds: [17539] }, [{ orig: 'x', book: 'x', verse_ids: [] }]))
       .toEqual([{ book: "Solomon's Song", orig: "Solomon's Song", verse_ids: [17539] }]);
   });
-  test('a word that is not a whole book name is a block without verses, as live', async () => {
-    expect(await meta('the')).toEqual([{ orig: 'The', book: 'The', verse_ids: [] }]);
-    expect(await meta('is')).toEqual([{ orig: 'Is', book: 'Is', verse_ids: [] }]);
-    expect(await meta('and')).toEqual([{ orig: 'And', book: 'And', verse_ids: [] }]);
-    expect(await meta('Christmas')).toEqual([{ orig: 'Christmas', book: 'Christmas', verse_ids: [] }]);
+  test('anything else the package cannot read: the PHP blocks the controller built', async () => {
+    const blocks = [{ orig: 'Farewell-speech', book: 'Multi', verse_ids: [null] }, { orig: ' 30', book: '', verse_ids: false }];
+    expect(await meta('farewell-speech; 30', null, blocks)).toEqual(blocks);
   });
 });
 

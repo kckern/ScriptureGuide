@@ -5,12 +5,13 @@
 import rawRepository from '../../../data/repositories/RawRepository.js';
 import { phpJson } from '../../legacy/phpJson.js';
 import { blocksFor } from './meta.js';
+import { blockVerseIds } from '../../legacy/passages.js';
 
 const HEADING_SKIP = new Set(['id', 'version', 'prev_id', 'verse_id']);
 
 export async function rawData(lr, result, repo = rawRepository) {
   const version = (lr.versionList ?? Object.entries(lr.versions || {}))[0]?.[0] || 'LDS';
-  const ids = blocksFor(lr.ref, result).flatMap(b => b.verse_ids || []);
+  const ids = blocksFor(lr.ref, result).flatMap(blockVerseIds);
   const rows = await repo.findRawVerses(version, ids);
   if (!rows.length) return null;
 
