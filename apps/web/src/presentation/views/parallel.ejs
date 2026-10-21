@@ -1,29 +1,35 @@
 <%
-// Markup follows parallel.php in the PHP site. Verse text is printed raw, as there.
+// Markup follows parallel.php in the PHP site. Verse text is printed raw, as there (it is
+// database markup). Everything else can come from the URL (versions, slugs): attributes and
+// text go through h(), JS strings through sq() (single-quoted as on the PHP page, "<" escaped
+// so a value cannot close the script).
+const h = v => String(v ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+const sq = v => "'" + String(v ?? '').replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/</g, '\\x3c')
+  .replace(/\r/g, '\\r').replace(/\n/g, '\\n').replace(/\u2028/g, '\\u2028').replace(/\u2029/g, '\\u2029') + "'";
 const media = 'https://media.scripture.guide/covers';
-const lv = lver.toLowerCase(), rv = rver.toLowerCase();
+const lv = h(lver.toLowerCase()), rv = h(rver.toLowerCase());
 const fullChapter = !ischapter;
 const trs = rows.map(r => `
 		<tr class="">
 			<td class='left ref'>
-				<a class="ref" href="/${lv}/${r.left.slug}">${r.left.ref}</a>
-				${r.left.fax ? `<a class="fax" id="left_${r.id}" target="_blank" href="https://img.scripture.guide/=/${lver}/${r.left.slug}">
+				<a class="ref" href="/${lv}/${h(r.left.slug)}">${h(r.left.ref)}</a>
+				${r.left.fax ? `<a class="fax" id="left_${h(r.id)}" target="_blank" href="https://img.scripture.guide/=/${h(lver)}/${h(r.left.slug)}">
 					<img src="/img/book_open.png" />
 				</a>` : ''}
 			</td>
 			<td></td>
 			<td class='right ref'>
-				${r.right.fax ? `<a class="fax" id="right_${r.id}" target="_blank" href="https://img.scripture.guide/=/${rver}/${r.right.slug}">
+				${r.right.fax ? `<a class="fax" id="right_${h(r.id)}" target="_blank" href="https://img.scripture.guide/=/${h(rver)}/${h(r.right.slug)}">
 					<img src="/img/book_open.png" />
 				</a>` : ''}
-				<a class="ref" href="/${rv}/${r.right.slug}">${r.right.ref}</a>
+				<a class="ref" href="/${rv}/${h(r.right.slug)}">${h(r.right.ref)}</a>
 			</td>
 		</tr>
-		<tr  id="row${r.id}" class="${r.className}">
-			<td class='left text original'><div class='verse' verse_id='${r.left.verseId}' ref='${r.left.ref}' version='${lver}'>${r.left.text}</div></td>
+		<tr  id="row${h(r.id)}" class="${h(r.className)}">
+			<td class='left text original'><div class='verse' verse_id='${h(r.left.verseId)}' ref='${h(r.left.ref)}' version='${h(lver)}'>${r.left.text}</div></td>
 
 			<td class='diff'></td>
-			<td class='right text changed'><div class='verse' verse_id='${r.right.verseId}' ref='${r.right.ref}' version='${rver}'>${r.right.text}</div></td>
+			<td class='right text changed'><div class='verse' verse_id='${h(r.right.verseId)}' ref='${h(r.right.ref)}' version='${h(rver)}'>${r.right.text}</div></td>
 
 		</tr>
 	`).join('');
@@ -45,35 +51,35 @@ const trs = rows.map(r => `
 
 		<tr class='header'>
 			<td>
-				<img class="cover" edition="" src="${media}/${limg}.jpg"><br>
-				<a style='word-break: break-all;' href="/${lv}/${leftheaderSlug}">${htmlLeftheader}</a>
+				<img class="cover" edition="" src="${media}/${h(limg)}.jpg"><br>
+				<a style='word-break: break-all;' href="/${lv}/${h(leftheaderSlug)}">${h(htmlLeftheader)}</a>
 			</td>
 			<td align="center">
 				<button class='compare' incr="1">&#128269;<br><small>DIFF</small></button>
 				</td>
 			<td>
-				<img class="cover" edition="" src="${media}/${rimg}.jpg"><br>
-				<a style='word-break: break-all;' href="/${rv}/${rightheaderSlug}">${htmlRightheader}</a>
+				<img class="cover" edition="" src="${media}/${h(rimg)}.jpg"><br>
+				<a style='word-break: break-all;' href="/${rv}/${h(rightheaderSlug)}">${h(htmlRightheader)}</a>
 			</td>
 		</tr>
 		<tr class="plinks">
 			<td colspan=3 align="center">
-				<a href="/${swapslug}">Switch ⇆ Sides</a>
-				${fullChapter ? `<br><a href="/${chslug}">Full ⇅ Chapter</a>` : ''}
+				<a href="/${h(swapslug)}">Switch ⇆ Sides</a>
+				${fullChapter ? `<br><a href="/${h(chslug)}">Full ⇅ Chapter</a>` : ''}
 			</td>
 		</tr>${trs}${fullChapter ? `
 		<tr class="plinks">
 			<td colspan=3 align="center" style="padding-top:2em;">
-				<a href="/${chslug}">Full ⇅ Chapter</a>
+				<a href="/${h(chslug)}">Full ⇅ Chapter</a>
 			</td>
 		</tr>` : ''}
 </table>
 <div id="floater"></div>
 
 <script>
-var fullslug = '${fullslug}';
-var chslug = '${chslug}';
-var swapslug = '${swapslug}';
+var fullslug = ${sq(fullslug)};
+var chslug = ${sq(chslug)};
+var swapslug = ${sq(swapslug)};
 	activateParallel();
 </script>
 		</div>

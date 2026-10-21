@@ -24,3 +24,12 @@ describe('layout: slugver and slugref are JS-escaped', () => {
     expect(scriptLine(html, 'slugref')).toBe('slugref = "john.3.16";');
   });
 });
+
+describe('error view escapes the message and stack', () => {
+  test('a message carrying markup stays text', async () => {
+    const view = path.join(path.dirname(LAYOUT), '../error.ejs');
+    const html = await ejs.renderFile(view, { message: 'URI malformed: <zzx>', status: 400, stack: 'at <zzy>', config: {} });
+    expect(html).not.toMatch(/<zz[xy]>/);
+    expect(html).toContain('URI malformed: &lt;zzx&gt;');
+  });
+});

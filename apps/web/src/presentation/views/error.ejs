@@ -1,8 +1,9 @@
+<% const h = v => String(v ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); %>
 <%- include('layouts/main', { body: `
   <div class="error-page">
-    <h1>Error ${typeof status !== 'undefined' ? status : ''}</h1>
-    <p class="error-message">${typeof message !== 'undefined' ? message : 'An error occurred'}</p>
-    ${typeof stack !== 'undefined' && stack ? '<pre class="error-stack">' + stack + '</pre>' : ''}
+    <h1>Error ${typeof status !== 'undefined' ? h(status) : ''}</h1>
+    <p class="error-message">${typeof message !== 'undefined' ? h(message) : 'An error occurred'}</p>
+    ${typeof stack !== 'undefined' && stack ? '<pre class="error-stack">' + h(stack) + '</pre>' : ''}
     <p><a href="/">Return to Home</a></p>
   </div>
 `, title: 'Error', config: typeof config !== 'undefined' ? config : {}, bodyClass: 'error-page' }) %>
