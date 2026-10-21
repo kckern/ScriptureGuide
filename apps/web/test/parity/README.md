@@ -41,3 +41,15 @@ npm run parity -- --corpus traffic
 ```
 
 The output holds paths real visitors requested, search terms included. Keep it, and the logs, out of the repo. With `PARITY_CACHE` set, `--corpus traffic` reads `$PARITY_CACHE/traffic.json`.
+
+## Response times
+
+`perf.mjs` times the same corpus on both sides: one warm-up, then `--runs` (default 5) sequential requests per URL, time to the last byte, over keep-alive connections.
+
+```sh
+node test/parity/perf.mjs [--corpus traffic] [--format html,api] [--only john] [--runs 5] [--max-live 200] [--refresh-live] [--json out.json]
+```
+
+It prints, per format and overall, the p50 and p95 across URLs of each URL's median on Node and live, and the ratio of the Node p50 to the live p50 over URLs timed on both. A URL is flagged when its Node median is more than 1.5 times live's and more than 300 ms slower. Live requests are spaced at least 250 ms apart and capped by `--max-live` (warm-ups count); URLs past the cap get Node times only. Live times are cached with a timestamp in `.cache/perf-live.json`, so later runs reuse them until `--refresh-live`.
+
+Against a local app and database the comparison is indicative only: live times include the network round trip from your machine, Node times do not, and a laptop with a local copy of the database is not the production host. Time on staging for numbers that decide anything.

@@ -5,85 +5,38 @@
 //   NODE_BASE=http://127.0.0.1:3101 node test/parity/run.mjs [--corpus traffic] [--format api,meta] [--only john] [--refresh] [--verbose]
 //
 // The Node app must run against a full copy of the database (see test/parity/README.md).
-import http from 'node:http';
 import { createHash } from 'node:crypto';
 import { mkdirSync, readFileSync, writeFileSync, existsSync, rmSync } from 'node:fs';
-import { fileURLToPath } from 'node:url';
 import * as cheerio from 'cheerio';
-import { corpus, hostFor } from './corpus.mjs';
+import { DIR, CACHE_ROOT, NODE_BASE, LIVE_SCHEME, USER_AGENT, cliOptions, loadCorpus, selectRequests, get, hostFor } from './harness.mjs';
 import { canonicalHtml, canonicalJson, canonicalAsset, mediaType, encodeCacheEntry, decodeCacheEntry, compare } from './normalize.mjs';
 import { allowReason } from './allow.mjs';
 
-const DIR = fileURLToPath(new URL('.', import.meta.url));
-// PARITY_CACHE lets several worktrees share one cache of live responses.
-const CACHE_ROOT = process.env.PARITY_CACHE || DIR + '.cache';
 const CACHE = CACHE_ROOT + '/live/';
 const DIFFS = DIR + '.cache/diffs/';
-const NODE_BASE = process.env.NODE_BASE || 'http://127.0.0.1:3101';
-const LIVE_SCHEME = process.env.LIVE_SCHEME || 'https';
 
-const args = process.argv.slice(2);
-const opt = name => { const i = args.indexOf(name); return i >= 0 ? args[i + 1] : undefined; };
-const formats = opt('--format')?.split(',');
-const only = opt('--only');
-const refresh = args.includes('--refresh');
-const verbose = args.includes('--verbose');
-// --corpus traffic: requests sampled from access logs by traffic.mjs, instead of the built-in list.
-const corpusName = opt('--corpus') ?? 'builtin';
-const requests = loadCorpus(corpusName);
+const cli = cliOptions();
+const refresh = cli.flag('--refresh');
+const verbose = cli.flag('--verbose');
+const requests = selectRequests(loadCorpus(cli.corpusName), cli);
 const allow = existsSync(DIR + 'allow.json') ? JSON.parse(readFileSync(DIR + 'allow.json', 'utf8')) : {};
-
-function loadCorpus(name) {
-  if (name === 'builtin') return corpus;
-  if (name !== 'traffic') { console.error(`unknown --corpus ${name} (builtin, traffic)`); process.exit(2); }
-  const file = CACHE_ROOT + '/traffic.json';
-  if (!existsSync(file)) {
-    console.error(`${file} is missing. Build it from access logs first:\n  node test/parity/traffic.mjs <access.log…> > ${file}`);
-    process.exit(2);
-  }
-  let list;
-  try { list = JSON.parse(readFileSync(file, 'utf8')); } catch (e) { list = e; }
-  const valid = Array.isArray(list) &&
-    list.every(r => Array.isArray(r) && r.length === 2 && typeof r[0] === 'string' && typeof r[1] === 'string');
-  if (!valid) {
-    console.error(`${file} is not a JSON array of [format, path] string pairs` + (list instanceof Error ? ` (${list.message})` : '') +
-      '. Rebuild it with test/parity/traffic.mjs.');
-    process.exit(2);
-  }
-  return list;
-}
 
 mkdirSync(CACHE, { recursive: true });
 rmSync(DIFFS, { recursive: true, force: true }); // stale diffs look like current failures
 mkdirSync(DIFFS, { recursive: true });
-
-function get(url, headers = {}) {
-  return new Promise((resolve, reject) => {
-    const req = (url.startsWith('https') ? import('node:https') : Promise.resolve(http)).then(mod =>
-      mod.get(url, { headers, timeout: 30000 }, res => {
-        const chunks = [];
-        res.on('data', c => chunks.push(c));
-        res.on('end', () => {
-          const buf = Buffer.concat(chunks);
-          resolve({ status: res.statusCode, type: res.headers['content-type'] || '', buf, body: buf.toString('utf8') });
-        });
-      }).on('error', reject).on('timeout', function () { this.destroy(new Error('timeout')); }));
-    req.catch(reject);
-  });
-}
 
 async function live(format, path) {
   const url = `${LIVE_SCHEME}://${hostFor(format)}${path}`;
   const file = CACHE + createHash('sha1').update(url).digest('hex') + '.json';
   if (!refresh && existsSync(file)) return decodeCacheEntry(JSON.parse(readFileSync(file, 'utf8')));
   await new Promise(r => setTimeout(r, 250));
-  const res = await get(url, { 'User-Agent': 'scripture-guide-parity/1 (Chrome)' });
+  const res = await get(url, { 'User-Agent': USER_AGENT });
   writeFileSync(file, JSON.stringify(encodeCacheEntry(res)));
   return res;
 }
 
 function local(format, path) {
-  return get(NODE_BASE + path, { Host: hostFor(format), 'User-Agent': 'scripture-guide-parity/1 (Chrome)' });
+  return get(NODE_BASE + path, { Host: hostFor(format), 'User-Agent': USER_AGENT });
 }
 
 function canonical(format, res) {
@@ -121,8 +74,6 @@ function safe(format, res) {
 
 const results = [];
 for (const [format, path] of requests) {
-  if (formats && !formats.includes(format)) continue;
-  if (only && !path.includes(only)) continue;
   const key = `${format} ${path}`;
   let expected, actual, verdict;
   try {
