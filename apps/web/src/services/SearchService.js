@@ -4,12 +4,17 @@
 import config from '../config/index.js';
 import searchRepository from '../data/repositories/SearchRepository.js';
 import { createSphinxClient } from '../data/external/sphinx.js';
-import { queryStems, queryTerms, matchesTerms, stemPrefix } from './search/matcher.js';
+import { queryStems, queryTerms, matchesTerms } from './search/matcher.js';
 import { plainText, flattenText } from '../domain/rules/legacyText.js';
 import { formatReference, slugifyRef, versionImg } from '../domain/rules/legacyReference.js';
 
 const REQUERY_OVER = 300;
 const TOP = 5000;
+// Candidate rows per fallback query. Without a (version, verse_id) index each page of a range
+// query reads every row of its versions again, so those pages are large; the first query over all
+// versions stops after REQUERY_OVER hits, so its pages are small.
+const PAGE = 20000;
+const FIRST_PAGE = 5000;
 // Requery ranges (OT, NT, BoM, D&C+PGP) for LDS and KJV when the first query is too broad
 const BOOK_RANGES = [[1, 23145], [23146, 31102], [31103, 37706], [37707, 41995]];
 const BOC = [89431, 90772];
@@ -87,15 +92,16 @@ export class SearchService {
     const stems = queryStems(query);
     const terms = queryTerms(query);
     if (!stems.length) return [];
-    const prefixes = [...new Set(stems.map(stemPrefix))];
     const out = [];
+    const page = Number.isFinite(stopAfter) ? FIRST_PAGE : PAGE;
     let afterId = 0;
     while (out.length < limit && out.length <= stopAfter) {
-      const rows = await this.repo.candidates(prefixes, versions, { range, afterId, limit: 5000 });
+      const rows = await this.repo.candidates(stems, versions, { range, afterId, limit: page });
       if (!rows.length) break;
       for (const r of rows) {
         if (matchesTerms(r.text, terms)) out.push({ verse_id: Number(r.verse_id), version: r.version });
       }
+      if (rows.length < page) break; // the last page
       afterId = rows[rows.length - 1].id;
     }
     return out.slice(0, limit);

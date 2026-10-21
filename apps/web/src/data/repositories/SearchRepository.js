@@ -1,4 +1,5 @@
 import db from '../db/connection.js';
+import { fulltextPlan, fulltextSettings } from '../../services/search/fulltext.js';
 
 // Database queries behind the search page (scriptures::search and search.php in the PHP site).
 export class SearchRepository {
@@ -27,16 +28,28 @@ export class SearchRepository {
     return rows.map(r => r.id);
   }
 
-  // Candidate verses for the MySQL fallback: the text contains every stem prefix.
+  // The FULLTEXT index settings (search/fulltext.js), looked up once
+  fulltext() {
+    this.fulltextPending ??= fulltextSettings(this.db);
+    return this.fulltextPending;
+  }
+
+  // Candidate verses for the MySQL fallback: the text has a word starting with each stem's prefix
+  // (through the FULLTEXT index where it covers the stem), or contains the prefix (LIKE).
   // The caller filters the candidates with the Sphinx tokenizer and stemmer.
   // Pages by primary key: pass the last row's id as afterId to continue.
-  async candidates(prefixes, versions, { range = null, afterId = 0, limit = 5000 } = {}) {
-    if (!prefixes.length || !versions.length) return [];
+  async candidates(stems, versions, { range = null, afterId = 0, limit = 5000 } = {}) {
+    if (!stems.length || !versions.length) return [];
+    // Within a verse range (the LDS/KJV requery) MySQL reads the versions' rows through the version
+    // index, about 70,000, faster than MATCH on a three-letter prefix ('+lor*'), so those stay LIKE.
+    const { match, like } = fulltextPlan(stems, await this.fulltext(), { minPrefix: range ? 4 : 1 });
     const where = ['id > ?', 'version IN (?)'];
     const params = [afterId, versions];
-    // LIKE rather than the MyISAM full-text index: that index skips words under four letters and
-    // ~500 stopwords ("another", "according"), so prefix lookups through it miss verses.
-    for (const p of prefixes) {
+    if (match) {
+      where.push('MATCH(text) AGAINST(? IN BOOLEAN MODE)');
+      params.push(match);
+    }
+    for (const p of like) {
       where.push('text LIKE ?');
       params.push(`%${p.replace(/[\\%_]/g, '\\$&')}%`);
     }

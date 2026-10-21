@@ -1,5 +1,6 @@
 import { describe, test, expect, vi } from 'vitest';
 import { SearchService, highlight, sortByOrder, volumeRange, formatOverride } from '../../src/services/SearchService.js';
+import { stemPrefix } from '../../src/services/search/matcher.js';
 
 // KJV wording (public domain) under synthetic version ids
 const VERSES = {
@@ -17,9 +18,9 @@ function fakeRepo({ texts = { 'LDS': [28679, 29564, 1], 'WEB': [28679] } } = {})
     searchableVersions: vi.fn(async forced => (forced ? forced.filter(f => ['LDS', 'WEB'].includes(f)) : ['LDS', 'WEB'])),
     volumeVersions: vi.fn(async () => []),
     versionsByPriority: vi.fn(async ids => ['LDS', 'KJV', 'WEB'].filter(v => ids.includes(v))),
-    candidates: vi.fn(async (prefixes, versions, { afterId = 0, range } = {}) =>
+    candidates: vi.fn(async (stems, versions, { afterId = 0, range } = {}) =>
       rows.filter(r => r.id > afterId && versions.includes(r.version) && (!range || (r.verse_id >= range[0] && r.verse_id <= range[1]))
-        && prefixes.every(p => r.text.toLowerCase().includes(p)))),
+        && stems.every(s => r.text.toLowerCase().includes(stemPrefix(s))))),
     standins: vi.fn(async () => []),
     verseInfo: vi.fn(async ids => ids.filter(i => VERSES[i]).map(i => ({
       verse_id: i, volume_id: VERSES[i].volume_id, book_id: VERSES[i].book_id, chapter: VERSES[i].chapter, verse: VERSES[i].verse,
