@@ -2,7 +2,7 @@ import VerseSerializer from '../serializers/VerseSerializer.js';
 import { displayReference, blankHeading } from '../../domain/rules/referenceParsing.js';
 
 import { versionImg, formatReference as referenceFromVerseIds } from '../../domain/rules/legacyReference.js';
-import { renderHeadingHtml, renderHeadingFields, RENDERED_HEADING_FIELDS, segmentFormats } from '../../domain/rules/legacyText.js';
+import { renderHeadingHtml, renderHeadingFields, RENDERED_HEADING_FIELDS, segmentFormats, escapeHtml } from '../../domain/rules/legacyText.js';
 
 // versionImg takes lds_scriptures_volumes.volume_id; Reference.volume is a volume code.
 // Verses outside the five volumes (null) have no LDS cover: 0 gives "lds".
@@ -419,7 +419,8 @@ export class HtmlPresenter {
       // Page title: the reference with en dashes for ranges (PHP referenceFromVerseIds)
       title: displayReference(result.reference.normalized),
       // Heading for a reference block that matched no verses (scriptures::blankData)
-      blank: result.verses.length ? null : blankHeading(result.reference.query),
+      // escaped: it echoes the request (the PHP site reflected it raw)
+      blank: result.verses.length ? null : escapeHtml(blankHeading(result.reference.query)),
       startsSection: (result.verses[0]?.text || '').startsWith('§'),
       faxIds: result.config._faxIds || [],
       typesByVerse,

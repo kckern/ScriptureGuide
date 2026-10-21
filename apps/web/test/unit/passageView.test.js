@@ -37,3 +37,21 @@ describe('passage partial (passage_script.php)', () => {
     expect($('.chapterNav').length).toBe(0);
   });
 });
+
+describe('reference that matched nothing', () => {
+  const XSS = '<img src=x onerror=alert(1)>';
+  const empty = query => new ScriptureResult({
+    reference: new Reference({ query, normalized: '', verseIds: [] }), verses: [], headings: [], config: { version: 'KJV' },
+  });
+  test('the blank heading escapes the requested text (/passage)', async () => {
+    const html = await ejs.renderFile(VIEW, { data: new HtmlPresenter().serialize(empty(XSS)) });
+    expect(html).not.toContain('<img');
+    expect(cheerio.load(html)('h3').text().toLowerCase()).toBe(XSS);
+  });
+  test('the blank heading escapes the requested text (scripture page)', async () => {
+    const SECTION = fileURLToPath(new URL('../../src/presentation/views/partials/section.ejs', import.meta.url));
+    const html = await ejs.renderFile(SECTION, { data: new HtmlPresenter().serialize(empty(`xyz.1${XSS}`)) });
+    expect(html).not.toContain('<img');
+    expect(cheerio.load(html)('h3').text().toLowerCase()).toBe('xyz 1<img src=x onerror=alert(1)>');
+  });
+});
