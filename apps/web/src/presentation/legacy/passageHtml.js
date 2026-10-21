@@ -58,7 +58,8 @@ function renderPage(req, res, result) {
 }
 
 export async function passageHtml(req, res, reference, version) {
-  const config = { ...(req.config || {}), version };
+  // The page lookup already counted against the request budget; the api output repeats it
+  const config = { ...(req.config || {}), version, _budget: undefined };
   const result = await scriptureLookupService.lookup(reference, config);
   const page = await renderPage(req, res, result);
   return passageInners(page, version);

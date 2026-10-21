@@ -88,3 +88,17 @@ describe('ScriptureController: an html reference that found nothing', () => {
     expect(req.scriptureResult.title).toBe('ref of 5,6');
   });
 });
+
+describe('ScriptureController: one budget per request', async () => {
+  const { RequestBudget } = await import('../../src/domain/rules/requestBudget.js');
+  test('the lookup and the PHP blocks share it', async () => {
+    const lookup = vi.fn(async () => empty());
+    const blocks = vi.fn(async () => [{ orig: 'x', book: 'x', verse_ids: [] }]);
+    const ctl = new ScriptureController({ lookup }, references, { blocks });
+    const req = { config: { outputFormat: 'api', reference: 'x1', legacy: { ref: 'x1' } }, params: {}, headers: {} };
+    await ctl.show(req, {}, () => {});
+    const budget = lookup.mock.calls[0][1]._budget;
+    expect(budget).toBeInstanceOf(RequestBudget);
+    expect(blocks.mock.calls[0][1]).toBe(budget);
+  });
+});

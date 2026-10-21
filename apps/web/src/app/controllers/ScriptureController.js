@@ -6,6 +6,7 @@ import legacyBlockService, { allVerseIds } from '../../services/LegacyBlockServi
 import { ScriptureResult } from '../../domain/entities/ScriptureResult.js';
 import { Reference } from '../../domain/entities/Reference.js';
 import { blockVerseIds } from '../../domain/rules/blockIds.js';
+import { RequestBudget } from '../../domain/rules/requestBudget.js';
 import { bookOnlyQuery } from '../../domain/rules/referenceParsing.js';
 import { isEmptyReference } from '../../domain/rules/requestParsing.js';
 
@@ -37,7 +38,7 @@ export class ScriptureController {
   async legacyBlocks(result, config) {
     if (result.reference?.verseIds?.length || config.parallel) return undefined;
     const ref = isHtml(config) ? config.reference : config.legacy?.ref;
-    return this.blockService.blocks(isEmptyReference(ref) ? '' : ref ?? '');
+    return this.blockService.blocks(isEmptyReference(ref) ? '' : ref ?? '', config._budget);
   }
 
   // A word alone that matched no verses: when it is a whole book name (or alias), its first
@@ -54,6 +55,9 @@ export class ScriptureController {
       if (await searchParallelController.dispatch(req, res)) return;
 
       const config = req.config || {};
+      // What this request may resolve (pieces, verses, queries), shared by the lookup and the
+      // PHP blocks
+      config._budget ??= new RequestBudget();
       // req.config.reference is parsed from the whole path (version spec, shortcuts, =/, random).
       // A parallel q reached through ?q= has no route param: use the parsed q.
       const reference = config.parallel ? (req.params?.reference || config.reference) : (config.reference ?? req.params.reference);

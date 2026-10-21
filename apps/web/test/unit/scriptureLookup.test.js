@@ -27,6 +27,12 @@ describe('splitBlocks', () => {
   test('an all-numeric reference stays verse ids', () => {
     expect(svc.splitBlocks('1; 5-6')).toEqual(['1', '5-6']);
   });
+  test('pieces past the limit (the request budget) are not parsed', () => {
+    let n = 0;
+    const counting = new ScriptureLookupService({ parse: t => { n++; return refs.parse(t); } }, null, null);
+    expect(counting.splitBlocks('gen.1.1; 3.1; 4.1; 5.1', 2)).toEqual(['gen.1.1', 'Genesis 3.1', '4.1', '5.1']);
+    expect(n).toBe(3);
+  });
 });
 
 describe('lookup: the short book title for compound refs', () => {
@@ -113,5 +119,40 @@ describe('lookup: chapter nav follows the cleaned reference', () => {
   });
   test('not when cleanReference reads verses into it ("abr.2.1-9.3-4" is "Abraham 2:1-9:3-4"), as PHP checked $meta[0][orig]', async () => {
     expect((await svc.lookup('abr.2.1-9.3-4', {})).chapterNav).toBeNull();
+  });
+});
+
+describe('lookup: the request budget', async () => {
+  const { RequestBudget } = await import('../../src/domain/rules/requestBudget.js');
+  const refs = { parse: t => ({ isEmpty: false, book: 'Genesis', normalized: 'Genesis 1:1', verseIds: [1, 2], chapter: 1, query: t }) };
+  const verses = {
+    findByIds: async ids => ids.map(id => ({ verse_id: id, verse: id, chapter: 1, text: 'In the beginning.', version: 'KJV' })),
+    findChaptersByVerseIds: async ids => ids.map(id => ({ verse_id: id, chapter: 1 })),
+  };
+  const headings = { findBookId: async () => null, findByVerseIds: async () => [], findFaxVerseIds: async () => [] };
+  const svc = new ScriptureLookupService(refs, verses, headings);
+  test('pieces past the budget are not looked up', async () => {
+    const r = await svc.lookup('gen.1.1; gen.1.1; gen.1.1', { version: 'KJV', _budget: new RequestBudget({ pieces: 2 }) });
+    expect(r.sections.map(s => s.verses.length)).toEqual([2, 2, 0]);
+  });
+  test('verses past the budget are not looked up', async () => {
+    const r = await svc.lookup('gen.1.1; gen.1.1; gen.1.1', { version: 'KJV', _budget: new RequestBudget({ verses: 5 }) });
+    expect(r.sections.map(s => s.verses.length)).toEqual([2, 2, 0]);
+  });
+  test('without a budget nothing changes', async () => {
+    const r = await svc.lookup('gen.1.1; gen.1.1; gen.1.1', { version: 'KJV' });
+    expect(r.sections.map(s => s.verses.length)).toEqual([2, 2, 2]);
+  });
+});
+
+describe('splitBlocks: cost of a long junk reference', async () => {
+  const { ReferenceService } = await import('../../src/services/ReferenceService.js');
+  test('10,000 pieces with the default budget of 100 split in well under a second', () => {
+    const svc = new ScriptureLookupService(new ReferenceService(null), null, null);
+    const ref = Array.from({ length: 10000 }, () => 'x1').join(';');
+    const t = performance.now();
+    const blocks = svc.splitBlocks(ref, 100);
+    expect(performance.now() - t).toBeLessThan(1000);
+    expect(blocks).toHaveLength(10000);
   });
 });

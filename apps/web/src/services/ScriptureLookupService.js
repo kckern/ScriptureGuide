@@ -49,13 +49,15 @@ export class ScriptureLookupService {
   // Split "john.3.16; gen.1.1" into blocks; a block without a book takes the previous one's.
   // After a word that is not a book, a bare number goes with that word (scriptutil::getBook):
   // "corianton; 38" is "corianton 38", not verse id 38.
-  splitBlocks(referenceString) {
+  // Pieces past `limit` (what the request budget has left) are kept as typed, not parsed.
+  splitBlocks(referenceString, limit = Infinity) {
     const pieces = String(referenceString || '').split(';').map(p => p.trim()).filter(Boolean);
     if (pieces.length < 2) return null;
     const blocks = [];
     let book = null;
     let resolved = false;
-    for (const piece of pieces) {
+    for (const [index, piece] of pieces.entries()) {
+      if (index >= limit) { blocks.push(piece); continue; }
       let text = piece;
       let ref = this.referenceService.parse(text);
       const words = /[a-z]/i.test(piece);
@@ -71,13 +73,18 @@ export class ScriptureLookupService {
   }
 
   async lookup(referenceString, config = {}) {
-    const blocks = config._block ? null : this.splitBlocks(referenceString);
+    const blocks = config._block ? null : this.splitBlocks(referenceString, config._budget?.pieces ?? Infinity);
     if (blocks) {
       // PHP read numbers as verse ids only when the whole reference was numeric
       // (cleanReference); a number among words ("1999; 12; some-words") is not a verse id.
       const idsAllowed = numericVerseIds(referenceString) !== null;
       const sections = [];
       for (const block of blocks) {
+        // Pieces past the request's budget are not looked up: not found
+        if (config._budget && !config._budget.takePiece()) {
+          sections.push(new ScriptureResult({ reference: new Reference({ query: block, normalized: '', verseIds: [] }), verses: [], headings: [], config }));
+          continue;
+        }
         sections.push(await this.lookup(block, { ...config, _block: true, _multiBlock: true, _noVerseIds: !idsAllowed }));
       }
       const found = sections.filter(r => !r.reference.isEmpty);
@@ -121,6 +128,11 @@ export class ScriptureLookupService {
     // Verse ids, JST books and collections the package does not know: the verse index
     if (reference.isEmpty && !(config._noVerseIds && parseVerseIdList(referenceString))) {
       reference = await this.referenceService.resolve(referenceString);
+    }
+
+    // More verses than the request has left (RequestBudget): not found
+    if (!reference.isEmpty && config._budget && !config._budget.takeVerses(reference.verseIds.length)) {
+      reference = new Reference({ query: referenceString, normalized: '', verseIds: [] });
     }
 
     if (reference.isEmpty) {
