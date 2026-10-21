@@ -32,7 +32,13 @@ jobs:
           # A second web container on the same network searches through Sphinx.
           docker compose -f infra/docker-compose.yml --profile search run -d --name web-sphinx \
             -e SPHINX_HOST=sphinx -p 127.0.0.1:3001:3000 web
-          for _ in $(seq 1 60); do curl -fsS http://localhost:3001/health >/dev/null 2>&1 && break; sleep 2; done
+          up=
+          for _ in $(seq 1 60); do curl -fsS http://localhost:3001/health >/dev/null 2>&1 && { up=1; break; }; sleep 2; done
+          [ -n "$up" ] || { echo "web-sphinx did not answer /health within 120 s"; docker logs --tail 80 web-sphinx; exit 1; }
+          # /healthz reports "sphinx":"ok" only when SPHINX_HOST is set and its SphinxQL port answers
+          health=$(curl -sS http://localhost:3001/healthz)
+          echo "web-sphinx /healthz: $health"
+          echo "$health" | grep -q '"sphinx":"ok"' || { echo "web-sphinx is not searching through Sphinx"; exit 1; }
           # median of 5 timed requests after one warm-up, in ms
           median() {
             curl -fsS -o /dev/null "$1"
