@@ -27,4 +27,11 @@ describe('allowReason', () => {
   test('an invalid pattern never matches', () => {
     expect(allowReason(allow, 'meta', '/[')).toBeUndefined();
   });
+  test('a "<format> live:<regex>" key matches the live body, never the path', () => {
+    const a = { 'markdown live:<b>Fatal error</b>': 'live is a PHP fatal error' };
+    expect(allowReason(a, 'markdown', '/x', '<br />\n<b>Fatal error</b>: Uncaught')).toBe('live is a PHP fatal error');
+    expect(allowReason(a, 'markdown', '/x', '# John 3:16')).toBeUndefined();
+    expect(allowReason(a, 'markdown', '/Fatal error')).toBeUndefined();
+    expect(allowReason(a, 'xml', '/x', '<b>Fatal error</b>')).toBeUndefined();
+  });
 });

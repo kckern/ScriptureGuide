@@ -1,5 +1,5 @@
 import { describe, test, expect } from 'vitest';
-import { canonicalHtml, canonicalJson, compare, canonicalAsset, encodeCacheEntry, decodeCacheEntry, homeCleanups } from './normalize.mjs';
+import { canonicalHtml, canonicalJson, compare, canonicalAsset, encodeCacheEntry, decodeCacheEntry, homeCleanups, rawSearchterm } from './normalize.mjs';
 
 describe('canonicalHtml', () => {
   test('ignores quote style, attribute order and whitespace between tags', () => {
@@ -83,5 +83,18 @@ describe('homeCleanups', () => {
   test('leaves other values alone', () => {
     const other = canonicalHtml('<input id="searchbox" name="searchbox" type="text" value="faith"><a href="https://example.com/?fbclid=1">x</a><p style="line-heigth:2em">y</p>');
     expect(homeCleanups(other)).toBe(other);
+  });
+});
+
+describe('rawSearchterm', () => {
+  test("Node's escaped search term reads as the raw term live prints", () => {
+    const live = 'x\nsearchterm = "" a(b) attr("c") ""; versions_index = null';
+    const node = 'x\nsearchterm = "\\" a(b) attr(\\"c\\") \\""; versions_index = null';
+    expect(rawSearchterm(node)).toBe(live);
+    expect(rawSearchterm(live)).toBe(live);
+  });
+  test('decodes the escaped "<" too, and leaves a different term different', () => {
+    expect(rawSearchterm('searchterm = "\\u003cb\\u003e";')).toBe('searchterm = "<b>";');
+    expect(rawSearchterm('searchterm = "faith";')).not.toBe('searchterm = "hope";');
   });
 });

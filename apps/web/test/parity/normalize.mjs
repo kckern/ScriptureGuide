@@ -91,3 +91,12 @@ const HOME_CLEANUPS = [
 export function homeCleanups(canonical) {
   return HOME_CLEANUPS.reduce((text, [re, to]) => text.replace(re, to), canonical);
 }
+
+// search.php echoed the search term into a JS string unescaped (a reflected XSS on live);
+// Node prints it as a JSON string literal. Decode Node's literal to the raw term so the term
+// itself is still compared; a raw live line is left as it is (it does not parse as one literal).
+export function rawSearchterm(body) {
+  return body.replace(/(searchterm = )("(?:[^"\\\n]|\\.)*")(;)/g, (all, pre, literal, end) => {
+    try { return `${pre}"${JSON.parse(literal)}"${end}`; } catch { return all; }
+  });
+}

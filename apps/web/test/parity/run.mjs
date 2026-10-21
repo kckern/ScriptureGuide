@@ -9,7 +9,7 @@ import { createHash } from 'node:crypto';
 import { mkdirSync, readFileSync, writeFileSync, existsSync, rmSync } from 'node:fs';
 import * as cheerio from 'cheerio';
 import { DIR, CACHE_ROOT, NODE_BASE, LIVE_SCHEME, USER_AGENT, cliOptions, loadCorpus, selectRequests, get, hostFor, diffName } from './harness.mjs';
-import { canonicalHtml, canonicalJson, canonicalAsset, mediaType, encodeCacheEntry, decodeCacheEntry, compare, homeCleanups } from './normalize.mjs';
+import { canonicalHtml, canonicalJson, canonicalAsset, mediaType, encodeCacheEntry, decodeCacheEntry, compare, homeCleanups, rawSearchterm } from './normalize.mjs';
 import { allowReason } from './allow.mjs';
 
 const CACHE = CACHE_ROOT + '/live/';
@@ -43,9 +43,10 @@ function canonical(format, res) {
   const body = res.body.replace(/\r\n/g, '\n');
   switch (format) {
     case 'html': {
-      const $ = cheerio.load(body);
+      const page = rawSearchterm(body);
+      const $ = cheerio.load(page);
       const title = collapse($('title').text());
-      const container = $('#container').length ? canonicalHtml(body, '#container') : canonicalHtml(body, 'body');
+      const container = $('#container').length ? canonicalHtml(page, '#container') : canonicalHtml(page, 'body');
       return `TITLE ${title}\n${homeCleanups(container)}`;
     }
     case 'api': {
@@ -81,7 +82,7 @@ for (const [format, path] of requests) {
     expected = `STATUS ${l.status}\n` + safe(format, l);
     actual = `STATUS ${n.status}\n` + safe(format, n);
     const c = compare(expected, actual);
-    const reason = allowReason(allow, format, path);
+    const reason = allowReason(allow, format, path, l.body);
     verdict = c.equal ? 'pass' : reason ? 'allowed' : 'fail';
     if (!c.equal) {
       const name = diffName(format, path);
