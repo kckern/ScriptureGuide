@@ -28,27 +28,78 @@ copies did not meet that condition. `public/css/webfont/OFL.txt` now sits beside
 fonts (and is served at `/css/webfont/OFL.txt`) with the three copyright lines followed by
 the full OFL 1.1 text, as Google Fonts packages it per family.
 
-## Needs owner decision
+## Served privately
 
-| File(s) | Family | Copyright holder (from file) | License | Source | Decision |
-|---|---|---|---|---|---|
-| `Goudy-Regular.{eot,svg,ttf,woff}`, `Goudy-Bold.{eot,svg,ttf,woff}`, `Goudy-Italic.{eot,svg,ttf,woff}` | Goudy Old Style / Bold / Italic (v1.51) | "Data by URW, Type Solutions, Inc. © 1993. Microsoft Corporation. All rights reserved." | No license in file (IDs 13/14 empty). From the copyright string, this appears to be the Goudy Old Style that ships with Microsoft Office/Windows, not the OFL Goudy Bookletter 1911. Treat as proprietary: no redistribution right is shown. | Unknown (converted with FontForge in 2016 per the `.svg` metadata) | Needs owner decision |
+The site's text font is the owner's licensed "Goudy Scripture" (one file, `scripture.woff2`:
+weight 400, upright, 563 glyphs including Latin Extended and Cyrillic). The owner is licensing
+it (decision 2026-10-20). A licence lets the site serve the font to visitors; it does not allow
+publishing the file in this public repository or in the Docker image. So the file is never
+committed or built into the image, and the app only points at it.
 
-`style.css` declares `@font-face { font-family: 'Goudy' }` from these files and uses it as a
-fallback after Sorts Mill Goudy, so deleting them would change requests the page makes and
-break asset parity. Options:
+| Env | Meaning |
+|---|---|
+| `FONT_BASE` | URL or path the font is fetched from, e.g. `https://media.scripture.guide/fonts` or `/private-fonts`. A trailing slash is dropped. |
+| `FONT_DIR` | A directory on the app's file system, served at `/private-fonts` (only when set; no directory listing, `Cache-Control: max-age=30d`). With `FONT_DIR` and no `FONT_BASE`, `FONT_BASE` defaults to `/private-fonts`. |
+| `FONT_GOUDY_FILE` | File name under `FONT_BASE`. Default `scripture.woff2`. The `format()` follows the extension (`woff2`, `woff`, `ttf`, `otf`). |
 
-- (a) Keep the files as they are and accept the risk.
-- (b) Serve them from an external `FONT_BASE` (e.g. `https://media.scripture.guide/fonts`)
-  and rewrite the `url()`s in `style.css`. This only takes the files out of the repository.
-  The site still sends the font to every visitor, so it is still distribution and does not
-  resolve the licensing issue.
-- (c) Substitute an OFL equivalent, e.g. Goudy Bookletter 1911 (The League of Moveable
-  Type), or drop the `'Goudy'` fallback and rely on Sorts Mill Goudy alone. This is the
-  only option that resolves the licensing issue. It changes the font requests the page
-  makes, so the asset parity corpus (`test/parity/corpus.mjs`) has to change with it.
+With `FONT_BASE` or `FONT_DIR` set, the layout (`src/presentation/views/layouts/main.ejs`)
+emits, after the stylesheets:
 
-None of these has been implemented.
+```css
+@font-face {
+  font-family: 'Goudy';
+  src: url('<FONT_BASE>/scripture.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+```
+
+Neither set: no `@font-face` for `'Goudy'`, so the page requests no font that would 404.
+
+The body stack in `style.css` is `'Goudy', 'Sorts Mill Goudy', Georgia, serif` (live has
+Sorts Mill Goudy first). With the private font configured, `'Goudy'` is the text font; without
+it, the browser has no `'Goudy'` face and uses Sorts Mill Goudy, as before. A system font whose
+family is exactly "Goudy" would also match; that is accepted. Notes:
+
+- The file has only a regular face. Bold and italic text in `'Goudy'` is synthesized by the
+  browser from it; it does not fall back to Sorts Mill Goudy Italic.
+- Characters the file lacks (outside Latin, Latin Extended and Cyrillic) fall back per glyph to
+  Sorts Mill Goudy, then Georgia.
+- From another origin (`FONT_BASE=https://…`), that host must send
+  `Access-Control-Allow-Origin` for the site's origins, or browsers refuse the font.
+- The home page search box keeps its own `'Sorts Mill Goudy', serif` (`home.ejs`), as live does.
+
+Deploying on bom: put the file in a host directory outside the repository and the image, mount
+it read-only into the web container and point `FONT_DIR` at it:
+
+```yaml
+  web:
+    environment:
+      FONT_DIR: /fonts
+    volumes:
+      - /srv/scripture-guide/fonts:/fonts:ro   # holds scripture.woff2, readable by uid 1000 (node)
+```
+
+Then check `curl -sI https://scripture.guide/private-fonts/scripture.woff2` returns 200 with
+`Content-Type: font/woff2`, and a page's `<head>` has `<style id="private-fonts">`.
+
+`.gitignore` and the root `.dockerignore` (the image's build context is the repository root)
+exclude `apps/web/public/css/webfont/goudy*` (any case) and `scripture*.woff2` anywhere, so
+a copy dropped into the tree is neither committed nor built into the image.
+
+### History: Goudy Old Style (removed)
+
+Until 2026-10-20 the repository shipped these, declared as `@font-face 'Goudy'` in `style.css`
+and used as the fallback after Sorts Mill Goudy:
+
+| File(s) | Family | Copyright holder (from file) | License | Source |
+|---|---|---|---|---|
+| `Goudy-Regular.{eot,svg,ttf,woff}`, `Goudy-Bold.{eot,svg,ttf,woff}`, `Goudy-Italic.{eot,svg,ttf,woff}` | Goudy Old Style / Bold / Italic (v1.51) | "Data by URW, Type Solutions, Inc. © 1993. Microsoft Corporation. All rights reserved." | No license in file (IDs 13/14 empty). From the copyright string, this appears to be the Goudy Old Style that ships with Microsoft Office/Windows, not the OFL Goudy Bookletter 1911. Proprietary: no redistribution right is shown. | Unknown (converted with FontForge in 2016 per the `.svg` metadata) |
+
+They were deleted, the asset parity corpus (`test/parity/corpus.mjs`) no longer requests them,
+and `allow.json` records the `style.css` difference from live. They remain in git history (see
+below).
 
 ## Removed
 
@@ -65,7 +116,7 @@ name). The live site still serves them, but no page uses them, so they were dele
 
 ## Git history
 
-All of these files, including the Goudy Old Style files and the removed ones, are in the
+All of these files, including the Goudy Old Style files and the other removed ones, are in the
 public GitHub repository's history. Deleting a file now does not remove it from history.
 They have lived at three paths:
 

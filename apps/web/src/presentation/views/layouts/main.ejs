@@ -23,6 +23,9 @@
 <link rel="stylesheet" href="/css/featherlight.css">
 <link rel="stylesheet" href="/css/parallel.css">
 <link rel="stylesheet" href="/css/fax.css">
+<% if (typeof fontFaceCss !== 'undefined' && fontFaceCss) { %>
+<style id="private-fonts"><%- fontFaceCss %></style>
+<% } %>
 <style>
   body { opacity: 0; transition: opacity 0.15s ease; }
   h3.heading a { color: inherit; text-decoration: none; }

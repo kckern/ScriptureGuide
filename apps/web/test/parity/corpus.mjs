@@ -39,7 +39,7 @@ const ASSETS = [
   '/img/audio.gif', '/img/audioload.gif', '/img/audiooff.png', '/img/audioplay.png', '/img/back.jpg', '/img/book_open.png',
   '/img/check.svg', '/img/chrome.png', '/img/copy.svg', '/img/diff.png', '/img/green.png', '/img/numbers.png', '/img/paper.jpg',
   '/img/red.png', '/img/ref.png', '/img/ver.png', '/img/xref.png', '/img/yellow.png',
-  ...['Goudy-Bold', 'Goudy-Italic', 'Goudy-Regular'].flatMap(f => ['eot', 'svg', 'ttf', 'woff'].map(ext => `/css/webfont/${f}.${ext}`)),
+  // Goudy-{Regular,Bold,Italic}.{eot,svg,ttf,woff} are gone: proprietary, served from a private FONT_BASE (docs/fonts.md)
   '/css/webfont/ShadowsIntoLight.woff2',
   '/css/webfont/SortsMillGoudy-Italic.woff', '/css/webfont/SortsMillGoudy-Regular.woff',
   '/css/webfont/YanoneKaffeesatz-Bold.woff', '/css/webfont/YanoneKaffeesatz-Light.woff', '/css/webfont/YanoneKaffeesatz-Regular.woff',

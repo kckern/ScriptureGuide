@@ -6,6 +6,17 @@ export function intEnv(value, fallback) {
   return Number.isFinite(n) ? n : fallback;
 }
 
+// The licensed text font, served privately (never in the repository or the image; see docs/fonts.md).
+//   FONT_BASE        URL or path the font is fetched from (no trailing slash needed)
+//   FONT_DIR         a local directory to serve at /private-fonts; FONT_BASE defaults to that path
+//   FONT_GOUDY_FILE  the file name under FONT_BASE (default scripture.woff2)
+// Neither FONT_BASE nor FONT_DIR set: no @font-face for 'Goudy'; pages use Sorts Mill Goudy.
+export function fontsFromEnv(env) {
+  const dir = env.FONT_DIR || '';
+  const base = (env.FONT_BASE || (dir ? '/private-fonts' : '')).replace(/\/+$/, '');
+  return { base, dir, goudyFile: env.FONT_GOUDY_FILE || 'scripture.woff2' };
+}
+
 export const config = {
   env: process.env.NODE_ENV || 'development',
   port: parseInt(process.env.PORT, 10) || 3000,
@@ -40,6 +51,8 @@ export const config = {
     coverHost: process.env.COVER_HOST || 'https://covers.scripture.guide',
     assetHost: process.env.ASSET_HOST || 'https://assets.scripture.guide'
   },
+
+  fonts: fontsFromEnv(process.env),
 
   session: {
     secret: process.env.SESSION_SECRET || 'dev-secret-change-me',

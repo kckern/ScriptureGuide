@@ -27,6 +27,13 @@ version gets an empty answer without a cache entry or a query.
 Verse text, heading text and everything else is read on every request. A failed lookup is not
 cached; it is retried on the next request (a database error is reported, not read as "no data").
 
+### Text font (private)
+
+The licensed text font is not in the repository or the image. Set `FONT_DIR` to a directory
+holding `scripture.woff2` (served at `/private-fonts`), or `FONT_BASE` to where it is hosted;
+`FONT_GOUDY_FILE` renames the file. Unset, pages use Sorts Mill Goudy. See
+[docs/fonts.md](docs/fonts.md#served-privately), which also has the bom mount.
+
 ### Search
 
 With `SPHINX_HOST` set, search goes to Sphinx (SphinxQL on `SPHINX_PORT`, default 9306), with the

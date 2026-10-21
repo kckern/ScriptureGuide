@@ -2,5 +2,6 @@
   "html /": "Home page cleanups kept: no leftover value=\"Test\" in the search box (JS replaces it on load), no fbclid tracking parameter on the Chrome Web Store link, line-height typo fixed",
   "passage /passage?ref=Matthew%205&version=NIV": "PHP single_heading bug: passage_script.php drops the first verse (or verse part) of every section after the first, e.g. Matthew 5:2b, 13, 17, 21. Node keeps all verses and shows only the first heading.",
   "html /%2eenv": "Locally the search runs on the MySQL fallback, which stops at its time budget (SEARCH_FALLBACK_MAX_MS) before finishing a scan for a short word and says \"Showing partial results\". Same 0 results; production searches through Sphinx, which has no budget.",
-  "html re:^/(search/)?[^/?]*(%22|\")[^/?]*$": "Live returns no results for quoted phrases (PHP breaks the quotes before querying Sphinx); Node searches the phrase, as Sphinx does — owner decision 2026-10-20"
+  "html re:^/(search/)?[^/?]*(%22|\")[^/?]*$": "Live returns no results for quoted phrases (PHP breaks the quotes before querying Sphinx); Node searches the phrase, as Sphinx does — owner decision 2026-10-20",
+  "asset /css/style.css": "Goudy Old Style is proprietary; served from a private FONT_BASE (owner decision 2026-10-20). Its @font-face rules are gone from style.css (the layout emits the licensed 'Goudy' only when FONT_BASE or FONT_DIR is set) and the body stack puts 'Goudy' before 'Sorts Mill Goudy'"
 }

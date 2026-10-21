@@ -1,5 +1,7 @@
 
 /*  FONT IMPORT */
+/*  'Goudy' (the licensed text font) is not here: the layout declares it only when FONT_BASE or
+    FONT_DIR is set (apps/web/docs/fonts.md). Without it, body text falls back to Sorts Mill Goudy. */
 
 
 
@@ -14,24 +16,6 @@
      font-style: italic;
      font-weight: 400;
      src: url('/css/webfont/SortsMillGoudy-Italic.woff') format('woff');
-}
- @font-face {
-     font-family: 'Goudy';
-     src: url('/css/webfont/Goudy-Regular.eot?#iefix') format('embedded-opentype'), url('/css/webfont/Goudy-Regular.woff') format('woff'), url('/css/webfont/Goudy-Regular.ttf') format('truetype'), url('/css/webfont/Goudy-Regular.svg#Goudy-Regular') format('svg');
-     font-weight: 400;
-     font-style: normal;
-}
- @font-face {
-     font-family: 'Goudy';
-     src: url('/css/webfont/Goudy-Bold.eot?#iefix') format('embedded-opentype'), url('/css/webfont/Goudy-Bold.woff') format('woff'), url('/css/webfont/Goudy-Bold.ttf') format('truetype'), url('/css/webfont/Goudy-Bold.svg#Goudy-Bold') format('svg');
-     font-weight: 700;
-     font-style: normal;
-}
- @font-face {
-     font-family: 'Goudy';
-     src: url('/css/webfont/Goudy-Italic.eot?#iefix') format('embedded-opentype'), url('/css/webfont/Goudy-Italic.woff') format('woff'), url('/css/webfont/Goudy-Italic.ttf') format('truetype'), url('/css/webfont/Goudy-Italic.svg#Goudy-Italic') format('svg');
-     font-weight: 400;
-     font-style: italic;
 }
  @font-face {
      font-family: 'Yanone Kaffeesatz';
@@ -72,7 +56,7 @@
 }
 
  body {
-     font-family: 'Sorts Mill Goudy', 'Goudy', Georgia, serif;
+     font-family: 'Goudy', 'Sorts Mill Goudy', Georgia, serif;
      font-size: 1.5em;
      line-height: 1.5em;
      background-color: #333;

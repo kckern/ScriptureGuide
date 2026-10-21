@@ -12,3 +12,10 @@ function setHeaders(res, filePath) {
 export function publicStatic(dir = PUBLIC_DIR) {
   return express.static(dir, { setHeaders });
 }
+
+// FONT_DIR (licensed fonts that must not be published) at /private-fonts; no route when unset.
+export function privateFonts(dir) {
+  const router = express.Router();
+  if (dir) router.use('/private-fonts', express.static(dir, { index: false, dotfiles: 'ignore', maxAge: '30d' }));
+  return router;
+}

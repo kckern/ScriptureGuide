@@ -10,8 +10,9 @@ import { fileURLToPath } from 'url';
 import config from './config/index.js';
 import routes from './app/routes/index.js';
 import subdomainMiddleware from './app/middleware/subdomain.js';
-import { publicStatic } from './app/middleware/static.js';
+import { publicStatic, privateFonts } from './app/middleware/static.js';
 import { notFoundHandler, errorHandler } from './app/middleware/error.js';
+import { goudyFontFace } from './presentation/fontFaces.js';
 import db from './data/db/connection.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -42,6 +43,8 @@ app.use(session(config.session));
 
 // Static files
 app.use(publicStatic());
+app.use(privateFonts(config.fonts.dir));
+app.locals.fontFaceCss = goudyFontFace(config.fonts);
 
 // View engine
 app.set('view engine', 'ejs');
