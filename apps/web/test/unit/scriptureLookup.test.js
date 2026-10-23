@@ -163,3 +163,71 @@ describe('splitBlocks: cost of a long junk reference', async () => {
     expect(blocks).toHaveLength(10000);
   });
 });
+
+// Psalms 22–24 in one version: each psalm has a heading row at its first verse. A psalm with a
+// superscription opens with "§" but not "§¶" (NIV Ps. 23:1 is "§A psalm of David.¶▼The Lord…").
+describe('lookup: the passage heading of a verse that starts a section', () => {
+  const PS = { 22: [206, 207, 208], 23: [209, 210, 211], 24: [212, 213] };
+  const SECTIONS = [[206, 'Psalm 22'], [209, 'Psalm 23'], [212, 'Psalm 24']];
+  const chapterOf = id => Number(Object.keys(PS).find(c => PS[c].includes(id)));
+  const verseOf = id => PS[chapterOf(id)].indexOf(id) + 1;
+  const lastOf = start => { const i = SECTIONS.findIndex(([v]) => v === start); return SECTIONS[i + 1] ? SECTIONS[i + 1][0] - 1 : 213; };
+
+  function service(firstText) {
+    const text = id => (id === 209 ? firstText : 'He leadeth me.');
+    const refs = { parse: t => {
+      const ch = Number(t.match(/^ps\.(\d+)$/)[1]);
+      return { isEmpty: false, book: 'Psalms', normalized: `Psalms ${ch}`, verseIds: PS[ch], chapter: ch, query: t };
+    } };
+    const indexRow = id => ({ verse_id: id, book_id: 19, book_title_short: 'Ps.', chapter: chapterOf(id), verse: verseOf(id) });
+    const verses = {
+      findByIds: async ids => ids.map(id => ({ verse_id: id, chapter: chapterOf(id), verse: verseOf(id), text: text(id), version: 'NIV' })),
+      findChaptersByVerseIds: async ids => ids.map(id => ({ verse_id: id, chapter: chapterOf(id) })),
+      findIndexRows: async ids => ids.filter(chapterOf).map(indexRow),
+    };
+    const navRow = chapter => ({ volume_id: 1, book_title: 'Psalms', book_title_short: 'Ps.', chapter });
+    const headings = {
+      findBookId: async () => ({ book_id: 19, lds_org: 'ps', book_title: 'Psalms', book_title_short: 'Ps.' }),
+      findByVerseIds: async ids => SECTIONS.filter(([v]) => ids.includes(v))
+        .map(([verse_id, t]) => ({ verse_id, version: 'NIV', type: 'heading', text: t, last_verse_id: lastOf(verse_id) })),
+      // Mirrors HeadingRepository.findChapterHeading: the latest heading at or before the
+      // first verse, or before it when the passage does not start a section
+      findChapterHeading: async (first, bookId, version, isNewSection) => {
+        const at = isNewSection ? first : first - 1;
+        const s = SECTIONS.filter(([v]) => v <= at).pop();
+        return s ? { verse_id: s[0], version, heading: s[1], last: lastOf(s[0]) } : null;
+      },
+      findChapterNavRows: async first => ({ current: navRow(chapterOf(first)), prev: navRow(chapterOf(first) - 1), next: navRow(chapterOf(first) + 1) }),
+      findChapterBounds: async (bookId, ch) => ({ first: PS[ch][0], last: PS[ch].at(-1) }),
+      findBookBounds: async () => ({ first: 206, last: 213 }),
+      hasAudio: async () => 0,
+      findParallels: async () => ({}),
+      findFaxVerseIds: async () => [],
+    };
+    return new ScriptureLookupService(refs, verses, headings);
+  }
+
+  test('a psalm whose superscription starts with "§" is headed by its own psalm (NIV Ps. 23), not the one before', async () => {
+    const r = await service('§A psalm of David.¶▼The Lord is my shepherd').lookup('ps.23', { version: 'NIV' });
+    expect(r.chapterHeading).toMatchObject({ verse_id: 209, heading: 'Psalm 23', last: 211 });
+  });
+  test('"§¶" still starts a section (unchanged)', async () => {
+    const r = await service('§¶The Lord is my shepherd').lookup('ps.23', { version: 'NIV' });
+    expect(r.chapterHeading).toMatchObject({ verse_id: 209, heading: 'Psalm 23' });
+  });
+  test('a first verse without "§" still takes the heading before it, as PHP did (KJV Ps. 23)', async () => {
+    const r = await service('The LORD is my shepherd').lookup('ps.23', { version: 'NIV' });
+    expect(r.chapterHeading).toMatchObject({ verse_id: 206, heading: 'Psalm 22' });
+  });
+  test('a "§" passage that is exactly one section gets section nav, as a "§¶" one does', async () => {
+    for (const first of ['§A psalm of David.¶▼The Lord is my shepherd', '§¶The Lord is my shepherd']) {
+      const nav = (await service(first).lookup('ps.23', { version: 'NIV' })).chapterNav;
+      expect(nav.prev).toMatchObject({ href: '/ps.22', label: 'Psalm 22' });
+      expect(nav.next).toMatchObject({ href: '/ps.24', label: 'Psalm 24' });
+    }
+  });
+  test('without "§" the chapter nav stays', async () => {
+    const nav = (await service('The LORD is my shepherd').lookup('ps.23', { version: 'NIV' })).chapterNav;
+    expect(nav.prev).toMatchObject({ href: '/ps.22', label: 'Psalms 22' });
+  });
+});

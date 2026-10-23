@@ -199,9 +199,13 @@ export class ScriptureLookupService {
 
       if (bookInfo) {
         const { book_id: bookId, lds_org: bookSlug, book_title_short: bookTitleShort, book_title: bookTitle } = bookInfo;
-        // PHP loadHeading: if first verse starts with §¶, do NOT decrement verse_id for lookup
+        // A first verse that opens with § starts a section, so the passage takes the heading at
+        // that verse. PHP's loadHeading only did so for §¶, so a psalm whose superscription opens
+        // with § alone (NIV Ps. 23:1 "§A psalm of David.¶▼…") was headed by the psalm before it;
+        // fixed by owner decision 2026-10-22. Raw, meta and latex already read the heading there,
+        // and HtmlPresenter treats § as a section start.
         const firstVerseText = verseRows[0]?.text || '';
-        const isNewSection = firstVerseText.startsWith('§¶');
+        const isNewSection = firstVerseText.startsWith('§');
         chapterHeading = await this.headingRepository.findChapterHeading(firstVerseId, bookId, headingVersion, isNewSection);
         // PHP tested the cleaned block ("abr.2.1-9.3-4" → "Abraham 2:1-9:3-4") for [,;:]
         if (!config._multiBlock && wantsChapterNav(reference.normalized) && !/[,;:]/.test(referenceString) &&

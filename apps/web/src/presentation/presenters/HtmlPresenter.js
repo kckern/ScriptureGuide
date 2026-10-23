@@ -463,8 +463,13 @@ export class HtmlPresenter {
             version: v.version,
             // Break paragraph if first linebreak part: meta has ¶, or single-segment verse with DB paraBreak
             paraBreak: lbIdx === 0 && (seg.meta.includes('¶') || (i === 0 && segments.length === 1 && v.paraBreak)),
-            // §¶ in meta means this segment triggers the section heading for this verse_id
-            isSection: lbIdx === 0 && /^§/.test(seg.meta),
+            // §¶ in meta means this segment triggers the section heading for this verse_id.
+            // So does the start of a passage's first verse when it opens with § alone (a psalm
+            // superscription, "§A psalm of David.¶▼…") and no later segment does: the lookup
+            // heads the passage with the section at that verse, which PHP never showed (owner
+            // decision 2026-10-22).
+            isSection: lbIdx === 0 && (/^§/.test(seg.meta) || (i === 0 && v === result.verses[0] &&
+              seg.text.startsWith('§') && !segments.some(s => /^§/.test(s.meta)))),
             segIndex: i,
             segCount: segments.length,
             lbIndex: lbIdx

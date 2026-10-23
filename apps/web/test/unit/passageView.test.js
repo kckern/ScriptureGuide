@@ -91,3 +91,55 @@ describe('heading whitespace', () => {
     expect(html).toMatch(/<h3 class="heading"[^>]*>\n\t\t\tGenesis 1\n\t\t\t<\/h3>/);
   });
 });
+
+// NIV Ps. 23 (synthetic text): the first verse opens with a superscription after "§", not "§¶",
+// and the lookup heads the passage with the section at that verse (owner decision 2026-10-22).
+describe('a passage whose first verse starts a section with "§"', () => {
+  function psalm(first) {
+    const texts = [first, '/_He makes me lie down.', '/_He refreshes my soul.'];
+    const verses = texts.map((text, i) => new Verse({ id: 209 + i, verseNum: i + 1, chapter: 23, text, version: 'NIV' }));
+    return new ScriptureResult({
+      reference: new Reference({ query: 'Psalms 23', normalized: 'Psalms 23', verseIds: [209, 210, 211] }),
+      verses,
+      headings: [{ verse_id: 209, type: 'heading', text: 'Psalm 23', last_verse_id: 211, book_id: 19 }],
+      chapterHeading: { verse_id: 209, version: 'NIV', heading: 'Psalm 23', last: 211 },
+      config: { version: 'NIV', _bookTitle: 'Psalms', _vChapterMap: { 209: 23, 210: 23, 211: 23 } },
+    });
+  }
+  const SECTION = fileURLToPath(new URL('../../src/presentation/views/partials/section.ejs', import.meta.url));
+  const render = async first => cheerio.load(await ejs.renderFile(SECTION, { data: new HtmlPresenter().serialize(psalm(first)) }));
+
+  test('is headed by that section, in the version\'s passage, with no ellipsis', async () => {
+    const $ = await render('§A psalm of David.¶▼The Lord is my shepherd');
+    expect($('h3.heading').length).toBe(1);
+    expect($('h3.heading').text().trim()).toBe('Psalm 23');
+    expect($('h3.heading').attr('heading_verse_id')).toBe('209');
+    expect($('h3.heading').parent().attr('class')).toBe('passage ver_NIV');
+    expect($('p.ellipses').length).toBe(0);
+  });
+  test('as a "§¶" first verse is (unchanged)', async () => {
+    const $ = await render('§¶The Lord is my shepherd');
+    expect($('h3.heading').text().trim()).toBe('Psalm 23');
+    expect($('h3.heading').parent().attr('class')).toBe('passage ver_NIV');
+  });
+});
+
+// NIV Ps. 1:1 (synthetic text): "§Psalms 1–41§¶Blessed is the one" opens with a division label,
+// and the section heading belongs to the "§¶" segment after it.
+describe('a first verse with "§" and a later "§¶"', () => {
+  test('shows the heading once, at the "§¶" segment', async () => {
+    const verses = ['§Psalms 1–41§¶Blessed is the one', 'But whose delight'].map((text, i) =>
+      new Verse({ id: 1 + i, verseNum: i + 1, chapter: 1, text, version: 'NIV' }));
+    const result = new ScriptureResult({
+      reference: new Reference({ query: 'Psalms 1', normalized: 'Psalms 1', verseIds: [1, 2] }),
+      verses,
+      headings: [{ verse_id: 1, type: 'heading', text: 'Psalm 1', last_verse_id: 2, book_id: 19 }],
+      chapterHeading: { verse_id: 1, version: 'NIV', heading: 'Psalm 1', last: 2 },
+      config: { version: 'NIV', _bookTitle: 'Psalms', _vChapterMap: { 1: 1, 2: 1 } },
+    });
+    const SECTION = fileURLToPath(new URL('../../src/presentation/views/partials/section.ejs', import.meta.url));
+    const $ = cheerio.load(await ejs.renderFile(SECTION, { data: new HtmlPresenter().serialize(result) }));
+    expect($('h3.heading').length).toBe(1);
+    expect($('h3.heading').next().text()).toMatch(/^Blessed is the one/);
+  });
+});
