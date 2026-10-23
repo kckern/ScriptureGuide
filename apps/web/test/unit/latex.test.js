@@ -148,7 +148,7 @@ describe('helpers', () => {
   it('collects footnote ids from text and headings', () => {
     expect(footnoteIds([{ text: 'a｢3｣', headings: { heading: 'b｢4｣' } }]).sort()).toEqual([3, 4]);
   });
-  it('picks the text version as PHP renderRaw did', () => {
+  it('picks a block\'s text version: the one its lookup resolved', () => {
     expect(LatexPresenter.textVersion({ config: { version: 'kjv*mev.rebom' } })).toBe('KJV');
     expect(LatexPresenter.textVersion({ config: {} })).toBe('LDS');
   });
@@ -161,5 +161,27 @@ describe('formatOptions', () => {
     expect(flag({ query: {} }, 'slides')).toBe(false);
     expect(flag({ config: { options: { slides: 1 } }, query: {} }, 'slides')).toBe(true);
     expect(option({ query: { source: 'a,b' } }, 'source')).toBe('a,b');
+  });
+});
+
+describe('LatexPresenter: each block in its own version (decision 2026-10-23)', () => {
+  // PHP read the request's version (LDS) only and dropped JST verses; Node renders every block
+  const TEXT = { LDS: { 26137: '¶For God so loved the world.' }, JST: { 68942: '¶For God so loved the world, that he gave his Only Begotten Son.' } };
+  const repo = {
+    rawVerses: async (ids, version) => ids.filter(id => TEXT[version]?.[id]).map(id => ({ verse_id: id, version, format: 'prose', text: TEXT[version][id], verse: 16 })),
+    loadHeading: async () => null,
+    footnotes: async () => new Map(),
+    verseInfo: async ids => new Map(ids.map(id => [id, { book_id: id === 26137 ? 43 : 1043, chapter: 3, verse: 16 }])),
+    headingLevels: async () => new Map(),
+  };
+  const block = (version, ids) => ({ config: { version }, reference: { verseIds: ids } });
+  const render = result => new LatexPresenter(repo).render(result, { query: {} });
+  it('a single JST block prints its JST verse', async () => {
+    expect(await render(block('JST', [68942]))).toContain('Only Begotten');
+  });
+  it('a JST block and an LDS block print both verses', async () => {
+    const out = await render({ ...block('JST', [68942, 26137]), sections: [block('JST', [68942]), block('LDS', [26137])] });
+    expect(out).toContain('Only Begotten');
+    expect(out).toContain('For God so loved the world.');
   });
 });
