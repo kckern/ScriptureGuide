@@ -6,15 +6,17 @@
 //                                      responses that are broken whatever the path, e.g. a PHP fatal error)
 //   "<format> re:<regex> && live:<regex>": "reason"   both: the path and the live body
 //   "<format> check:<name>": "reason"  every request where the named check (CHECKS) passes on the
-//                                      canonical live and Node responses: for a known live bug
-//                                      that Node fixes, where only the fixed lines may differ
+//                                      compared responses ({ live, node } canonical, plus what
+//                                      run.mjs looked up for it): for a known live bug that Node
+//                                      fixes, where only the fixed lines may differ
 // An exact key wins over a pattern; patterns are tried in file order. Invalid regexes never match.
 import { staleSectionHeading } from './normalize.mjs';
 
-// check:<name> predicates: (canonical live, canonical Node) => boolean
+// check:<name> predicates: ({ live, node, ... }) => boolean
 const CHECKS = {
-  // Live heads a passage whose first verse opens with § (not §¶) with the section before it
-  staleSectionHeading: (live, node) => staleSectionHeading(live, node) === node,
+  // Live heads a passage whose first verse starts a section with § with the section before it;
+  // raw: the first verse's live raw-format entry (staleSectionVerse)
+  staleSectionHeading: ({ live, node, raw }) => staleSectionHeading(live, node, raw) === node,
 };
 
 const PATTERN = /^(\S+) (re|live):(.*)$/s;
@@ -41,8 +43,8 @@ function compile(allow) {
 
 const cache = new WeakMap();
 
-// The reason a request's difference is allowed, or undefined. canonical: { live, node }, the
-// compared texts, for check: keys.
+// The reason a request's difference is allowed, or undefined. canonical: { live, node, ... },
+// the compared texts and lookups, for check: keys.
 export function allowReason(allow, format, path, liveBody, canonical) {
   const exact = allow[`${format} ${path}`];
   if (exact) return exact;
@@ -50,5 +52,5 @@ export function allowReason(allow, format, path, liveBody, canonical) {
   return cache.get(allow).find(p => (p.format === '*' || p.format === format) &&
     (!p.path || p.path.test(path)) &&
     (!p.live || (typeof liveBody === 'string' && p.live.test(liveBody))) &&
-    (!p.check || (canonical != null && p.check(canonical.live, canonical.node))))?.reason;
+    (!p.check || (canonical != null && p.check(canonical))))?.reason;
 }

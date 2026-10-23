@@ -9,7 +9,7 @@ import { createHash } from 'node:crypto';
 import { mkdirSync, readFileSync, writeFileSync, existsSync, rmSync } from 'node:fs';
 import * as cheerio from 'cheerio';
 import { DIR, CACHE_ROOT, NODE_BASE, LIVE_SCHEME, USER_AGENT, cliOptions, loadCorpus, selectRequests, get, hostFor, diffName } from './harness.mjs';
-import { canonicalHtml, canonicalJson, canonicalAsset, mediaType, encodeCacheEntry, decodeCacheEntry, compare, homeCleanups, rawSearchterm } from './normalize.mjs';
+import { canonicalHtml, canonicalJson, canonicalAsset, mediaType, encodeCacheEntry, decodeCacheEntry, compare, homeCleanups, rawSearchterm, staleSectionVerse } from './normalize.mjs';
 import { allowReason } from './allow.mjs';
 
 const CACHE = CACHE_ROOT + '/live/';
@@ -33,6 +33,17 @@ async function live(format, path) {
   const res = await get(url, { 'User-Agent': USER_AGENT });
   writeFileSync(file, JSON.stringify(encodeCacheEntry(res)));
   return res;
+}
+
+// The live raw-format entry of the first verse of a passage live heads with the section before
+// it (normalize.mjs staleSectionVerse), for check:staleSectionHeading; one cached live fetch
+async function staleRaw(expected) {
+  const v = staleSectionVerse(expected);
+  if (!v) return undefined;
+  try {
+    const res = await live('raw', `/${v.version.toLowerCase()}/${v.verseId}`);
+    return JSON.parse(res.body)?.[v.verseId];
+  } catch { return undefined; }
 }
 
 function local(format, path) {
@@ -82,7 +93,7 @@ for (const [format, path] of requests) {
     expected = `STATUS ${l.status}\n` + safe(format, l);
     actual = `STATUS ${n.status}\n` + safe(format, n);
     const c = compare(expected, actual);
-    const reason = allowReason(allow, format, path, l.body, { live: expected, node: actual });
+    const reason = allowReason(allow, format, path, l.body, { live: expected, node: actual, raw: c.equal ? undefined : await staleRaw(expected) });
     verdict = c.equal ? 'pass' : reason ? 'allowed' : 'fail';
     if (!c.equal) {
       const name = diffName(format, path);

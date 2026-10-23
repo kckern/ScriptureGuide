@@ -45,19 +45,21 @@ describe('allowReason', () => {
 
 describe('allowReason: a "<format> check:<name>" key', () => {
   const a = { '* check:staleSectionHeading': 'live heads the passage with the section before it' };
-  const head = (id, last) => `<h3 class="heading" heading_verse_id="${id}" last_verse_id="${last}">\n  "H${id}"`;
+  const head = (id, last, text) => `<h3 class="heading" heading_verse_id="${id}" last_verse_id="${last}" ver="NIV" verse_count="${last - id}">\n  "${text}"`;
   const verse = '<p class="prose">\n  <span class="verse v_9" verse_id="9">\n    "§A psalm."';
-  const live = `STATUS 200\n${head(5, 8)}\n<p class="ellipses" heading_verse_id="5" last_verse_id="8">\n  "..."\n${verse}`;
-  const node = `STATUS 200\n${head(9, 12)}\n${verse}`;
-  test('allows a request when the named check passes on the canonical live and Node responses', () => {
-    expect(allowReason(a, 'html', '/niv/ps.23', '', { live, node })).toBe('live heads the passage with the section before it');
-    expect(allowReason(a, 'api', '/niv/ps.23', '', { live, node })).toBe('live heads the passage with the section before it');
+  const live = `STATUS 200\n${head(5, 8, 'Psalm 1')}\n<p class="ellipses" heading_verse_id="5" last_verse_id="8">\n  "..."\n${verse}`;
+  const node = `STATUS 200\n${head(9, 12, 'Psalm 2')}\n${verse}`;
+  const raw = { text: '§A psalm.¶▼Why', headings: { heading: 'Psalm 2', last: 12 } };
+  test('allows a request when the named check passes on the compared responses', () => {
+    expect(allowReason(a, 'html', '/niv/ps.2', '', { live, node, raw })).toBe('live heads the passage with the section before it');
+    expect(allowReason(a, 'api', '/niv/ps.2', '', { live, node, raw })).toBe('live heads the passage with the section before it');
   });
   test('not when it fails, or without the responses', () => {
-    expect(allowReason(a, 'html', '/niv/ps.23', '', { live, node: node.replace('A psalm', 'Other') })).toBeUndefined();
-    expect(allowReason(a, 'html', '/niv/ps.23', '')).toBeUndefined();
+    expect(allowReason(a, 'html', '/niv/ps.2', '', { live, node: node.replace('A psalm', 'Other'), raw })).toBeUndefined();
+    expect(allowReason(a, 'html', '/niv/ps.2', '', { live, node })).toBeUndefined();
+    expect(allowReason(a, 'html', '/niv/ps.2', '')).toBeUndefined();
   });
   test('an unknown check never matches', () => {
-    expect(allowReason({ 'html check:nope': 'x' }, 'html', '/', '', { live, node })).toBeUndefined();
+    expect(allowReason({ 'html check:nope': 'x' }, 'html', '/', '', { live, node, raw })).toBeUndefined();
   });
 });

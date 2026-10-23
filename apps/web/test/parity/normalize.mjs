@@ -101,25 +101,39 @@ export function rawSearchterm(body) {
   });
 }
 
-// The live site headed a passage whose first verse opens with § but not §¶ (a psalm
-// superscription, NIV Ps. 23:1 "§A psalm of David.¶▼…") with the section before it and an
-// ellipsis; Node heads it with the section at that verse (owner decision 2026-10-22), and a
-// whole chapter that is one section gets section nav. Given the canonical live and Node
-// responses (html, or api with its "output"), returns live with that heading and the nav labels
-// taken from Node, or null when live does not show the pattern. Only these lines are taken:
-// live's h3 and ellipsis must end right before the first verse, Node's h3 must be at that verse,
-// and a nav label only where both sides link to the same place. Everything else still compares.
-export function staleSectionHeading(live, node) {
+// The live site headed a passage whose first verse starts a section with § alone (a psalm
+// superscription, NIV Ps. 23:1 "§A psalm of David.¶▼…", or after a division label, NET Ps.
+// 90:1 "Book 4 (Psalms 90-106)§A prayer…") with the section before it and an ellipsis; Node
+// heads it with the section at that verse (owner decision 2026-10-22), and a whole chapter that
+// is one section gets section nav. A first verse that opens with § before a "§¶" (NIV Ps. 1:1
+// "§Psalms 1–41§¶Blessed…") keeps its label in a passage of its own, without live's heading.
+//
+// staleSectionVerse(live): { version, verseId } of the first verse when live shows the pattern
+// (an h3 and ellipsis ending right before it), else null; the caller looks up that verse in the
+// raw format (verse text and heading, which live gets right).
+// staleSectionHeading(live, node, raw): live with the fix applied, or null when it does not
+// apply. raw is the first verse's raw entry ({ text, headings: { heading, last } }); its text
+// must start a section, and Node's h3 must be live's tag line with the section's
+// heading_verse_id, last_verse_id and verse_count, and the raw heading as its text. For a label
+// before "§¶", live's h3 and ellipsis are dropped and Node must show the raw heading after it.
+// Nav labels are taken only where both sides link to the same place. Everything else compares.
+export function staleSectionVerse(live) {
+  const html = outputHtml(splitStatus(live)[1]);
+  const m = html === null ? null : stalePattern(html.split('\n'));
+  return m && { version: m.version, verseId: m.first };
+}
+
+export function staleSectionHeading(live, node, raw) {
   const [liveHead, liveRest] = splitStatus(live);
-  const [nodeHead, nodeRest] = splitStatus(node);
+  const nodeRest = splitStatus(node)[1];
   const l = parseJsonObject(liveRest);
   const n = parseJsonObject(nodeRest);
   if (l || n) {
     if (typeof l?.output !== 'string' || typeof n?.output !== 'string') return null;
-    const output = staleHeadingHtml(l.output, n.output);
+    const output = staleHeadingHtml(l.output, n.output, raw);
     return output === null ? null : liveHead + JSON.stringify({ ...l, output }, null, 1);
   }
-  const html = staleHeadingHtml(liveRest, nodeRest);
+  const html = staleHeadingHtml(liveRest, nodeRest, raw);
   return html === null ? null : liveHead + html;
 }
 
@@ -133,6 +147,12 @@ function parseJsonObject(text) {
   try { return JSON.parse(text); } catch { return null; }
 }
 
+function outputHtml(text) {
+  const j = parseJsonObject(text);
+  if (j) return typeof j.output === 'string' ? j.output : null;
+  return text;
+}
+
 const indent = line => line.match(/^\s*/)[0].length;
 // The lines of the element at i: its tag line and everything indented deeper after it
 function elementEnd(lines, i) {
@@ -141,10 +161,11 @@ function elementEnd(lines, i) {
   return j;
 }
 const attr = (line, name) => line.match(new RegExp(`\\s${name}="([^"]*)"`))?.[1];
+const setAttr = (line, name, value) => line.replace(new RegExp(`(\\s${name}=")[^"]*(")`), `$1${value}$2`);
+const textOf = lines => lines.filter(x => /^\s*"/.test(x)).map(x => JSON.parse(x.trim())).join(' ');
 
-function staleHeadingHtml(live, node) {
-  const L = live.split('\n');
-  const N = node.split('\n');
+// Live's first h3 + ellipsis ending right before the first verse span
+function stalePattern(L) {
   const i = L.findIndex(line => /^\s*<h3 class="heading"/.test(line));
   if (i < 0) return null;
   const ellipsis = elementEnd(L, i);
@@ -152,16 +173,39 @@ function staleHeadingHtml(live, node) {
   const last = Number(attr(L[ellipsis], 'last_verse_id'));
   if (attr(L[i], 'last_verse_id') !== String(last) || attr(L[ellipsis], 'heading_verse_id') !== attr(L[i], 'heading_verse_id')) return null;
   const rest = elementEnd(L, ellipsis);
-  // The first verse after it: the next span.verse and its text line
   const s = L.findIndex((line, k) => k >= rest && /^\s*<span class="verse /.test(line));
   if (s < 0 || L.slice(rest, s).some(line => !/^\s*<(p|blockquote) /.test(line))) return null;
   const first = Number(attr(L[s], 'verse_id'));
-  const text = L[s + 1]?.trim() ?? '';
-  if (first !== last + 1 || !text.startsWith('"§') || text.startsWith('"§¶')) return null;
-  // Node: the same lines before, then its h3 at the first verse, then the same verse lines
+  if (first !== last + 1 || !attr(L[i], 'ver')) return null;
+  return { i, rest, first, version: attr(L[i], 'ver') };
+}
+
+// § at the start (not §¶), or after a label before the first ¶ (not §¶)
+const OWN_SECTION = /^§(?!¶)|^[^¶§]+§(?!¶)/;
+// § at the start, then a label, then §¶
+const LABEL_THEN_SECTION = /^§[^¶§]+§¶/;
+
+function staleHeadingHtml(live, node, raw) {
+  const L = live.split('\n');
+  const N = node.split('\n');
+  const m = stalePattern(L);
+  const heading = raw?.headings?.heading;
+  const last = Number(raw?.headings?.last);
+  if (!m || typeof raw?.text !== 'string' || !heading || !last) return null;
+  const { i, rest, first } = m;
   if (L.slice(0, i).join('\n') !== N.slice(0, i).join('\n')) return null;
-  if (!/^\s*<h3 class="heading"/.test(N[i] ?? '') || attr(N[i], 'heading_verse_id') !== String(first)) return null;
-  const out = [...L.slice(0, i), ...N.slice(i, elementEnd(N, i)), ...L.slice(rest)];
+  const isSectionH3 = (lines, k) => /^\s*<h3 class="heading"/.test(lines[k] ?? '') && attr(lines[k], 'heading_verse_id') === String(first) &&
+    textOf(lines.slice(k + 1, elementEnd(lines, k))) === heading;
+  let out;
+  if (LABEL_THEN_SECTION.test(raw.text)) {
+    out = [...L.slice(0, i), ...L.slice(rest)];
+    if (!N.some((line, k) => k > i && isSectionH3(N, k))) return null;
+  } else if (OWN_SECTION.test(raw.text)) {
+    // Node's h3: live's tag line for the section at the first verse, with the raw heading
+    const tag = setAttr(setAttr(setAttr(L[i], 'heading_verse_id', first), 'last_verse_id', last), 'verse_count', last - first);
+    if (N[i] !== tag || !isSectionH3(N, i)) return null;
+    out = [...L.slice(0, i), ...N.slice(i, elementEnd(N, i)), ...L.slice(rest)];
+  } else return null;
   // Nav labels where both sides link to the same place
   for (let k = 0; k < out.length && k < N.length; k++) {
     const link = /^\s*<a class="(prev|next)" href="[^"]*">$/;
