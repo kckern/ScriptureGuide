@@ -81,6 +81,12 @@ describe('displayReference', () => {
     expect(displayReference('2 Nephi 3:1-4:2')).toBe('2 Nephi 3–4:2');
     expect(displayReference('Genesis 1:30-2:3')).toBe('Genesis 1:30–2:3');
   });
+  test('except from Genesis 1:1 (verse id 1), where referenceFromVerseIds printed "Genesis 1–2.3"', () => {
+    expect(displayReference('Genesis 1:1-2:3')).toBe('Genesis 1–2.3');
+    expect(displayReference('Genesis 1:1-3:5')).toBe('Genesis 1–3.5');
+    expect(displayReference('Genesis 1:1-5')).toBe('Genesis 1:1–5');
+    expect(displayReference('JST Genesis 1:1-2:3')).toBe('JST Genesis 1–2:3');
+  });
 });
 
 describe('blankHeading', () => {

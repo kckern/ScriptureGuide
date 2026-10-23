@@ -30,6 +30,10 @@ describe('formatReference (referenceFromVerseIds)', () => {
   test('separate verses in a chapter', () => expect(ref([1, 2, 4])).toBe('Genesis 1:1–2,4'));
   test('cross-chapter range', () => expect(ref(range(30, 34))).toBe('Genesis 1:30–2:3'));
   test('whole chapters in a row', () => expect(ref(range(1, 56))).toBe('Genesis 1–2'));
+  // PHP numbered the first segment 0 when the ids start at verse id 1 ($last_id + 1 with no
+  // last id), and empty($multics[0]) is true: Genesis 1:1 ranges skip the cross-chapter branch
+  test('a range from Genesis 1:1 into the next chapter, as live titles it', () => expect(ref(range(1, 34))).toBe('Genesis 1–2.3'));
+  test('the same range from any other first verse', () => expect(ref(range(2, 34))).toBe('Genesis 1:2–2:3'));
   test('two books', () => expect(ref([1, 1015])).toBe('Genesis 1:1; John 3:16'));
   test('short book titles', () => {
     const s = fixture('short');
@@ -50,7 +54,7 @@ describe('referenceFromRows (AJAX endpoints: referenceFromVerseIds over verse ro
     expect(referenceFromRows([gen(1, 1, 1, 2), gen(2, 1, 2, 2)])).toBe('Genesis 1');
   });
   it('a range from verse 1 into the next chapter starts with the bare chapter, as PHP printed it', () => {
-    const rows = [...range(1, 31).map(v => gen(v, 1, v, 31)), gen(32, 2, 1, 25), gen(33, 2, 2, 25)];
+    const rows = [...range(1, 31).map(v => gen(100 + v, 1, v, 31)), gen(132, 2, 1, 25), gen(133, 2, 2, 25)];
     expect(referenceFromRows(rows)).toBe('Genesis 1–2:2');
   });
   it('a one-verse chapter keeps its verse', () => {

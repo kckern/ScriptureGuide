@@ -225,10 +225,10 @@ describe('/passage', () => {
     expect(lookup.lookup).toHaveBeenCalledWith('Genesis 1:1–2', expect.objectContaining({ version: 'KJV' }));
   });
   it('names an options[start..end] range as PHP did (referenceFromVerseIds)', async () => {
-    const rows = [...Array.from({ length: 31 }, (_, i) => meta(i + 1, 'Genesis', 'Gen.', 1, i + 1, 31)), meta(32, 'Genesis', 'Gen.', 2, 1, 25)];
+    const rows = [...Array.from({ length: 24 }, (_, i) => meta(549 + i, 'Genesis', 'Gen.', 22, i + 1, 24)), meta(573, 'Genesis', 'Gen.', 23, 1, 20)];
     repo.findVerseMeta.mockResolvedValue(rows);
-    await request(app).get('/passage?ref=x&version=KJV&options[start]=1&options[end]=32');
-    expect(lookup.lookup).toHaveBeenCalledWith('Genesis 1–2:1', expect.anything());
+    await request(app).get('/passage?ref=x&version=KJV&options[start]=549&options[end]=573');
+    expect(lookup.lookup).toHaveBeenCalledWith('Genesis 22–23:1', expect.anything());
   });
   it('reads JST passages as JST references', async () => {
     await request(app).get('/passage?ref=Mark%205&version=JST');

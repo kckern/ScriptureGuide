@@ -73,6 +73,9 @@ export function displayReference(normalized) {
       part = book === lastBook && out.length ? named[2] : part;
       lastBook = book;
     }
+    // From Genesis 1:1 (verse id 1) referenceFromVerseIds skipped its cross-chapter branch
+    // (segment 0) and printed the chapter run as "Genesis 1–2.3"
+    if (!out.length && /^Genesis 1:1[-–]\d+:\d+$/.test(part)) part = part.replace(/^Genesis 1:1[-–](\d+):(\d+)$/, 'Genesis 1-$1.$2');
     part = part.replace(/(^|\s)(\d+):1[-–](\d+:\d+)$/, '$1$2-$3');
     const own = part.match(/^(.*?\s)?(\d+):(.+)$/);
     if (own && !own[1] && own[2] === chapter && out.length) {

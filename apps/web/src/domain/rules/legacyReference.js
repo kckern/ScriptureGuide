@@ -93,6 +93,9 @@ export function formatReference(verseIds, info, chapterMax) {
       if (!blocks.get(block)?.has(verse - 1)) block++;
       getOrSet(blocks, block).set(verse, verse);
     }
+    // PHP tested !empty($multis[$segid]): segment 0 (ids starting at verse id 1, Genesis 1:1)
+    // never takes the cross-book or cross-chapter branch ("Genesis 1–2.3")
+    if (segid === 0) continue;
     if (isConsecutive(segment) && books.size > 1) multis.add(segid);
     else if (isConsecutive(segment) && first(books).size > 1) multics.add(segid);
   }
