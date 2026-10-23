@@ -13,6 +13,7 @@ import {
   flattenText, transposeRef, baseVersion, highlightSearchTerm,
 } from '../../domain/rules/legacyText.js';
 import { referenceFromRows, slugifyRef, versionImg } from '../../domain/rules/legacyReference.js';
+import { defaultVersions } from '../../domain/rules/defaultVersions.js';
 import { logError } from '../log.js';
 
 // The PHP site's AJAX endpoints: vbox (versebox.php), passage (passage_script.php),
@@ -142,10 +143,17 @@ export class AjaxController {
         lastId = r.verse_id;
       }
       const refIds = groups.flatMap(g => rangeIds(g[0].verse_id, g[g.length - 1].verse_id));
+      // PHP looked each group up (scriptures::lookup) with the volume defaults of its verses
+      const groupDefaults = new Map();
+      for (const g of groups) {
+        const ids = rangeIds(g[0].verse_id, g[g.length - 1].verse_id);
+        const defaults = volumeDefaults(ids);
+        for (const id of ids) groupDefaults.set(id, defaults);
+      }
       const [meta, texts, ownText] = await Promise.all([
         this.repo.findVerseMeta(verse ? [verseId, ...refIds] : refIds),
-        this.repo.findTexts(refIds, ver),
-        verse ? this.repo.findTexts([verseId], ver) : [],
+        this.repo.findTexts(refIds, ver, id => groupDefaults.get(id) || []),
+        verse ? this.repo.findTexts([verseId], ver, () => volumeDefaults([verseId])) : [],
       ]);
       const metaById = new Map(meta.map(m => [m.verse_id, m]));
       const textById = new Map(texts.map(t => [t.verse_id, t]));
@@ -227,6 +235,9 @@ export class AjaxController {
     res.type('html').send('');
   }
 }
+
+// The versions scriptures::defaultVersions added for these verses ("GFRONSDAL" for the Dhammapada)
+const volumeDefaults = ids => defaultVersions([], ids).map(v => v.version);
 
 function rangeIds(a, b) {
   const ids = [];

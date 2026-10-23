@@ -73,9 +73,11 @@ export class VerseboxRepository {
     );
   }
 
-  // Text of each verse in `version`. A verse missing from that version falls back to the
-  // highest-priority version that has it (e.g. JST verses read as LDS come back as JST).
-  async findTexts(verseIds, version) {
+  // Text of each verse in `version`. A verse missing from that version falls back to the first of
+  // defaultsFor(id) that has it (the volume defaults scriptures::lookup added to the requested
+  // version: Dhammapada read as LDS is GFRONSDAL), then to the highest-priority version that has it
+  // (e.g. JST verses read as LDS come back as JST).
+  async findTexts(verseIds, version, defaultsFor = () => []) {
     if (!verseIds?.length) return [];
     const rows = await db.query(
       `SELECT v.verse_id, v.version, v.text
@@ -94,7 +96,15 @@ export class VerseboxRepository {
          ORDER BY v.verse_id, s.priority, v.id`,
         [missing]
       );
-      for (const r of fallback) if (!found.has(r.verse_id)) found.set(r.verse_id, r);
+      const byId = new Map();
+      for (const r of fallback) {
+        if (!byId.has(r.verse_id)) byId.set(r.verse_id, []);
+        byId.get(r.verse_id).push(r);
+      }
+      for (const [id, list] of byId) {
+        const preferred = defaultsFor(id).map(v => list.find(r => r.version === v)).find(Boolean);
+        found.set(id, preferred || list[0]);
+      }
     }
     return verseIds.filter(id => found.has(id)).map(id => found.get(id));
   }

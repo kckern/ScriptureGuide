@@ -150,6 +150,16 @@ describe('/vbox', () => {
     expect(ref.find('.gridtext').attr('chapter')).toBe('d&c.13.1');
     expect($('.refpanel tr.original .gridtext').attr('chapter')).toBe('john.3.16');
   });
+  it('falls back to the volume default version for verses the requested version lacks (scriptures::defaultVersions)', async () => {
+    repo.findVerse.mockResolvedValue({ verse_id: 91490, volume_id: 13, verse_title: 'Dhammapada 2:28', verse_title_short: 'Dhpada 2:28' });
+    repo.findReferences.mockResolvedValue([{ verse_id: 23144, type: 'xref', significant: 0 }, { verse_id: 23145, type: 'xref', significant: 0 }]);
+    await request(app).get('/vbox?verse_id=91490&ver=LDS');
+    const own = repo.findTexts.mock.calls.find(([ids]) => ids.length === 1 && ids[0] === 91490);
+    expect(own[1]).toBe('LDS');
+    expect(own[2](91490)).toEqual(['GFRONSDAL', '1835']);
+    const refs = repo.findTexts.mock.calls.find(([ids]) => ids.includes(23144));
+    expect(refs[2](23144)).toEqual(['LDS']);
+  });
   it('accepts POST and escapes request values', async () => {
     const res = await request(app).post('/vbox').type('form').send({ verse_id: '26137', seq: "'><script>" });
     expect(res.text).not.toContain('<script>');
