@@ -124,10 +124,21 @@ describe('renderMarkdown', () => {
     );
   });
 
-  it('indents poetry and skips ellipses', () => {
+  // Owner decision #13 (2026-10-22): PHP's 4-space indent renders as a code block, so poetry is
+  // a blockquote: one "> " line per poetry line, a backslash hard break between lines, indented
+  // lines led by four no-break spaces (not Markdown indentation, so no code block).
+  it('renders poetry as blockquote lines and skips ellipses', () => {
+    const nb = '\u00a0'.repeat(4);
     expect(renderMarkdown(passageSections(POEM))).toBe(
-      '## Psalms 23\n\n    The LORD is my shepherd;\n         I shall not want.\n    He maketh me to lie down\n'
+      `## Psalms 23\n\n> The LORD is my shepherd;\\\n> ${nb}I shall not want.\\\n> He maketh me to lie down\n`
     );
+  });
+
+  it('keeps stanzas apart and never indents poetry 4 spaces', () => {
+    const twoStanzas = POEM.replace('</blockquote>', '</blockquote>\n<blockquote class="poetry"><span class="verse v_14239 poetry psalms-23-3" verse_label="3">He restoreth my soul:</span></blockquote>');
+    const md = renderMarkdown(passageSections(twoStanzas));
+    expect(md).toContain('> He maketh me to lie down\n\n> He restoreth my soul:\n');
+    expect(md).not.toMatch(/^ {4}/m);
   });
 
   it('flattens scripture markup', () => {

@@ -2,16 +2,20 @@
 // site; this follows what its renderMarkdown/renderMarkdownElement code meant to produce:
 //   - a blank line before each h2, h3, div, p and blockquote
 //   - a line break before spans with the linebreak class
-//   - poetry lines indented 4 spaces, indented poetry lines 5 more
+//   - poetry lines indented 4 spaces, indented poetry lines 5 more (replaced, see below)
 //   - text flattened to plain text; ellipses and verse_head blocks left out
 // Choices of this port:
 //   - headings are Markdown headings: h2 (book title) "# ", h3 (section or reference) "## "
+//   - poetry is a blockquote, not PHP's 4-space indent, which Markdown renders as a code block
+//     (owner decision #13, 2026-10-22): each poetry line starts "> ", lines of one stanza end in a
+//     backslash hard break, and indented lines start with four no-break spaces after the "> "
 //   - runs of blank lines collapse to one, trailing spaces are trimmed, output is trimmed
 //   - the PHP flattenText dropped every character outside Latin, Hangul and ASCII; here only
 //     the scripture markup characters are removed, so other scripts survive
 
 const BLOCK = new Set(['h2', 'h3', 'div', 'p', 'blockquote']);
 const SKIP_CLASSES = ['ellipses', 'verse_head'];
+const POETRY_INDENT = '\u00a0'.repeat(4);
 
 // Plain text of one text node (PHP scriptutil::flattenText, minus its character whitelist).
 export function flattenText(text) {
@@ -41,6 +45,12 @@ function pushText(text, out) {
   if (t) out.push(t + ' ');
 }
 
+// True when the next text starts a new output line.
+function atLineStart(out) {
+  for (let i = out.length - 1; i >= 0; i--) if (out[i]) return out[i].endsWith('\n');
+  return true;
+}
+
 function walk(node, out) {
   if (typeof node === 'string') return pushText(node, out);
   const cls = String(node.attr?.class ?? '');
@@ -51,8 +61,9 @@ function walk(node, out) {
   }
   if (BLOCK.has(node.el)) out.push('\n\n');
   if (/linebreak/i.test(cls)) out.push('\n');
-  if (/poetry/i.test(cls) && node.el === 'span') out.push('    ');
-  if (/indent/i.test(cls) && /poetry/i.test(cls)) out.push('     ');
+  if (/poetry/i.test(cls) && node.el === 'span' && atLineStart(out)) {
+    out.push(/indent/i.test(cls) ? `> ${POETRY_INDENT}` : '> ');
+  }
   if (SKIP_CLASSES.includes(cls.trim())) return;
   // A verse (or any element holding only inline markup) is one run of text.
   if (node.content.every(isInline)) return pushText(textOf(node), out);
@@ -68,6 +79,7 @@ export function renderMarkdown(sections) {
   return out.join('')
     .replace(/[ \t]+$/gm, '')
     .replace(/\n{3,}/g, '\n\n')
+    .replace(/^(> .*)\n(?=> )/gm, '$1\\\n')
     .trim() + '\n';
 }
 
