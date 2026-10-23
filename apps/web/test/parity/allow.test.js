@@ -97,3 +97,14 @@ describe('allow.json: junk pieces after a leading cross-book range', () => {
   });
 });
 
+describe('allow.json: latex of junk pieces after a leading cross-book range', () => {
+  const allow = JSON.parse(readFileSync(new URL('./allow.json', import.meta.url), 'utf8'));
+  test('allowed where live\'s latex is empty', () => {
+    expect(allowReason(allow, 'latex', '/acts.28.31-rom.1.1;16.1', '')).toMatch(/latex/);
+  });
+  test('not where live printed text, nor for a same-book range', () => {
+    expect(allowReason(allow, 'latex', '/acts.28.31-rom.1.1;16.1', '\\begin{scripturechapter}')).toBeUndefined();
+    expect(allowReason(allow, 'latex', '/gen.1.1-gen.2.3;4', '')).toBeUndefined();
+  });
+});
+
