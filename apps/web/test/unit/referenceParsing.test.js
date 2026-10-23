@@ -86,6 +86,9 @@ describe('displayReference', () => {
     expect(displayReference('Genesis 1:1-3:5')).toBe('Genesis 1–3.5');
     expect(displayReference('Genesis 1:1-5')).toBe('Genesis 1:1–5');
     expect(displayReference('JST Genesis 1:1-2:3')).toBe('JST Genesis 1–2:3');
+    // the package lists at most 1000 verses: a capped range was never what PHP titled
+    expect(displayReference('Genesis 1:1-34:19', 1000)).toBe('Genesis 1–34:19');
+    expect(displayReference('Genesis 1:1-2:3', 34)).toBe('Genesis 1–2.3');
   });
   test('a range across a book end is one range (referenceFromVerseIds)', () => {
     expect(displayReference('Malachi 4:5 - Matthew 1:2')).toBe('Malachi 4:5–Matthew 1:2');

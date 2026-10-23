@@ -61,7 +61,12 @@ export function bookAlias(key) {
 // "2 Nephi 3:19; 27:13"), verses of the same chapter joined by commas ("John 3:16; 3:18" →
 // "John 3:16,18"), and a range from verse 1 into another chapter without its first verse
 // ("2 Nephi 3:1-4:2" → "2 Nephi 3–4:2").
-export function displayReference(normalized) {
+// The scripture-guide package lists at most this many verses for a reference
+export const PACKAGE_VERSE_LIMIT = 1000;
+
+// verseCount: the verses the reference resolved to; a capped range (PACKAGE_VERSE_LIMIT) is not
+// the range PHP titled, so its Genesis 1:1 form is not reproduced
+export function displayReference(normalized, verseCount = 0) {
   const parts = String(normalized || '').split(/;\s*/).filter(Boolean);
   const out = [];
   let chapter = null;
@@ -75,7 +80,7 @@ export function displayReference(normalized) {
     }
     // From Genesis 1:1 (verse id 1) referenceFromVerseIds skipped its cross-chapter branch
     // (segment 0) and printed the chapter run as "Genesis 1–2.3"
-    if (!out.length && /^Genesis 1:1[-–]\d+:\d+$/.test(part)) part = part.replace(/^Genesis 1:1[-–](\d+):(\d+)$/, 'Genesis 1-$1.$2');
+    if (!out.length && verseCount < PACKAGE_VERSE_LIMIT && /^Genesis 1:1[-–]\d+:\d+$/.test(part)) part = part.replace(/^Genesis 1:1[-–](\d+):(\d+)$/, 'Genesis 1-$1.$2');
     part = part.replace(/(^|\s)(\d+):1[-–](\d+:\d+)$/, '$1$2-$3');
     // Across a book end, one range without spaces; a start at verse 1 drops it ("Malachi 4–Matthew 1:2")
     part = part.replace(/^(.*?\d+)(?::(\d+))?\s+[-–]\s+(?=[^\d\s])/, (m, start, v) => `${start}${v && v !== '1' ? `:${v}` : ''}–`);

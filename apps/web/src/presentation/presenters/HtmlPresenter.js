@@ -432,7 +432,7 @@ export class HtmlPresenter {
     return {
       reference: result.reference.normalized,
       // Page title: the reference with en dashes for ranges (PHP referenceFromVerseIds)
-      title: displayReference(result.reference.normalized),
+      title: displayReference(result.reference.normalized, result.reference.verseIds?.length ?? 0),
       // Heading for a reference block that matched no verses (scriptures::blankData)
       // escaped: it echoes the request (the PHP site reflected it raw)
       blank: result.verses.length ? null : escapeHtml(result.legacyBlock ? result.legacyBlock.orig : blankHeading(result.reference.query)),
