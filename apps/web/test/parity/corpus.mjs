@@ -44,6 +44,10 @@ const EXTRA = [
   ['passage', '/passage?ref=Doctrine+and+Covenants+26&version=LDS&hversion=LDS&options%5Bstart%5D=38254&options%5Bend%5D=38257&searchterm='],
   // A range across a book end names the second book's verses by that book
   ['html', '/mal.4.5-matt.1.2'],
+  ['api', '/mal.4.5-matt.1.2'],
+  ['meta', '/mal.4.5-matt.1.2'],
+  ['html', '/mal.4-matt.1'],
+  ['html', '/gen.50.26-ex.1.2'],
   ['passage', '/passage?ref=Malachi+4%3A6&version=KJV&hversion=KJV&options%5Bstart%5D=23144&options%5Bend%5D=23147&searchterm='],
 ];
 
