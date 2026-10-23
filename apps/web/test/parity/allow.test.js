@@ -1,4 +1,5 @@
 import { describe, test, expect } from 'vitest';
+import { readFileSync } from 'node:fs';
 import { allowReason } from './allow.mjs';
 
 describe('allowReason', () => {
@@ -77,3 +78,22 @@ describe('allowReason: check:singleHeadingDrop', () => {
     expect(allowReason(a, 'html', '/x', '', { live, node, dropRaw: { 2: { text: '§¶v2' } } })).toBeUndefined();
   });
 });
+
+describe('allow.json: junk pieces after a leading cross-book range', () => {
+  const allow = JSON.parse(readFileSync(new URL('./allow.json', import.meta.url), 'utf8'));
+  const junk = (h3) => `<div class='passage ver_'>\n\t\t\t<h3>\n\t\t\t${h3}\n\t\t\t</h3>\n\t\t\t<p>\n\t\t\t<span class='verse'>No scripture verses found.</span>`;
+  const reason = (path, live) => allowReason(allow, 'html', path, live);
+  test('allowed where live shows getBook\'s junk heading', () => {
+    expect(reason('/acts.28.31-rom.1.1;16.1', junk(' 16:1'))).toMatch(/cross-book/);
+    expect(reason('/gen.50.26-ex.1.2;3.4', junk('3: 3:4'))).toMatch(/cross-book/);
+  });
+  test('not where live has no junk heading', () => {
+    expect(reason('/acts.28.31-rom.1.1;16.1', junk('Romans 16:1'))).toBeUndefined();
+    expect(reason('/acts.28.31-rom.1.1;16.1', '<title>Acts 28:31–Romans 1:1')).toBeUndefined();
+  });
+  test('not for a range within one book', () => {
+    expect(reason('/gen.1.1-gen.2.3;4', junk(' 4'))).toBeUndefined();
+    expect(reason('/gen.1.1-gen.2.3;4.1', junk(' 4:1'))).toBeUndefined();
+  });
+});
+
