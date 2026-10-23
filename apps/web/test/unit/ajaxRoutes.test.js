@@ -254,6 +254,11 @@ describe('/settings', () => {
     expect($('#mail').attr('value')).toBe('');
     expect(repo.findPrefs).not.toHaveBeenCalled();
   });
+  it('has no Logout button now that Google sign-in is gone (decision #11)', async () => {
+    const res = await request(app).get('/settings');
+    expect(cheerio.load(res.text)('#logout').length).toBe(0);
+    expect(res.text).not.toContain('logout()');
+  });
   it('marks saved choices for a signed-in visitor', async () => {
     repo.findPrefs.mockResolvedValue({ versions: { bible: { t: 'KJV' } }, options: { audio: 'false', voice: 'female', verpanel: 'ver' } });
     const res = await request(app).post('/settings').set('Cookie', 'sg_user=Ann; sg_mail=ann@example.com');

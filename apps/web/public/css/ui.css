@@ -451,11 +451,6 @@ sup.vnum
      line-height: 20px;
      height: 20px;
 }
- #logout {
-     position: absolute;
-     top: 50px;
-     right: 20px;
-}
  #options {
      width: 700px;
      margin-top: 15px;

@@ -35,7 +35,6 @@ export function renderSettings({ user = {}, prefs, versionsByVol }) {
 
   return `<div id="settings">
 
-<button onclick='logout()' id="logout">Logout</button>
 <h3>Scripture.Guide Preferences for ${esc(user.name)}</h3>
 <hr>
 <h5>Preferred Versions:</h5>
