@@ -150,3 +150,21 @@ describe('ReferenceService.resolveBookOnly', async () => {
     expect(await svc.resolveBookOnly('and')).toBeNull();
   });
 });
+
+describe('metaOnly: a JST piece among others (the package reads no JST books)', () => {
+  const section = (normalized, book, verseIds) => ({ reference: { normalized, book, verseIds } });
+  const meta = (ref, sections) =>
+    metaOnly({ config: { legacy: { ref, versions: null } }, query: {}, headers: {} }, { reference: { verseIds: [] }, sections }, {});
+  test('a later JST piece is its block from the lookup, its book doubled as PHP did', async () => {
+    expect(await meta('john.3.16;jst.john.3.16', [section('John 3:16', 'John', [26137]), section('JST John 3:16', 'JST John', [68942])])).toEqual([
+      { orig: 'John 3:16', book: 'John', verse_ids: [26137] },
+      { orig: 'JST John JST John 3:16', book: 'JST John', verse_ids: [68942] },
+    ]);
+  });
+  test('a first JST piece leads, and the named piece after it doubles its book', async () => {
+    expect(await meta('jst.john.3.16;john.3.16', [section('JST John 3:16', 'JST John', [68942]), section('John 3:16', 'John', [26137])])).toEqual([
+      { orig: 'JST John 3:16', book: 'JST John', verse_ids: [68942] },
+      { orig: 'John John 3:16', book: 'John', verse_ids: [26137] },
+    ]);
+  });
+});
