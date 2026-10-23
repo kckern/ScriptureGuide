@@ -246,3 +246,40 @@ describe('lookup: the passage heading of a verse that starts a section', () => {
     expect(r.chapterHeading).toMatchObject({ verse_id: 206, heading: 'Psalm 22' });
   });
 });
+
+describe('lookup: a range from verse 1 into the next chapter (LDS, no section headings)', async () => {
+  const { default: HtmlPresenter } = await import('../../src/presentation/presenters/HtmlPresenter.js');
+  // 1 Nephi 1 is ids 101–103, 1 Nephi 2 is 104–106; each chapter opens with "§"
+  const CH = { 1: [101, 102, 103], 2: [104, 105, 106] };
+  const chapterOf = id => (id <= 103 ? 1 : 2);
+  const verseOf = id => CH[chapterOf(id)].indexOf(id) + 1;
+  function service(ids, normalized) {
+    const refs = { parse: () => ({ isEmpty: false, book: '1 Nephi', normalized, verseIds: ids, chapter: 1 }) };
+    const verses = {
+      findByIds: async list => list.map(id => ({ verse_id: id, chapter: chapterOf(id), verse: verseOf(id), text: verseOf(id) === 1 ? '§¶And it came to pass.' : 'And it came to pass.', version: 'LDS' })),
+      findChaptersByVerseIds: async list => list.map(id => ({ verse_id: id, chapter: chapterOf(id) })),
+    };
+    const headings = {
+      findBookId: async () => ({ book_id: 66, lds_org: '1-ne', book_title: '1 Nephi', book_title_short: '1 Ne.' }),
+      findByVerseIds: async () => [],
+      findChapterHeading: async () => null,
+      findChapterNavRows: async () => null,
+      findChapterBounds: async (bookId, ch) => ({ first: CH[ch][0], last: CH[ch].at(-1) }),
+      findBookBounds: async () => ({ first: 101, last: 106 }),
+      hasAudio: async () => 0,
+      findParallels: async () => ({}),
+      findFaxVerseIds: async () => [],
+    };
+    return new ScriptureLookupService(refs, verses, headings);
+  }
+  const refs = async (ids, normalized) => {
+    const data = new HtmlPresenter().serialize(await service(ids, normalized).lookup('x', { version: 'LDS' }));
+    return Object.values(data.h3ByVerse).map(h => [h.ref, h.slug]);
+  };
+  test('the whole first chapter is headed by the chapter, as referenceFromVerseIds named it', async () => {
+    expect(await refs([101, 102, 103, 104, 105], '1 Nephi 1:1-2:2')).toEqual([['1 Nephi 1', 'LDS/1.nephi.1'], ['1 Nephi 2:1–2', 'LDS/1.nephi.2.1-2']]);
+  });
+  test('a part of the first chapter keeps its verses', async () => {
+    expect((await refs([102, 103, 104, 105], '1 Nephi 1:2-2:2'))[0]).toEqual(['1 Nephi 1:2–3', 'LDS/1.nephi.1.2-3']);
+  });
+});

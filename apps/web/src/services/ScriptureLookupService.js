@@ -313,7 +313,11 @@ export class ScriptureLookupService {
             for (const g of groups) {
               const chNum = g[0].chapter;
               const bounds = await this.headingRepository.findChapterBounds(bookId, chNum);
+              // A group that is its whole chapter is headed by the chapter ("Genesis 1" in
+              // Genesis 1:1–2:3), as referenceFromVerseIds named the section's verses
+              const wholeChapter = !!bounds && g[0].verse_id === bounds.first && g[g.length - 1].verse_id === bounds.last;
               headings.push({
+                ...(wholeChapter ? { _wholeChapter: true } : {}),
                 verse_id: g[0].verse_id,
                 type: 'heading',
                 text: `${reference.book} ${chNum}`,
