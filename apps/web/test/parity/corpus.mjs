@@ -34,6 +34,17 @@ const EXTRA = [
   ['vbox', '/vbox?verse_id=38003&ver=LDS&seq=1'],
   ['vbox', '/vbox?verse_id=91490&ver=GFRONSDAL&seq=1'],
   ['vbox', '/vbox?verse_id=89527&ver=LDS&seq=1'],
+  // The vbox text of a verse the requested version lacks: the volume default (GFRONSDAL)
+  ['vbox', '/vbox?verse_id=91490&ver=LDS&seq=1'],
+  // A range from verse 1 into the next chapter heads its whole first chapter "Genesis 1"
+  ['html', '/gen.1-2.3'],
+  ['meta', '/gen.1-2.3'],
+  ['passage', '/passage?ref=Genesis+1&version=LDS&hversion=LDS&options%5Bstart%5D=1&options%5Bend%5D=34&searchterm='],
+  ['passage', '/passage?ref=1+Nephi+1&version=LDS&hversion=LDS&options%5Bstart%5D=31103&options%5Bend%5D=31125&searchterm='],
+  ['passage', '/passage?ref=Doctrine+and+Covenants+26&version=LDS&hversion=LDS&options%5Bstart%5D=38254&options%5Bend%5D=38257&searchterm='],
+  // A range across a book end names the second book's verses by that book
+  ['html', '/mal.4.5-matt.1.2'],
+  ['passage', '/passage?ref=Malachi+4%3A6&version=KJV&hversion=KJV&options%5Bstart%5D=23144&options%5Bend%5D=23147&searchterm='],
 ];
 
 // Static files the live pages reference (src=/href= in the cached pages and the parallel page's
