@@ -19,3 +19,13 @@ test('the Install Now button is styled as on live (home.php a.button)', async ()
   const decls = rule[1].replace(/\/\*[\s\S]*?\*\//g, '').split(';').map(d => d.replace(/\s+/g, ' ').trim().replace(/\s*:\s*/, ':')).filter(Boolean);
   expect(decls).toEqual(LIVE_BUTTON);
 });
+
+// A search can take seconds; the box must react the moment Enter is pressed (checked in Chromium
+// by hand: class, readonly and progress cursor are set before the next page loads).
+test('the search box shows it is searching on Enter and recovers on Back', async () => {
+  const html = await ejs.renderFile(HOME, { config: {} });
+  expect(html).toMatch(/input\.searching\s*\{[^}]*animation:\s*searching/);
+  expect(html).toContain('$("#searchbox").addClass("searching").prop("readonly", true);');
+  expect(html).toMatch(/hasClass\("searching"\) \|\| !term\.trim\(\)\) return false;/);
+  expect(html).toMatch(/on\("pageshow"[\s\S]*removeClass\("searching"\)/);
+});

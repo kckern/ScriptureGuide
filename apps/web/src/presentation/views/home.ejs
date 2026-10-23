@@ -20,6 +20,18 @@
     border: 1px solid black;
     box-shadow: 0 0 10px #492517;
   }
+  /* Shown the moment Enter is pressed, until the next page arrives (a search can take seconds) */
+  input.searching {
+    color: #777 !important;
+    cursor: progress;
+    background: linear-gradient(90deg, #fff 0%, #efe6dc 50%, #fff 100%);
+    background-size: 200% 100%;
+    animation: searching 1s linear infinite;
+  }
+  @keyframes searching {
+    from { background-position: 100% 0; }
+    to { background-position: -100% 0; }
+  }
   div { font-weight: bold; }
   a.button {
     position: relative;
@@ -89,11 +101,20 @@
       }
       if (e.which == 13) {
         var term = $("#searchbox").val();
+        if ($("#searchbox").hasClass("searching") || !term.trim()) return false;
         if (term.match(/\\d+/g) == null) {
           term = term.trim().replace(/\\s+/gi, ".");
         }
+        $("#searchbox").addClass("searching").prop("readonly", true);
+        document.body.style.cursor = "progress";
         window.location.href = term;
       }
+    });
+
+    // Coming back with the Back button restores the page from cache: make the box usable again.
+    $(window).on("pageshow", function () {
+      $("#searchbox").removeClass("searching").prop("readonly", false);
+      document.body.style.cursor = "";
     });
   });
 </script>
