@@ -292,6 +292,15 @@ export class HeadingRepository {
     return rows[0] || null;
   }
 
+  // Several books' info (as findBookId gives it) in one query
+  async findBooks(bookIds) {
+    if (!bookIds?.length) return [];
+    return db.query(
+      'SELECT book_id, lds_org, book_title_short, book_title FROM lds_scriptures_books WHERE book_id IN (?)',
+      [bookIds]
+    );
+  }
+
   // Find parallel cross-references for a range of verse_ids
   // Returns map of range.from → parallel attr string
   // PHP logic: include ALL standin rows if at least one is significant

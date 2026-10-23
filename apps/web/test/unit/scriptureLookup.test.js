@@ -292,6 +292,7 @@ describe('lookup: a range across a book end', async () => {
   const chapterOf = id => (id <= 203 ? 4 : 1);
   const verseOf = id => (id <= 203 ? id - 200 : id - 203);
   const ids = [202, 203, 204, 205];
+  let ranges, bookQueries = 0;
   const refs = { parse: () => ({ isEmpty: false, book: 'Malachi', normalized: 'Malachi 4:2 - Matthew 1:2', verseIds: ids, chapter: 4 }) };
   const verses = {
     findByIds: async list => list.map(id => ({ verse_id: id, book_id: bookOf(id), chapter: chapterOf(id), verse: verseOf(id), text: id === 204 ? '§¶The book.' : 'And it came to pass.', version: 'LDS' })),
@@ -299,13 +300,14 @@ describe('lookup: a range across a book end', async () => {
   };
   const headings = {
     findBookId: async id => BOOKS[bookOf(id)],
+    findBooks: async list => { bookQueries++; return list.map(b => BOOKS[b]); },
     findByVerseIds: async () => [],
     findChapterHeading: async () => null,
     findChapterNavRows: async () => null,
     findChapterBounds: async (bookId, ch) => (bookId === 39 && ch === 4 ? { first: 201, last: 203 } : bookId === 40 && ch === 1 ? { first: 204, last: 206 } : { first: 1, last: 9 }),
     findBookBounds: async () => ({ first: 201, last: 206 }),
     hasAudio: async () => 0,
-    findParallels: async () => ({}),
+    findParallels: async r => { ranges = r; return {}; },
     findFaxVerseIds: async () => [],
   };
   const data = async () => new HtmlPresenter().serialize(await new ScriptureLookupService(refs, verses, headings).lookup('x', { version: 'LDS' }));
@@ -313,6 +315,16 @@ describe('lookup: a range across a book end', async () => {
     const h3 = Object.values((await data()).h3ByVerse);
     expect(h3.map(h => [h.ref, h.slug])).toEqual([['Malachi 4:2–3', 'LDS/malachi.4.2-3'], ['Matthew 1:1–2', 'LDS/matthew.1.1-2']]);
     expect(h3[1].displayVerseId ?? h3[1].verse_id).toBe(204);
+  });
+  test('its parallels are looked up under its own book (live: "JST*lds/matt.1.1-2~…")', async () => {
+    await data();
+    expect(ranges.map(r => [r.from, r.bookSlug])).toEqual([[202, 'mal'], [204, 'matt']]);
+    expect(ranges.every(r => !r.dstSlugOverride || r.dstSlugOverride.startsWith(r.bookSlug + '.'))).toBe(true);
+  });
+  test('the other books are read in one query', async () => {
+    bookQueries = 0;
+    await data();
+    expect(bookQueries).toBe(1);
   });
   test('its verses carry their own book', async () => {
     const d = await data();

@@ -165,3 +165,16 @@ describe('findParallels', () => {
     expect(await srcSlug('Tao', 1)).toBe('tao.49');
   });
 });
+
+describe('findBooks', () => {
+  test('one query for every book', async () => {
+    query.mockResolvedValue([{ book_id: 40 }]);
+    expect(await repo.findBooks([40, 66])).toEqual([{ book_id: 40 }]);
+    expect(query).toHaveBeenCalledTimes(1);
+    expect(query.mock.calls[0][1]).toEqual([[40, 66]]);
+  });
+  test('no books, no query', async () => {
+    expect(await repo.findBooks([])).toEqual([]);
+    expect(query).not.toHaveBeenCalled();
+  });
+});

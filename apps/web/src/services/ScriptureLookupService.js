@@ -32,6 +32,9 @@ export function chapterRuns(rows) {
   return runs;
 }
 
+// A book's short title as a slug: "Gen." → "gen", "D&C" → "d&c", "1 Ne." → "1.ne"
+const slugBook = title => String(title || '').toLowerCase().replace(/\./g, '').replace(/\s+/g, '.');
+
 export class ScriptureLookupService {
   constructor(refService, verseRepo, headingRepo) {
     this.referenceService = refService;
@@ -198,10 +201,8 @@ export class ScriptureLookupService {
     for (const row of chapterRows) if (row.book_id != null) vBookMap[row.verse_id] = row.book_id;
     const books = new Map(bookInfo ? [[bookInfo.book_id, bookInfo]] : []);
     if (bookInfo) {
-      for (const id of verseIds) {
-        const b = vBookMap[id];
-        if (b != null && !books.has(b)) books.set(b, await this.headingRepository.findBookId(id));
-      }
+      const others = [...new Set(Object.values(vBookMap))].filter(b => !books.has(b));
+      if (others.length) for (const b of await this.headingRepository.findBooks(others)) books.set(b.book_id, b);
       if (books.size > 1) for (const v of verses) v.book = books.get(vBookMap[v.id] ?? v.bookId)?.book_title ?? null;
     }
 
@@ -263,7 +264,7 @@ export class ScriptureLookupService {
 
         // Compute canonical ref slug using book_title_short stripped of periods, spaces→dots
         // "Gen." → "gen", "D&C" → "d&c", "1 Cor." → "1.cor", "1 Ne." → "1.ne"
-        const bookPart = bookTitleShort.toLowerCase().replace(/\./g, '').replace(/\s+/g, '.');
+        const bookPart = slugBook(bookTitleShort);
         const chapterPart = reference.chapter;
         const verseMatch = reference.normalized.match(/:(.+)$/);
         const versePart = verseMatch ? '.' + verseMatch[1] : '';
@@ -449,7 +450,10 @@ export class ScriptureLookupService {
             const runs = endChapter !== hChapter
               ? splitRuns(actualIds.map(id => ({ id, chapter: vChapterMap[id], verse: vNumMap[id] })))
               : null;
-            return { from: h.verse_id, to: queryTo, ids: actualIds, verseNums, bookSlug: bookPart, chapter: hChapter, endChapter, firstVerse: fv, lastVerse: lv, rangeLastVerse, zeroLength: isZeroLength, synthetic: !!h.synthetic, wholeChapter: isWholeChapter, dstSlugOverride: runs ? `${bookPart}.${runs.slug}` : (endChapter !== hChapter ? dstSlugOverride : null) };
+            // A section of a later book (a passage across a book end) is slugged by its own book
+            const hBook = books.get(vBookMap[h.verse_id]);
+            const hBookPart = hBook && hBook.book_id !== bookId ? slugBook(hBook.book_title_short) : bookPart;
+            return { from: h.verse_id, to: queryTo, ids: actualIds, verseNums, bookSlug: hBookPart, chapter: hChapter, endChapter, firstVerse: fv, lastVerse: lv, rangeLastVerse, zeroLength: isZeroLength, synthetic: !!h.synthetic, wholeChapter: isWholeChapter, dstSlugOverride: runs ? `${hBookPart}.${runs.slug}` : (endChapter !== hChapter && hBookPart === bookPart ? dstSlugOverride : null) };
           });
 
           const parallelMap = await this.headingRepository.findParallels(ranges, version);
