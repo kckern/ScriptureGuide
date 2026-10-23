@@ -93,6 +93,9 @@ describe('displayReference', () => {
   test('a range across a book end is one range (referenceFromVerseIds)', () => {
     expect(displayReference('Malachi 4:5 - Matthew 1:2')).toBe('Malachi 4:5–Matthew 1:2');
     expect(displayReference('Malachi 4:1 - Matthew 1:2')).toBe('Malachi 4–Matthew 1:2');
+    // its cross-book branch printed no "; " before it: live titles "John 3:16Malachi 4:5–Matthew 1:2"
+    expect(displayReference('John 3:16; Malachi 4:5 - Matthew 1:2')).toBe('John 3:16Malachi 4:5–Matthew 1:2');
+    expect(displayReference('Malachi 4:5 - Matthew 1:2; John 3:16')).toBe('Malachi 4:5–Matthew 1:2; John 3:16');
   });
 });
 

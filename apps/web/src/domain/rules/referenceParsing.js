@@ -83,7 +83,17 @@ export function displayReference(normalized, verseCount = 0) {
     if (!out.length && verseCount < PACKAGE_VERSE_LIMIT && /^Genesis 1:1[-–]\d+:\d+$/.test(part)) part = part.replace(/^Genesis 1:1[-–](\d+):(\d+)$/, 'Genesis 1-$1.$2');
     part = part.replace(/(^|\s)(\d+):1[-–](\d+:\d+)$/, '$1$2-$3');
     // Across a book end, one range without spaces; a start at verse 1 drops it ("Malachi 4–Matthew 1:2")
-    part = part.replace(/^(.*?\d+)(?::(\d+))?\s+[-–]\s+(?=[^\d\s])/, (m, start, v) => `${start}${v && v !== '1' ? `:${v}` : ''}–`);
+    const crossBook = /^(.*?\d+)(?::(\d+))?\s+[-–]\s+(?=[^\d\s])/;
+    if (crossBook.test(part)) {
+      part = part.replace(crossBook, (m, start, v) => `${start}${v && v !== '1' ? `:${v}` : ''}–`);
+      // referenceFromVerseIds' cross-book branch wrote no "; " before it ("John 3:16Malachi 4:5–…")
+      if (out.length) {
+        out[out.length - 1] += part;
+        chapter = null;
+        lastBook = null;
+        continue;
+      }
+    }
     const own = part.match(/^(.*?\s)?(\d+):(.+)$/);
     if (own && !own[1] && own[2] === chapter && out.length) {
       out[out.length - 1] += `,${own[3]}`;
