@@ -80,6 +80,13 @@ export function metaFromRef(ref) {
   for (const piece of blockTexts(ref, normalized)) {
     let orig = trimChars(piece, ';:');
     if (!orig.trim()) continue;
+    // A range across a book end: cleanReference wrote it without spaces ("Malachi 4:5-Matthew
+    // 1:2"), and loadMetaFromRef made it one "Multi" block before getBook, keeping the book
+    const joined = orig.trim().replace(/\s+-\s+/g, '-');
+    if (/[—-](\d\s)*[A-Za-z]/.test(joined)) {
+      blocks.push({ orig: joined, book: 'Multi', verse_ids: lookupIds(orig.trim()) });
+      continue;
+    }
     book = getBook(orig, book);
     const bare = orig.trim();
     if (orig.startsWith(' ')) orig = book + orig;

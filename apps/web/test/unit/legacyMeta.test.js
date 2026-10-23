@@ -22,6 +22,16 @@ describe('metaFromRef (scriptures::loadMetaFromRef)', () => {
     ]);
   });
 
+  test('a range across a book end is one "Multi" block, as cleanReference wrote it', () => {
+    expect(metaFromRef('mal.4.5-matt.1.2')).toEqual([{ orig: 'Malachi 4:5-Matthew 1:2', book: 'Multi', verse_ids: [23144, 23145, 23146, 23147] }]);
+  });
+
+  test('a block after a "Multi" one still repeats its own book, as PHP did', () => {
+    expect(metaFromRef('mal.4.6-matt.1.1;john.3.16').map(b => [b.orig, b.book])).toEqual([
+      ['Malachi 4:6-Matthew 1:1', 'Multi'], ['John John 3:16', 'John'],
+    ]);
+  });
+
   test('a later block without a book takes the previous book', () => {
     expect(metaFromRef('gen.1.1;3.1')).toEqual([
       { orig: 'Genesis 1:1', book: 'Genesis', verse_ids: [1] },
