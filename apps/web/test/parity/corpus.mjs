@@ -58,6 +58,15 @@ const EXTRA = [
   ['raw', '/john.3.16;mal.4.5-matt.1.2'],
   ['plain', '/john.3.16;mal.4.5-matt.1.2'],
   ['latex', '/john.3.16;mal.4.5-matt.1.2'],
+  // A bare piece after a cross-book range keeps the book before the range (John 3)
+  ['html', '/john.3.16;mal.4.5-matt.1.2;3'],
+  ['api', '/john.3.16;mal.4.5-matt.1.2;3'],
+  ['meta', '/john.3.16;mal.4.5-matt.1.2;3'],
+  // ... and with no book before the range PHP read junk
+  ['meta', '/acts.28.31-rom.1.1;16.1'],
+  ['meta', '/gen.50.26-ex.1.2;3.4'],
+  ['html', '/acts.28.31-rom.1.1;16.1'],
+  ['html', '/gen.50.26-ex.1.2;3.4'],
   ['passage', '/passage?ref=Malachi+4%3A6&version=KJV&hversion=KJV&options%5Bstart%5D=23144&options%5Bend%5D=23147&searchterm='],
 ];
 
