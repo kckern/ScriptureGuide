@@ -25,6 +25,15 @@ const EXTRA = [
   ['passage', '/passage?ref=Matthew%205&version=NIV'],
   ['versionselect', '/versionselect?ref=John%203:16&ver=LDS'],
   ['vbox', '/vbox?verse_id=26137&ver=LDS&seq=1'],
+  // Ranges the AJAX endpoints name with referenceFromVerseIds (owner decision #12): a one-verse
+  // chapter (D&C 13:1, 1835 D&C 77:1), verse 0 in a reference group (BoC 13:1,0), and chapters
+  // named by determineChapter (d&c.13.1, dhpada.2.21-32, BoC 13 without its verse 0)
+  ['passage', '/passage?ref=Doctrine+and+Covenants+13&version=LDS&hversion=LDS&options%5Bstart%5D=37991&options%5Bend%5D=37991&searchterm='],
+  ['vbox', '/vbox?verse_id=36708&ver=LDS&seq=1'],
+  ['vbox', '/vbox?verse_id=39571&ver=LDS&seq=1'],
+  ['vbox', '/vbox?verse_id=38003&ver=LDS&seq=1'],
+  ['vbox', '/vbox?verse_id=91490&ver=GFRONSDAL&seq=1'],
+  ['vbox', '/vbox?verse_id=89527&ver=LDS&seq=1'],
 ];
 
 // Static files the live pages reference (src=/href= in the cached pages and the parallel page's
