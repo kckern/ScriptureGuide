@@ -100,14 +100,38 @@ describe('cleanReference: cost of adversarial input', () => {
   });
 });
 
+// Work, not wall time: each pattern's cost on 500 characters (the most cleanReference ever
+// reads) is compared with a linear scan of the same string, timed the same way in the same run,
+// so a busy machine slows both. The fastest of a few runs is each cost (load only adds time).
+// A pattern fails only when it is both slow (over 10 ms) and over 500 linear scans' worth. The
+// table's worst costs about 1.3 ms, 110 scans; one more .* in \b3.*ne...*?acts (\b3.*ne.*ne.*?acts)
+// costs about 30 ms, 2500 scans, and fails.
+function cost(fn, runs) {
+  let best = Infinity;
+  for (let i = 0; i < runs; i++) {
+    const t = performance.now();
+    fn();
+    best = Math.min(best, performance.now() - t);
+  }
+  return best;
+}
+function backtrackCost(re, frag, len = 500) {
+  const s = frag.repeat(Math.ceil(len / frag.length)).slice(0, len);
+  const linear = cost(() => s.replace(/[^]/g, 'X'), 5);
+  const pattern = cost(() => s.replace(re, 'X'), 3);
+  return { pattern, linear, ratio: pattern / Math.max(linear, 0.001) };
+}
+const backtracksBadly = ({ pattern, ratio }) => pattern > 10 && ratio > 500;
+
 describe('regex tables: no pattern backtracks badly on 500 characters', () => {
   const FRAGMENTS = ['3ne ', '3ne 3ne ', 'the the ', 's ', 'of a ', ',', ',,', '0', '\t. ', ' ', 'jst ', 'al-', 'w o ', 'd c a ', 'surah a ', 'qur ', 'l o '];
   test.each(Object.entries(REGEX_TABLES).flatMap(([t, list]) => list.map(([re], i) => [`${t} ${i}`, re])))('%s', (name, re) => {
     for (const frag of FRAGMENTS) {
-      const s = frag.repeat(Math.ceil(500 / frag.length)).slice(0, 500);
-      const t = performance.now();
-      s.replace(re, 'X');
-      expect(performance.now() - t).toBeLessThan(25);
+      const c = backtrackCost(re, frag);
+      expect(backtracksBadly(c), `${name} on ${JSON.stringify(frag)}: ${c.pattern.toFixed(2)} ms, ${Math.round(c.ratio)} linear scans`).toBe(false);
     }
+  });
+  test('the measure catches a pattern that backtracks badly', () => {
+    expect(backtracksBadly(backtrackCost(/\b3.*ne.*ne.*?acts/gi, '3ne '))).toBe(true);
   });
 });
