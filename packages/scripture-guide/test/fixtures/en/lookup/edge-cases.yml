@@ -5183,31 +5183,51 @@ tests:
       - numbered-book
     description: Cross-book range ending in a numbered book, after another piece
   - id: multibook-0484
-    input: Malachi 4:5-Matthew 1:2; 3
+    input: John 3:16; Malachi 4:5-Matthew 1:2; 3
     expected_ids:
+      - 26137
       - 23144
       - 23145
       - 23146
       - 23147
-      - 23194
-      - 23195
-      - 23196
-      - 23197
-      - 23198
-      - 23199
-      - 23200
-      - 23201
-      - 23202
-      - 23203
-      - 23204
-      - 23205
-      - 23206
-      - 23207
-      - 23208
-      - 23209
-      - 23210
-    expected_ref: Malachi 4:5 - Matthew 1:2; Matthew 3
+      - 26122
+      - 26123
+      - 26124
+      - 26125
+      - 26126
+      - 26127
+      - 26128
+      - 26129
+      - 26130
+      - 26131
+      - 26132
+      - 26133
+      - 26134
+      - 26135
+      - 26136
+      - 26137
+      - 26138
+      - 26139
+      - 26140
+      - 26141
+      - 26142
+      - 26143
+      - 26144
+      - 26145
+      - 26146
+      - 26147
+      - 26148
+      - 26149
+      - 26150
+      - 26151
+      - 26152
+      - 26153
+      - 26154
+      - 26155
+      - 26156
+      - 26157
+    expected_ref: John 3:16; Malachi 4:5 - Matthew 1:2; John 3
     tags:
       - multi-book-range
       - compound
-    description: A bare chapter after a cross-book range takes the book the range ends in
+    description: A bare chapter after a cross-book range keeps the book before the range, as scripture.guide did

@@ -483,10 +483,10 @@ const splitReferences = function(compoundReference, config) {
     for (let i in refs) {
         const ref = refs[i];
         // A range across books ("Malachi 4:5-Matthew 1:2") names its own books: keep it whole,
-        // without the running book, and continue with the book it ends in
+        // without the running book, and leave the running book as it was (scripture.guide's
+        // loadMetaFromRef handled such a piece before reading its book)
         const multiBook = ref.match(/^(.*?\D)\s*\d[\d:,]*\s*[—-]\s*((?:\d\s*)?\D+?)\s*\d[\d:,]*$/);
         if (multiBook && bookExists(multiBook[1].trim(), config) && bookExists(multiBook[2].trim(), config)) {
-            runningBook = multiBook[2].trim();
             completeRefs.push(ref.trim());
             continue;
         }
