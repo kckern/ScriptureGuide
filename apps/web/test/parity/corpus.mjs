@@ -48,6 +48,16 @@ const EXTRA = [
   ['meta', '/mal.4.5-matt.1.2'],
   ['html', '/mal.4-matt.1'],
   ['html', '/gen.50.26-ex.1.2'],
+  // A cross-book range after another piece (the package dropped it)
+  ['api', '/john.3.16;mal.4.5-matt.1.2'],
+  ['meta', '/john.3.16;mal.4.5-matt.1.2'],
+  ['html', '/john.3.16;mal.4.5-matt.1.2'],
+  ['api', '/john.3.16;gen.50.26-ex.1.2'],
+  ['meta', '/john.3.16;gen.50.26-ex.1.2'],
+  ['html', '/john.3.16;gen.50.26-ex.1.2'],
+  ['raw', '/john.3.16;mal.4.5-matt.1.2'],
+  ['plain', '/john.3.16;mal.4.5-matt.1.2'],
+  ['latex', '/john.3.16;mal.4.5-matt.1.2'],
   ['passage', '/passage?ref=Malachi+4%3A6&version=KJV&hversion=KJV&options%5Bstart%5D=23144&options%5Bend%5D=23147&searchterm='],
 ];
 
