@@ -76,6 +76,13 @@ const EXTRA = [
   ['api', '/john.3;jst.john.3'],
   ['meta', '/john.3;jst.john.3'],
   ['raw', '/john.3;jst.john.3'],
+  // Pieces after a JST piece: its book carries on ("JST John 18"), a named piece repeats its book
+  ['meta', '/john.3.16;jst.john.3.16;18'],
+  ['api', '/john.3.16;jst.john.3.16;18'],
+  ['plain', '/john.3.16;jst.john.3.16;18'],
+  ['raw', '/john.3.16;jst.john.3.16;18'],
+  ['meta', '/jst.john.3.16;18'],
+  ['meta', '/john.3.16;jst.john.3.16;john.1.1'],
   ['passage', '/passage?ref=Malachi+4%3A6&version=KJV&hversion=KJV&options%5Bstart%5D=23144&options%5Bend%5D=23147&searchterm='],
 ];
 
