@@ -5144,3 +5144,70 @@ tests:
     tags:
       - chapter-range
     description: Abraham chapters 1-2
+  - id: multibook-0481
+    input: John 3:16; Malachi 4:5-Matthew 1:2
+    expected_ids:
+      - 26137
+      - 23144
+      - 23145
+      - 23146
+      - 23147
+    expected_ref: John 3:16; Malachi 4:5 - Matthew 1:2
+    tags:
+      - multi-book-range
+      - compound
+    description: A range across books after another piece keeps its own books
+  - id: multibook-0482
+    input: john.3.16;gen.50.26-ex.1.2
+    expected_ids:
+      - 26137
+      - 1533
+      - 1534
+      - 1535
+    expected_ref: John 3:16; Genesis 50:26 - Exodus 1:2
+    tags:
+      - multi-book-range
+      - compound
+      - slug
+    description: Slug form of a cross-book range after another piece
+  - id: multibook-0483
+    input: John 3:16; 1 Kings 22:53-2 Kings 1:1
+    expected_ids:
+      - 26137
+      - 9534
+      - 9535
+    expected_ref: John 3:16; 1 Kings 22:53 - 2 Kings 1:1
+    tags:
+      - multi-book-range
+      - compound
+      - numbered-book
+    description: Cross-book range ending in a numbered book, after another piece
+  - id: multibook-0484
+    input: Malachi 4:5-Matthew 1:2; 3
+    expected_ids:
+      - 23144
+      - 23145
+      - 23146
+      - 23147
+      - 23194
+      - 23195
+      - 23196
+      - 23197
+      - 23198
+      - 23199
+      - 23200
+      - 23201
+      - 23202
+      - 23203
+      - 23204
+      - 23205
+      - 23206
+      - 23207
+      - 23208
+      - 23209
+      - 23210
+    expected_ref: Malachi 4:5 - Matthew 1:2; Matthew 3
+    tags:
+      - multi-book-range
+      - compound
+    description: A bare chapter after a cross-book range takes the book the range ends in
