@@ -32,6 +32,7 @@ function makeRepo() {
   return {
     findVerse: vi.fn(async id => (id === 26137 ? { verse_id: 26137, volume_id: 2, verse_title: 'John 3:16', verse_title_short: 'John 3:16' } : null)),
     findVerseMeta: vi.fn(async ids => ids.map(id => META[id]).filter(Boolean)),
+    findChapterVerses: vi.fn(async pairs => Object.values(META).filter(m => pairs.some(([b, c]) => b === m.book_id && c === m.chapter))),
     findEnglishVersions: vi.fn(async () => [
       { verse_id: 26137, version: 'LDS', text: JOHN_3_16 },
       { verse_id: 26137, version: 'KJV', text: JOHN_3_16 },
@@ -56,7 +57,7 @@ function makeRepo() {
   };
 }
 
-let repo, lookup, render, app;
+let repo, lookup, render, app, blocks;
 beforeEach(() => {
   repo = makeRepo();
   lookup = { lookup: vi.fn(async (ref, config) => ({ ref, config })) };
@@ -65,8 +66,8 @@ beforeEach(() => {
   const references = { parse: ref => ({ verseIds: ref ? [26137] : [] }) };
   // PHP blocks of a non-numeric verse_id (LegacyBlockService), as cleanReference titled them
   // and the verse ids of a chapter (determineChapter's lookupVerseIds)
-  const CHAPTERS = { 'Genesis 22': Array.from({ length: 24 }, (_, i) => 549 + i), 'John 3': [26137], '1 John 4': [30613], 'Doctrine and Covenants 13': [37991] };
-  const blocks = { blocks: vi.fn(async ref => [{ orig: ref.charAt(0).toUpperCase() + ref.slice(1), book: ref, verse_ids: CHAPTERS[ref] || [] }]) };
+  // and whether a chapter reference resolves at all (determineChapter's lookupVerseIds)
+  blocks = { blocks: vi.fn(async ref => [{ orig: ref.charAt(0).toUpperCase() + ref.slice(1), book: ref, verse_ids: /^(?!The First Vision).+ \d+$/.test(ref) ? [1] : [] }]) };
   const controller = new AjaxController({ lookup, references, repo, presenter, render, blocks });
   app = express();
   app.use(express.urlencoded({ extended: true }));
@@ -142,13 +143,31 @@ describe('/vbox', () => {
     repo.findReferences.mockResolvedValue([{ verse_id: 37991, type: 'xref', significant: 0 }]);
     repo.findTexts.mockResolvedValue([]);
     const dc13 = { verse_id: 37991, book_id: 82, chapter: 13, verse: 1, chapter_max: 1, book_title: 'Doctrine and Covenants', book_title_short: 'D&C', volume_id: 4 };
-    const base = repo.findVerseMeta.getMockImplementation();
-    repo.findVerseMeta.mockImplementation(async ids => [...(await base(ids)), ...(ids.includes(37991) ? [dc13] : [])]);
-    const $ = cheerio.load((await request(app).get('/vbox?verse_id=26137')).text);
-    const ref = $('.refpanel tr.matches td.gridbox').eq(0);
-    expect(ref.find('a').text()).toBe('D&C 13:1');
-    expect(ref.find('.gridtext').attr('chapter')).toBe('d&c.13.1');
-    expect($('.refpanel tr.original .gridtext').attr('chapter')).toBe('john.3.16');
+    META[37991] = dc13;
+    try {
+      const $ = cheerio.load((await request(app).get('/vbox?verse_id=26137')).text);
+      const ref = $('.refpanel tr.matches td.gridbox').eq(0);
+      expect(ref.find('a').text()).toBe('D&C 13:1');
+      expect(ref.find('.gridtext').attr('chapter')).toBe('d&c.13.1');
+      expect($('.refpanel tr.original .gridtext').attr('chapter')).toBe('john.3.16');
+    } finally { delete META[37991]; }
+  });
+  it('reads every chapter in one query and asks once per book whether its title resolves', async () => {
+    repo.findReferences.mockResolvedValue([
+      { verse_id: 549, type: 'xref', significant: 0 }, { verse_id: 1, type: 'xref', significant: 0 }, { verse_id: 30613, type: 'xref', significant: 0 },
+    ]);
+    await request(app).get('/vbox?verse_id=26137');
+    expect(repo.findChapterVerses).toHaveBeenCalledTimes(1);
+    expect(blocks.blocks.mock.calls.map(c => c[0]).sort()).toEqual(['1 John 4', 'Genesis 22', 'John 3']);
+  });
+  it('a chapter whose book title does not resolve has no chapter name (live: referenceFromVerseIds([]))', async () => {
+    const tfv = { verse_id: 82806, book_id: 140, chapter: 1, verse: 1, chapter_max: 57, book_title: 'The First Vision', book_title_short: 'TFV', volume_id: 9 };
+    META[82806] = tfv;
+    try {
+      repo.findReferences.mockResolvedValue([{ verse_id: 82806, type: 'xref', significant: 0 }]);
+      const $ = cheerio.load((await request(app).get('/vbox?verse_id=26137')).text);
+      expect($('.refpanel tr.matches td.gridbox').eq(0).find('.gridtext').attr('chapter')).toBe('');
+    } finally { delete META[82806]; }
   });
   it('falls back to the volume default version for verses the requested version lacks (scriptures::defaultVersions)', async () => {
     repo.findVerse.mockResolvedValue({ verse_id: 91490, volume_id: 13, verse_title: 'Dhammapada 2:28', verse_title_short: 'Dhpada 2:28' });

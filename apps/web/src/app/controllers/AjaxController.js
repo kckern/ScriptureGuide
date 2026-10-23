@@ -106,14 +106,35 @@ export class AjaxController {
   // versebox.php chapterSlug: scriptutil::determineChapter named the chapter of a verse with
   // referenceFromVerseIds over the verse ids of "<book_title> <chapter>" (book_title_short):
   // "Gen. 22", but "D&C 13:1" (one verse) and "Dhpada 2:21–32" (verses numbered across chapters).
+  // Those ids are the chapter's verses without verse 0 (lookupVerseIds skipped it; checked on
+  // every chapter against LegacyBlockService), so one query reads every chapter. A book whose
+  // title does not resolve as a reference ("The First Vision 1") has none, and no name: asked
+  // once per book, so a vbox costs one query plus one lookup per book, not one per chapter.
   // "book_id|chapter" → reference, for the chapters of the given verse rows.
   async chapterReferences(rows) {
-    const chapters = [...new Map(rows.map(r => [`${r.book_id}|${r.chapter}`, r])).entries()];
-    const idLists = await Promise.all(chapters.map(async ([, r]) =>
-      (await this.blocks.blocks(`${r.book_title} ${r.chapter}`)).flatMap(b => (Array.isArray(b.verse_ids) ? b.verse_ids : []))));
-    const all = [...new Set(idLists.flat())];
-    const meta = all.length ? await this.repo.findVerseMeta(all) : [];
-    return new Map(chapters.map(([key], i) => [key, referenceFromRows(meta, 'book_title_short', idLists[i])]));
+    const chapters = new Map(rows.map(r => [`${r.book_id}|${r.chapter}`, r]));
+    if (!chapters.size) return new Map();
+    const books = new Map();
+    for (const r of chapters.values()) if (!books.has(r.book_id)) books.set(r.book_id, r);
+    const [verses, resolved] = await Promise.all([
+      this.repo.findChapterVerses([...chapters.values()].map(r => [r.book_id, r.chapter])),
+      Promise.all([...books.values()].map(async r => [r.book_id,
+        (await this.blocks.blocks(`${r.book_title} ${r.chapter}`)).some(b => Array.isArray(b.verse_ids) && b.verse_ids.length)])),
+    ]);
+    const resolves = new Map(resolved);
+    const max = new Map();
+    for (const v of verses) {
+      const key = `${v.book_id}|${v.chapter}`;
+      max.set(key, Math.max(max.get(key) ?? 0, v.verse));
+    }
+    const rowsOf = new Map();
+    for (const v of verses) {
+      const key = `${v.book_id}|${v.chapter}`;
+      if (v.verse === 0 || !resolves.get(v.book_id)) continue;
+      if (!rowsOf.has(key)) rowsOf.set(key, []);
+      rowsOf.get(key).push({ ...v, chapter_max: max.get(key) });
+    }
+    return new Map([...chapters.keys()].map(key => [key, referenceFromRows(rowsOf.get(key) || [], 'book_title_short')]));
   }
 
   // GET|POST /vbox — the verse analysis box (versions, references, comparison).

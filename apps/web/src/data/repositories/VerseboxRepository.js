@@ -23,6 +23,8 @@ export class VerseboxRepository {
 
   // Book/chapter metadata for building references, with each chapter's last verse number
   // (grouped once per chapter: a correlated MAX per row took ~60 ms for a 150-verse chapter set).
+  // An inner join is enough: lds_scriptures_verses.chapter is NOT NULL, so every row's chapter
+  // has a group.
   async findVerseMeta(verseIds) {
     if (!verseIds?.length) return [];
     return db.query(
@@ -35,6 +37,20 @@ export class VerseboxRepository {
        WHERE l.verse_id IN (?)
        ORDER BY l.verse_id`,
       [verseIds, verseIds]
+    );
+  }
+
+  // Every verse of these chapters ([book_id, chapter] pairs), verse 0 too, in verse id order,
+  // for determineChapter (AjaxController.chapterReferences). One query for every chapter of a vbox.
+  async findChapterVerses(pairs) {
+    if (!pairs?.length) return [];
+    return db.query(
+      `SELECT l.verse_id, l.book_id, l.chapter, l.verse, b.book_title, b.book_title_short
+       FROM lds_scriptures_verses l
+       JOIN lds_scriptures_books b ON b.book_id = l.book_id
+       WHERE (l.book_id, l.chapter) IN (?)
+       ORDER BY l.verse_id`,
+      [pairs]
     );
   }
 
