@@ -70,9 +70,10 @@ describe('allowReason: check:singleHeadingDrop', () => {
   const node = `STATUS 200\n<p class="prose">\n${span(1)}\n<p class="prose">\n${span(2)}\n<p class="prose">\n${span(3)}`;
   const live = `STATUS 200\n<p class="prose">\n${span(1)}\n<p class="prose">\n${span(3)}`;
   test('allows a passage whose live response dropped a later section\'s first verse', () => {
-    expect(allowReason(a, 'passage', '/passage?x', '', { live, node })).toBe('single_heading drops verses');
+    expect(allowReason(a, 'passage', '/passage?x', '', { live, node, dropRaw: { 2: { text: '§¶v2' } } })).toBe('single_heading drops verses');
+    expect(allowReason(a, 'passage', '/passage?x', '', { live, node, dropRaw: { 2: { text: '¶v2' } } })).toBeUndefined();
   });
   test('only for that format', () => {
-    expect(allowReason(a, 'html', '/x', '', { live, node })).toBeUndefined();
+    expect(allowReason(a, 'html', '/x', '', { live, node, dropRaw: { 2: { text: '§¶v2' } } })).toBeUndefined();
   });
 });

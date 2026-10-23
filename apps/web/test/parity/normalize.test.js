@@ -1,5 +1,5 @@
 import { describe, test, expect } from 'vitest';
-import { canonicalHtml, canonicalJson, compare, canonicalAsset, encodeCacheEntry, decodeCacheEntry, homeCleanups, rawSearchterm, staleSectionHeading, staleSectionVerse, singleHeadingDrops } from './normalize.mjs';
+import { canonicalHtml, canonicalJson, compare, canonicalAsset, encodeCacheEntry, decodeCacheEntry, homeCleanups, rawSearchterm, staleSectionHeading, staleSectionVerse, singleHeadingDrops, singleHeadingDropIds } from './normalize.mjs';
 
 describe('canonicalHtml', () => {
   test('ignores quote style, attribute order and whitespace between tags', () => {
@@ -165,7 +165,7 @@ describe('staleSectionHeading', () => {
   });
 });
 
-describe('singleHeadingDrops', () => {
+describe('singleHeadingDropIds (the structure)', () => {
   const span = (id, text) => `  <span class="verse v_${id} prose" verse_id="${id}">\n    "${text}"`;
   const p = '<p class="prose">';
   const node = ['STATUS 200', '<h3 class="heading" ref="Genesis 1">', '  "Genesis 1"', p, span(31, 'very good.'),
@@ -173,33 +173,58 @@ describe('singleHeadingDrops', () => {
   // passage_script.php drops the first verse of every later section, and its extras
   const live = ['STATUS 200', '<h3 class="heading" ref="Genesis 1">', '  "Genesis 1"', p, span(31, 'very good.'), p, span(33, 'And on the seventh day')].join('\n');
   test('live is Node without the first verse (and its extras) of later sections', () => {
-    expect(singleHeadingDrops(live, node)).toBe(true);
+    expect(singleHeadingDropIds(live, node)).not.toBeNull();
   });
-  test('not when they are equal: nothing was dropped', () => expect(singleHeadingDrops(node, node)).toBe(false));
+  test('not when they are equal: nothing was dropped', () => expect(singleHeadingDropIds(node, node)).toBeNull());
   test('not when live has a line Node lacks', () => {
-    expect(singleHeadingDrops(live.replace('very good.', 'very bad.'), node)).toBe(false);
+    expect(singleHeadingDropIds(live.replace('very good.', 'very bad.'), node)).toBeNull();
   });
   test('not when Node has another kind of extra line', () => {
-    expect(singleHeadingDrops(live, node.replace('<div class="summary" version="LDS">', '<h3 class="heading" ref="Genesis 2">'))).toBe(false);
+    expect(singleHeadingDropIds(live, node.replace('<div class="summary" version="LDS">', '<h3 class="heading" ref="Genesis 2">'))).toBeNull();
   });
   // A later section's first verse starts a paragraph between verses live shows
   describe('not for a verse that cannot be a later section\'s first', () => {
     const v = (id, t) => `  <span class="verse v_${id} prose" verse_id="${id}">\n    "${t}"`;
     const base = ['STATUS 200', '<h3 class="heading">', p, v(1, 'a'), v(2, 'b')];
     const live2 = base.join('\n');
-    test('after the last live verse', () => expect(singleHeadingDrops(live2, [...base, v(3, 'c')].join('\n'))).toBe(false));
-    test('after a paragraph tag past the last live verse', () => expect(singleHeadingDrops(live2, [...base, p, v(3, 'c')].join('\n'))).toBe(false));
-    test('before the first live verse', () => expect(singleHeadingDrops(live2, ['STATUS 200', '<h3 class="heading">', p, v(0, 'z'), v(1, 'a'), v(2, 'b')].join('\n'))).toBe(false));
-    test('inside a paragraph', () => expect(singleHeadingDrops(live2, ['STATUS 200', '<h3 class="heading">', p, v(1, 'a'), v(9, 'dup'), v(2, 'b')].join('\n'))).toBe(false));
+    test('after the last live verse', () => expect(singleHeadingDropIds(live2, [...base, v(3, 'c')].join('\n'))).toBeNull());
+    test('after a paragraph tag past the last live verse', () => expect(singleHeadingDropIds(live2, [...base, p, v(3, 'c')].join('\n'))).toBeNull());
+    test('before the first live verse', () => expect(singleHeadingDropIds(live2, ['STATUS 200', '<h3 class="heading">', p, v(0, 'z'), v(1, 'a'), v(2, 'b')].join('\n'))).toBeNull());
+    test('inside a paragraph', () => expect(singleHeadingDropIds(live2, ['STATUS 200', '<h3 class="heading">', p, v(1, 'a'), v(9, 'dup'), v(2, 'b')].join('\n'))).toBeNull());
   });
   test('a dropped verse whose paragraph tag live gave to the next verse (KJV Matthew 1:1)', () => {
     const v = (id, t) => `  <span class="verse v_${id} prose" verse_id="${id}">\n    "${t}"`;
     const n = ['STATUS 200', '<h3 class="heading">', p, v(1, 'a'), p, v(2, 'b'), p, v(3, 'c')].join('\n');
     const l = ['STATUS 200', '<h3 class="heading">', p, v(1, 'a'), p, v(3, 'c')].join('\n');
-    expect(singleHeadingDrops(l, n)).toBe(true);
+    expect(singleHeadingDropIds(l, n)).not.toBeNull();
   });
   test('not when a dropped run holds more than one verse', () => {
     const more = node.replace(span(32, 'Thus the heavens'), `${span(32, 'Thus the heavens')}\n${span(32.5, 'and all the host')}`);
-    expect(singleHeadingDrops(live, more)).toBe(false);
+    expect(singleHeadingDropIds(live, more)).toBeNull();
   });
 });
+
+describe('singleHeadingDrops: each dropped verse starts a section in live\'s raw text', () => {
+  const v = (id, t) => `  <span class="verse v_${id} prose" verse_id="${id}">\n    "${t}"`;
+  const p = '<p class="prose">';
+  const tail = '<div class="footer">';
+  const live = ['STATUS 200', '<h3 class="heading">', p, v(1, 'a'), p, v(2, 'b'), tail].join('\n');
+  const node = ['STATUS 200', '<h3 class="heading">', p, v(1, 'a'), p, v(9, 'x'), p, v(2, 'b'), tail].join('\n');
+  test('the dropped verse ids', () => expect(singleHeadingDropIds(live, node)).toEqual([9]));
+  test('allowed when the dropped verse starts a section (§)', () => {
+    expect(singleHeadingDrops(live, node, { 9: { text: '§¶The book.' } })).toBe(true);
+    expect(singleHeadingDrops(live, node, { 9: { text: '¶And he said,§¶Blessed' } })).toBe(true);
+  });
+  test('not for a paragraph-opening verse that starts no section (reviewer case 2)', () => {
+    expect(singleHeadingDrops(live, node, { 9: { text: '¶And it came to pass.' } })).toBe(false);
+  });
+  test('not for one at the end before trailing markup that starts no section (reviewer case 1)', () => {
+    const end = ['STATUS 200', '<h3 class="heading">', p, v(1, 'a'), p, v(2, 'b'), p, v(3, 'c'), tail].join('\n');
+    expect(singleHeadingDrops(live, end, { 3: { text: '¶c' } })).toBe(false);
+  });
+  test('not without live\'s raw text', () => {
+    expect(singleHeadingDrops(live, node)).toBe(false);
+    expect(singleHeadingDrops(live, node, {})).toBe(false);
+  });
+});
+

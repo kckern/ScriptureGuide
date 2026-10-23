@@ -18,7 +18,8 @@ const CHECKS = {
   // raw: the first verse's live raw-format entry (staleSectionVerse)
   staleSectionHeading: ({ live, node, raw }) => staleSectionHeading(live, node, raw) === node,
   // passage_script.php dropped the first verse of every later section (single_heading)
-  singleHeadingDrop: ({ live, node }) => typeof live === 'string' && typeof node === 'string' && singleHeadingDrops(live, node),
+  // dropRaw: live's raw entries of the dropped verses (run.mjs singleHeadingRaw)
+  singleHeadingDrop: ({ live, node, dropRaw }) => typeof live === 'string' && typeof node === 'string' && singleHeadingDrops(live, node, dropRaw),
 };
 
 const PATTERN = /^(\S+) (re|live):(.*)$/s;

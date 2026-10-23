@@ -217,37 +217,50 @@ function staleHeadingHtml(live, node, raw) {
 
 // passage_script.php's single_heading dropped the first verse (or verse part) of every section
 // after the first, with the section's extras (summary, background, headnote); Node keeps them.
-// True when live is Node with only such runs removed: each run is extras and paragraph tags
-// around exactly one verse span that starts a paragraph, between verses live shows (a verse
-// before it and a line after it), and every live line is matched in order.
+// singleHeadingDropIds: the verse ids of the dropped spans when live is Node with only such runs
+// removed (each run is extras and paragraph tags around exactly one verse span that starts a
+// paragraph, between verses live shows, and every live line matched in order), else null.
+// singleHeadingDrops also requires each of them to start a section in live's raw text (§).
 const DROPPABLE_EXTRA = /^\s*<div class="(summary|background|headnote)"/;
 const PARAGRAPH = /^\s*<p class="[^"]*">$/;
 const VERSE = /^\s*<span class="verse /;
-export function singleHeadingDrops(live, node) {
+export function singleHeadingDropIds(live, node) {
   const L = live.split('\n');
   const N = node.split('\n');
-  let i = 0, j = 0, runs = 0, verseSeen = false;
+  let i = 0, j = 0, verseSeen = false;
+  const ids = [];
   while (j < N.length) {
     if (i < L.length && L[i] === N[j]) {
       if (VERSE.test(N[j])) verseSeen = true;
       i++; j++; continue;
     }
-    if (!verseSeen) return false;
+    if (!verseSeen) return null;
     let spans = 0;
     while (j < N.length && !(spans === 1 && i < L.length && L[i] === N[j])) {
       if (DROPPABLE_EXTRA.test(N[j])) j = elementEnd(N, j);
       else if (PARAGRAPH.test(N[j])) j++;
       else if (VERSE.test(N[j]) && spans === 0) {
         // it starts a paragraph: a paragraph tag (matched or dropped) or an extra right before it
-        const before = N[j - 1] ?? '';
-        if (!PARAGRAPH.test(before) && !droppedExtraBefore(N, j)) return false;
+        if (!PARAGRAPH.test(N[j - 1] ?? '') && !droppedExtraBefore(N, j)) return null;
+        ids.push(Number(attr(N[j], 'verse_id')));
         spans++; j = elementEnd(N, j);
-      } else return false;
+      } else return null;
     }
-    if (spans !== 1 || j >= N.length) return false;
-    runs++;
+    if (spans !== 1 || j >= N.length) return null;
   }
-  return i === L.length && runs > 0;
+  return i === L.length && ids.length ? ids : null;
+}
+
+// The version of the dropped spans (their version attribute), for fetching live's raw text
+export function singleHeadingDropVersion(node, ids) {
+  const line = node.split('\n').find(l => VERSE.test(l) && ids.includes(Number(attr(l, 'verse_id'))));
+  return line ? attr(line, 'version') : undefined;
+}
+
+// raw: live's raw-format entries by verse id ({ text }) for the dropped verses
+export function singleHeadingDrops(live, node, raw) {
+  const ids = singleHeadingDropIds(live, node);
+  return !!ids && !!raw && ids.every(id => /§/.test(raw[id]?.text ?? ''));
 }
 
 // The element that ends right before line j is a droppable extra
