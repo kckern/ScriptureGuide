@@ -10,13 +10,15 @@
 //                                      run.mjs looked up for it): for a known live bug that Node
 //                                      fixes, where only the fixed lines may differ
 // An exact key wins over a pattern; patterns are tried in file order. Invalid regexes never match.
-import { staleSectionHeading } from './normalize.mjs';
+import { staleSectionHeading, singleHeadingDrops } from './normalize.mjs';
 
 // check:<name> predicates: ({ live, node, ... }) => boolean
 const CHECKS = {
   // Live heads a passage whose first verse starts a section with § with the section before it;
   // raw: the first verse's live raw-format entry (staleSectionVerse)
   staleSectionHeading: ({ live, node, raw }) => staleSectionHeading(live, node, raw) === node,
+  // passage_script.php dropped the first verse of every later section (single_heading)
+  singleHeadingDrop: ({ live, node }) => typeof live === 'string' && typeof node === 'string' && singleHeadingDrops(live, node),
 };
 
 const PATTERN = /^(\S+) (re|live):(.*)$/s;

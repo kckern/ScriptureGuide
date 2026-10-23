@@ -1,5 +1,5 @@
 import { describe, test, expect } from 'vitest';
-import { canonicalHtml, canonicalJson, compare, canonicalAsset, encodeCacheEntry, decodeCacheEntry, homeCleanups, rawSearchterm, staleSectionHeading, staleSectionVerse } from './normalize.mjs';
+import { canonicalHtml, canonicalJson, compare, canonicalAsset, encodeCacheEntry, decodeCacheEntry, homeCleanups, rawSearchterm, staleSectionHeading, staleSectionVerse, singleHeadingDrops } from './normalize.mjs';
 
 describe('canonicalHtml', () => {
   test('ignores quote style, attribute order and whitespace between tags', () => {
@@ -162,5 +162,28 @@ describe('staleSectionHeading', () => {
     expect(staleSectionVerse(json(live))).toEqual({ version: 'NRSV', verseId: 14237 });
     expect(staleSectionHeading(json(live), json(node), raw)).toBe(json(node));
     expect(staleSectionHeading(json(live), json(node).replace('ps.23', 'ps.24'), raw)).not.toBe(json(node).replace('ps.23', 'ps.24'));
+  });
+});
+
+describe('singleHeadingDrops', () => {
+  const span = (id, text) => `  <span class="verse v_${id} prose" verse_id="${id}">\n    "${text}"`;
+  const p = '<p class="prose">';
+  const node = ['STATUS 200', '<h3 class="heading" ref="Genesis 1">', '  "Genesis 1"', p, span(31, 'very good.'),
+    '<div class="summary" version="LDS">', '  "The Creation is completed"', p, span(32, 'Thus the heavens'), p, span(33, 'And on the seventh day')].join('\n');
+  // passage_script.php drops the first verse of every later section, and its extras
+  const live = ['STATUS 200', '<h3 class="heading" ref="Genesis 1">', '  "Genesis 1"', p, span(31, 'very good.'), p, span(33, 'And on the seventh day')].join('\n');
+  test('live is Node without the first verse (and its extras) of later sections', () => {
+    expect(singleHeadingDrops(live, node)).toBe(true);
+  });
+  test('not when they are equal: nothing was dropped', () => expect(singleHeadingDrops(node, node)).toBe(false));
+  test('not when live has a line Node lacks', () => {
+    expect(singleHeadingDrops(live.replace('very good.', 'very bad.'), node)).toBe(false);
+  });
+  test('not when Node has another kind of extra line', () => {
+    expect(singleHeadingDrops(live, node.replace('<div class="summary" version="LDS">', '<h3 class="heading" ref="Genesis 2">'))).toBe(false);
+  });
+  test('not when a dropped run holds more than one verse', () => {
+    const more = node.replace(span(32, 'Thus the heavens'), `${span(32, 'Thus the heavens')}\n${span(32.5, 'and all the host')}`);
+    expect(singleHeadingDrops(live, more)).toBe(false);
   });
 });

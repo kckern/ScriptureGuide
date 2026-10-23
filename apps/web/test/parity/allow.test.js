@@ -63,3 +63,16 @@ describe('allowReason: a "<format> check:<name>" key', () => {
     expect(allowReason({ 'html check:nope': 'x' }, 'html', '/', '', { live, node, raw })).toBeUndefined();
   });
 });
+
+describe('allowReason: check:singleHeadingDrop', () => {
+  const a = { 'passage check:singleHeadingDrop': 'single_heading drops verses' };
+  const span = id => `  <span class="verse v_${id}" verse_id="${id}">\n    "v${id}"`;
+  const node = `STATUS 200\n<p class="prose">\n${span(1)}\n<p class="prose">\n${span(2)}\n<p class="prose">\n${span(3)}`;
+  const live = `STATUS 200\n<p class="prose">\n${span(1)}\n<p class="prose">\n${span(3)}`;
+  test('allows a passage whose live response dropped a later section\'s first verse', () => {
+    expect(allowReason(a, 'passage', '/passage?x', '', { live, node })).toBe('single_heading drops verses');
+  });
+  test('only for that format', () => {
+    expect(allowReason(a, 'html', '/x', '', { live, node })).toBeUndefined();
+  });
+});
