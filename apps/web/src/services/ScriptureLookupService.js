@@ -69,7 +69,10 @@ export class ScriptureLookupService {
         text = `${book} ${piece}`;
         ref = this.referenceService.parse(text);
       }
-      if (!ref.isEmpty) { book = ref.book; resolved = true; }
+      // A range across books ("Malachi 4:5 - Matthew 1:2") keeps the running book: PHP's
+      // loadMetaFromRef made it a "Multi" block before getBook
+      if (!ref.isEmpty && /\s-\s\D/.test(ref.normalized || '')) resolved = true;
+      else if (!ref.isEmpty) { book = ref.book; resolved = true; }
       else if (words) { book = getBook(piece, book); resolved = false; }
       blocks.push(text);
     }

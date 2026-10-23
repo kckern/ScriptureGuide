@@ -24,6 +24,11 @@ describe('splitBlocks', () => {
     expect(svc.splitBlocks('corianton; 38')).toEqual(['corianton', 'corianton 38']);
     expect(svc.splitBlocks('zoramites; almas-teachings; 5')).toEqual(['zoramites', 'almas-teachings', 'almas-teachings 5']);
   });
+  test('a cross-book range does not change the running book (loadMetaFromRef skipped getBook)', () => {
+    const books = { 'john.3.16': ['John', 'John 3:16'], 'mal.4.5-matt.1.2': ['Malachi', 'Malachi 4:5 - Matthew 1:2'], 'John 3': ['John', 'John 3'], 'Malachi 3': ['Malachi', 'Malachi 3'] };
+    const parse = t => (books[t] ? { isEmpty: false, book: books[t][0], normalized: books[t][1] } : { isEmpty: true, book: '' });
+    expect(new ScriptureLookupService({ parse }, null, null).splitBlocks('john.3.16;mal.4.5-matt.1.2;3')).toEqual(['john.3.16', 'mal.4.5-matt.1.2', 'John 3']);
+  });
   test('an all-numeric reference stays verse ids', () => {
     expect(svc.splitBlocks('1; 5-6')).toEqual(['1', '5-6']);
   });
