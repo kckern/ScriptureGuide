@@ -218,24 +218,42 @@ function staleHeadingHtml(live, node, raw) {
 // passage_script.php's single_heading dropped the first verse (or verse part) of every section
 // after the first, with the section's extras (summary, background, headnote); Node keeps them.
 // True when live is Node with only such runs removed: each run is extras and paragraph tags
-// around exactly one verse span, and every live line is matched in order.
+// around exactly one verse span that starts a paragraph, between verses live shows (a verse
+// before it and a line after it), and every live line is matched in order.
 const DROPPABLE_EXTRA = /^\s*<div class="(summary|background|headnote)"/;
+const PARAGRAPH = /^\s*<p class="[^"]*">$/;
+const VERSE = /^\s*<span class="verse /;
 export function singleHeadingDrops(live, node) {
   const L = live.split('\n');
   const N = node.split('\n');
-  let i = 0, j = 0, runs = 0;
+  let i = 0, j = 0, runs = 0, verseSeen = false;
   while (j < N.length) {
-    if (i < L.length && L[i] === N[j]) { i++; j++; continue; }
+    if (i < L.length && L[i] === N[j]) {
+      if (VERSE.test(N[j])) verseSeen = true;
+      i++; j++; continue;
+    }
+    if (!verseSeen) return false;
     let spans = 0;
     while (j < N.length && !(spans === 1 && i < L.length && L[i] === N[j])) {
       if (DROPPABLE_EXTRA.test(N[j])) j = elementEnd(N, j);
-      else if (/^\s*<p class="[^"]*">$/.test(N[j])) j++;
-      else if (/^\s*<span class="verse /.test(N[j]) && spans === 0) { spans++; j = elementEnd(N, j); }
-      else return false;
+      else if (PARAGRAPH.test(N[j])) j++;
+      else if (VERSE.test(N[j]) && spans === 0) {
+        // it starts a paragraph: a paragraph tag (matched or dropped) or an extra right before it
+        const before = N[j - 1] ?? '';
+        if (!PARAGRAPH.test(before) && !droppedExtraBefore(N, j)) return false;
+        spans++; j = elementEnd(N, j);
+      } else return false;
     }
-    if (spans !== 1) return false;
+    if (spans !== 1 || j >= N.length) return false;
     runs++;
   }
   return i === L.length && runs > 0;
 }
 
+// The element that ends right before line j is a droppable extra
+function droppedExtraBefore(N, j) {
+  for (let k = j - 1; k >= 0; k--) {
+    if (indent(N[k]) <= indent(N[j]) && !/^\s*"/.test(N[k])) return DROPPABLE_EXTRA.test(N[k]) && elementEnd(N, k) === j;
+  }
+  return false;
+}

@@ -182,6 +182,22 @@ describe('singleHeadingDrops', () => {
   test('not when Node has another kind of extra line', () => {
     expect(singleHeadingDrops(live, node.replace('<div class="summary" version="LDS">', '<h3 class="heading" ref="Genesis 2">'))).toBe(false);
   });
+  // A later section's first verse starts a paragraph between verses live shows
+  describe('not for a verse that cannot be a later section\'s first', () => {
+    const v = (id, t) => `  <span class="verse v_${id} prose" verse_id="${id}">\n    "${t}"`;
+    const base = ['STATUS 200', '<h3 class="heading">', p, v(1, 'a'), v(2, 'b')];
+    const live2 = base.join('\n');
+    test('after the last live verse', () => expect(singleHeadingDrops(live2, [...base, v(3, 'c')].join('\n'))).toBe(false));
+    test('after a paragraph tag past the last live verse', () => expect(singleHeadingDrops(live2, [...base, p, v(3, 'c')].join('\n'))).toBe(false));
+    test('before the first live verse', () => expect(singleHeadingDrops(live2, ['STATUS 200', '<h3 class="heading">', p, v(0, 'z'), v(1, 'a'), v(2, 'b')].join('\n'))).toBe(false));
+    test('inside a paragraph', () => expect(singleHeadingDrops(live2, ['STATUS 200', '<h3 class="heading">', p, v(1, 'a'), v(9, 'dup'), v(2, 'b')].join('\n'))).toBe(false));
+  });
+  test('a dropped verse whose paragraph tag live gave to the next verse (KJV Matthew 1:1)', () => {
+    const v = (id, t) => `  <span class="verse v_${id} prose" verse_id="${id}">\n    "${t}"`;
+    const n = ['STATUS 200', '<h3 class="heading">', p, v(1, 'a'), p, v(2, 'b'), p, v(3, 'c')].join('\n');
+    const l = ['STATUS 200', '<h3 class="heading">', p, v(1, 'a'), p, v(3, 'c')].join('\n');
+    expect(singleHeadingDrops(l, n)).toBe(true);
+  });
   test('not when a dropped run holds more than one verse', () => {
     const more = node.replace(span(32, 'Thus the heavens'), `${span(32, 'Thus the heavens')}\n${span(32.5, 'and all the host')}`);
     expect(singleHeadingDrops(live, more)).toBe(false);
