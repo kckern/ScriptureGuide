@@ -11,7 +11,11 @@ const HEADING_SKIP = new Set(['id', 'version', 'prev_id', 'verse_id']);
 
 export async function rawData(lr, result, repo = rawRepository) {
   const version = (lr.versionList ?? Object.entries(lr.versions || {}))[0]?.[0] || 'LDS';
-  const ids = blocksFor(lr.ref, result).flatMap(blockVerseIds);
+  const blocks = blocksFor(lr.ref, result);
+  // renderRaw array_merge'd the blocks' verse_ids: one that is not an array (false, a junk piece
+  // after a cross-book range) made the list null and the query fail, so the output was null
+  if (blocks.some(b => !Array.isArray(b.verse_ids))) return null;
+  const ids = blocks.flatMap(blockVerseIds);
   const rows = await repo.findRawVerses(version, ids);
   if (!rows.length) return null;
 

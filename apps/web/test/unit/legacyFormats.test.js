@@ -36,6 +36,12 @@ describe('raw format', () => {
     expect(phpJson(data)).toContain('"verse_id": "1"');
   });
 
+  test('null when a block\'s verse_ids is not an array (PHP 7 array_merge gave null): /acts.28.31-rom.1.1;16.1', async () => {
+    const any = { findRawVerses: async (version, ids) => ids.map(id => ({ verse_id: String(id), verse: '1', format: 'prose', text: 'x' })), loadHeading: async () => null };
+    expect(await rawData({ ref: 'acts.28.31-rom.1.1', versions: { KJV: 'KJV' } }, null, any)).not.toBeNull();
+    expect(await rawData({ ref: 'acts.28.31-rom.1.1;16.1', versions: { KJV: 'KJV' } }, null, any)).toBeNull();
+  });
+
   test('defaults to LDS and gives null when nothing is found', async () => {
     expect(await rawData({ ref: 'gen.1.1', versions: null }, null, stubRepo({ KJV }))).toBeNull();
   });
