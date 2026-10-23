@@ -192,6 +192,19 @@ export class ScriptureLookupService {
     const bookInfo = verseIds.length ? await this.headingRepository.findBookId(verseIds[0]) : null;
     if (bookInfo) config._bookShort = bookInfo.book_title_short;
 
+    // A passage across a book end ("Malachi 4:5–Matthew 1:2"): each verse and section is named
+    // by its own book, as PHP named them from their verse titles
+    const vBookMap = {};
+    for (const row of chapterRows) if (row.book_id != null) vBookMap[row.verse_id] = row.book_id;
+    const books = new Map(bookInfo ? [[bookInfo.book_id, bookInfo]] : []);
+    if (bookInfo) {
+      for (const id of verseIds) {
+        const b = vBookMap[id];
+        if (b != null && !books.has(b)) books.set(b, await this.headingRepository.findBookId(id));
+      }
+      if (books.size > 1) for (const v of verses) v.book = books.get(vBookMap[v.id] ?? v.bookId)?.book_title ?? null;
+    }
+
     if (config.includeHeadings !== false && verseIds.length > 0) {
       headings = await this.headingRepository.findByVerseIds(verseIds, headingVersion);
 
@@ -312,15 +325,17 @@ export class ScriptureLookupService {
             });
             for (const g of groups) {
               const chNum = g[0].chapter;
-              const bounds = await this.headingRepository.findChapterBounds(bookId, chNum);
+              const groupBook = books.get(vBookMap[g[0].verse_id] ?? g[0].book_id) ?? bookInfo;
+              const bounds = await this.headingRepository.findChapterBounds(groupBook.book_id, chNum);
               // A group that is its whole chapter is headed by the chapter ("Genesis 1" in
               // Genesis 1:1–2:3), as referenceFromVerseIds named the section's verses
               const wholeChapter = !!bounds && g[0].verse_id === bounds.first && g[g.length - 1].verse_id === bounds.last;
               headings.push({
                 ...(wholeChapter ? { _wholeChapter: true } : {}),
+                ...(groupBook.book_id !== bookId ? { _bookTitle: groupBook.book_title } : {}),
                 verse_id: g[0].verse_id,
                 type: 'heading',
-                text: `${reference.book} ${chNum}`,
+                text: `${groupBook.book_id !== bookId ? groupBook.book_title : reference.book} ${chNum}`,
                 last_verse_id: g[g.length - 1].verse_id,
                 version,
                 book_id: bookId,

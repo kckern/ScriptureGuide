@@ -186,8 +186,10 @@ export class HtmlPresenter {
       // or look up the heading verse's chapter from the vChapterMap (inline headings),
       // falling back to reference.chapter (single-chapter requests).
       const h3Chapter = h._chapterNum ?? chapter ?? vChapterMap[h.verse_id];
-      if (bookSlugForH3 && h3Chapter) {
-        const bookName = result.reference.book || '';
+      // A section of a later book in a passage across a book end is named by its own book
+      const hBookSlug = h._bookTitle ? h._bookTitle.toLowerCase().replace(/\s+/g, '.') : bookSlugForH3;
+      if (hBookSlug && h3Chapter) {
+        const bookName = h._bookTitle || result.reference.book || '';
         // All synthetic headings are headless
         if (h.synthetic) h.headless = true;
         // Whole-chapter heading (synthetic full-chapter OR single real section spanning whole chapter):
@@ -197,10 +199,10 @@ export class HtmlPresenter {
           // Check if the whole-chapter heading spans multiple chapters (e.g. NRSV Ps.22-23 single section)
           const hLastChap = vChapterMap[h.last] ?? h3Chapter;
           if (hLastChap !== h3Chapter) {
-            h.slug = `${version}/${bookSlugForH3}.${h3Chapter}-${hLastChap}`;
+            h.slug = `${version}/${hBookSlug}.${h3Chapter}-${hLastChap}`;
             h.ref = `${bookName} ${h3Chapter}\u2013${hLastChap}`;
           } else {
-            h.slug = `${version}/${bookSlugForH3}.${h3Chapter}`;
+            h.slug = `${version}/${hBookSlug}.${h3Chapter}`;
             h.ref = `${bookName} ${h3Chapter}`;
           }
         } else if (crossChapterMatch && h.verse_id <= (result.verses[0]?.id ?? 0) + 1 &&
@@ -211,10 +213,10 @@ export class HtmlPresenter {
           const endChap = parseInt(crossChapterMatch[2]);
           const endVerse = parseInt(crossChapterMatch[3]);
           if (startVerse === 1) {
-            h.slug = `${version}/${bookSlugForH3}.${h3Chapter}-${endChap}.${endVerse}`;
+            h.slug = `${version}/${hBookSlug}.${h3Chapter}-${endChap}.${endVerse}`;
             h.ref = `${bookName} ${h3Chapter}\u2013${endChap}:${endVerse}`;
           } else {
-            h.slug = `${version}/${bookSlugForH3}.${h3Chapter}.${startVerse}-${endChap}.${endVerse}`;
+            h.slug = `${version}/${hBookSlug}.${h3Chapter}.${startVerse}-${endChap}.${endVerse}`;
             h.ref = `${bookName} ${h3Chapter}:${startVerse}\u2013${endChap}:${endVerse}`;
           }
         } else {
@@ -229,7 +231,7 @@ export class HtmlPresenter {
             .filter((v, i, all) => v.id >= h.verse_id && v.id <= h.last && v.id !== all[i - 1]?.id)
             .map(v => ({ id: v.id, chapter: vChapterMap[v.id] ?? v.chapter, verse: v.verseNum }))) : null;
           if (runs) {
-            h.slug = `${version}/${bookSlugForH3}.${runs.slug}`;
+            h.slug = `${version}/${hBookSlug}.${runs.slug}`;
             h.ref = `${bookName} ${runs.ref}`;
           } else if (hLastChapter !== h3Chapter) {
             // Cross-chapter section heading: use chapter-range ref/slug format
@@ -238,10 +240,10 @@ export class HtmlPresenter {
             const endVerse = h.lastVerseNum ?? verseNumMap[h.last];
             if (f === 1) {
               // Starts at verse 1: compact format (no starting verse in slug/ref)
-              h.slug = `${version}/${bookSlugForH3}.${h3Chapter}-${endChap}.${endVerse}`;
+              h.slug = `${version}/${hBookSlug}.${h3Chapter}-${endChap}.${endVerse}`;
               h.ref = `${bookName} ${h3Chapter}\u2013${endChap}:${endVerse}`;
             } else {
-              h.slug = `${version}/${bookSlugForH3}.${h3Chapter}.${f}-${endChap}.${endVerse}`;
+              h.slug = `${version}/${hBookSlug}.${h3Chapter}.${f}-${endChap}.${endVerse}`;
               h.ref = `${bookName} ${h3Chapter}:${f}\u2013${endChap}:${endVerse}`;
             }
           } else {
@@ -277,7 +279,7 @@ export class HtmlPresenter {
               verseRangeSlug = (f && l && f !== l) ? `.${f}-${l}` : (f ? `.${f}` : '');
               refVerse = (f && l && f !== l) ? `${f}\u2013${l}` : `${f || ''}`;
             }
-            h.slug = `${version}/${bookSlugForH3}.${h3Chapter}${verseRangeSlug}`;
+            h.slug = `${version}/${hBookSlug}.${h3Chapter}${verseRangeSlug}`;
             h.ref = `${bookName} ${h3Chapter}:${refVerse}`;
           }
         }
@@ -456,6 +458,7 @@ export class HtmlPresenter {
             id: v.id,
             num: v.verseNum,
             chapter: v.chapter,
+            book: v.book,
             mixmatch: v.mixmatch,
             text: VerseSerializer.formatHtml(part.text),
             format: segFormat,

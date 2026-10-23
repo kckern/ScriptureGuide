@@ -7,7 +7,7 @@ export class VerseRepository {
     }
 
     const rows = await db.query(
-      `SELECT sv.verse_id, sv.verse, sv.text, sv.version, sv.format, sv.s, sv.p, v.chapter
+      `SELECT sv.verse_id, sv.verse, sv.text, sv.version, sv.format, sv.s, sv.p, v.chapter, v.book_id
        FROM scripture_verses sv
        JOIN lds_scriptures_verses v ON v.verse_id = sv.verse_id
        WHERE sv.verse_id IN (?) AND sv.version = ?
@@ -23,7 +23,7 @@ export class VerseRepository {
     if (!verseIds || verseIds.length === 0) return [];
     return db.query(
       `SELECT v.verse_id, v.verse, v.verse_scripture AS text, 'INDEX' AS version, 'prose' AS format,
-        '' AS s, '' AS p, v.chapter
+        '' AS s, '' AS p, v.chapter, v.book_id
        FROM lds_scriptures_verses v
        WHERE v.verse_id IN (?)
        ORDER BY v.verse_id`,
@@ -94,7 +94,7 @@ export class VerseRepository {
   async findChaptersByVerseIds(verseIds) {
     if (!verseIds || verseIds.length === 0) return [];
     const rows = await db.query(
-      'SELECT verse_id, chapter FROM lds_scriptures_verses WHERE verse_id IN (?)',
+      'SELECT verse_id, book_id, chapter FROM lds_scriptures_verses WHERE verse_id IN (?)',
       [verseIds]
     );
     return rows;

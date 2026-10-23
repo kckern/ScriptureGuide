@@ -77,6 +77,8 @@ export function displayReference(normalized) {
     // (segment 0) and printed the chapter run as "Genesis 1–2.3"
     if (!out.length && /^Genesis 1:1[-–]\d+:\d+$/.test(part)) part = part.replace(/^Genesis 1:1[-–](\d+):(\d+)$/, 'Genesis 1-$1.$2');
     part = part.replace(/(^|\s)(\d+):1[-–](\d+:\d+)$/, '$1$2-$3');
+    // Across a book end, one range without spaces; a start at verse 1 drops it ("Malachi 4–Matthew 1:2")
+    part = part.replace(/^(.*?\d+)(?::(\d+))?\s+[-–]\s+(?=[^\d\s])/, (m, start, v) => `${start}${v && v !== '1' ? `:${v}` : ''}–`);
     const own = part.match(/^(.*?\s)?(\d+):(.+)$/);
     if (own && !own[1] && own[2] === chapter && out.length) {
       out[out.length - 1] += `,${own[3]}`;

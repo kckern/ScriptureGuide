@@ -87,6 +87,10 @@ describe('displayReference', () => {
     expect(displayReference('Genesis 1:1-5')).toBe('Genesis 1:1–5');
     expect(displayReference('JST Genesis 1:1-2:3')).toBe('JST Genesis 1–2:3');
   });
+  test('a range across a book end is one range (referenceFromVerseIds)', () => {
+    expect(displayReference('Malachi 4:5 - Matthew 1:2')).toBe('Malachi 4:5–Matthew 1:2');
+    expect(displayReference('Malachi 4:1 - Matthew 1:2')).toBe('Malachi 4–Matthew 1:2');
+  });
 });
 
 describe('blankHeading', () => {

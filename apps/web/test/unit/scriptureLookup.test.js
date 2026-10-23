@@ -283,3 +283,39 @@ describe('lookup: a range from verse 1 into the next chapter (LDS, no section he
     expect((await refs([102, 103, 104, 105], '1 Nephi 1:2-2:2'))[0]).toEqual(['1 Nephi 1:2–3', 'LDS/1.nephi.1.2-3']);
   });
 });
+
+describe('lookup: a range across a book end', async () => {
+  const { default: HtmlPresenter } = await import('../../src/presentation/presenters/HtmlPresenter.js');
+  // Malachi 4 is ids 201–203 (book 39), Matthew 1 is 204–206 (book 40); Matthew 1:1 opens with "§"
+  const BOOKS = { 39: { book_id: 39, lds_org: 'mal', book_title: 'Malachi', book_title_short: 'Mal.' }, 40: { book_id: 40, lds_org: 'matt', book_title: 'Matthew', book_title_short: 'Matt.' } };
+  const bookOf = id => (id <= 203 ? 39 : 40);
+  const chapterOf = id => (id <= 203 ? 4 : 1);
+  const verseOf = id => (id <= 203 ? id - 200 : id - 203);
+  const ids = [202, 203, 204, 205];
+  const refs = { parse: () => ({ isEmpty: false, book: 'Malachi', normalized: 'Malachi 4:2 - Matthew 1:2', verseIds: ids, chapter: 4 }) };
+  const verses = {
+    findByIds: async list => list.map(id => ({ verse_id: id, book_id: bookOf(id), chapter: chapterOf(id), verse: verseOf(id), text: id === 204 ? '§¶The book.' : 'And it came to pass.', version: 'LDS' })),
+    findChaptersByVerseIds: async list => list.map(id => ({ verse_id: id, book_id: bookOf(id), chapter: chapterOf(id) })),
+  };
+  const headings = {
+    findBookId: async id => BOOKS[bookOf(id)],
+    findByVerseIds: async () => [],
+    findChapterHeading: async () => null,
+    findChapterNavRows: async () => null,
+    findChapterBounds: async (bookId, ch) => (bookId === 39 && ch === 4 ? { first: 201, last: 203 } : bookId === 40 && ch === 1 ? { first: 204, last: 206 } : { first: 1, last: 9 }),
+    findBookBounds: async () => ({ first: 201, last: 206 }),
+    hasAudio: async () => 0,
+    findParallels: async () => ({}),
+    findFaxVerseIds: async () => [],
+  };
+  const data = async () => new HtmlPresenter().serialize(await new ScriptureLookupService(refs, verses, headings).lookup('x', { version: 'LDS' }));
+  test('the second book\'s section is headed and slugged by that book, over its own chapter', async () => {
+    const h3 = Object.values((await data()).h3ByVerse);
+    expect(h3.map(h => [h.ref, h.slug])).toEqual([['Malachi 4:2–3', 'LDS/malachi.4.2-3'], ['Matthew 1:1–2', 'LDS/matthew.1.1-2']]);
+    expect(h3[1].displayVerseId ?? h3[1].verse_id).toBe(204);
+  });
+  test('its verses carry their own book', async () => {
+    const d = await data();
+    expect(d.verses.map(v => v.book ?? d.book)).toEqual(['Malachi', 'Malachi', 'Matthew', 'Matthew']);
+  });
+});

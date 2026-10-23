@@ -67,8 +67,9 @@ data.verses.forEach(verse => {
 
   const vChapter = verse.chapter ?? data.chapter;
   // A compound line (verses merged by "*" lines) carries the merged reference and label
-  const ref = verse.compoundRef ?? `${data.book || ''} ${vChapter || ''}:${verse.num}`.trim();
-  const bookSlug = (data.book || '').toLowerCase().replace(/\s+/g, '-');
+  const vBook = verse.book || data.book || '';
+  const ref = verse.compoundRef ?? `${vBook} ${vChapter || ''}:${verse.num}`.trim();
+  const bookSlug = vBook.toLowerCase().replace(/\s+/g, '-');
   const verseClass = `${bookSlug}-${vChapter}-${verse.num}`;
   // verse_label only on first segment and first linebreak part; second+ get no attr
   // Note: <sup class="vnum"> is NOT rendered server-side — JS adds it from verse_label attr
