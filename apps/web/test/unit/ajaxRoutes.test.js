@@ -180,6 +180,12 @@ describe('/passage', () => {
     await request(app).post('/passage').type('form').send({ ref: 'ignored', version: 'KJV*LDS', 'options[start]': '1', 'options[end]': '2' });
     expect(lookup.lookup).toHaveBeenCalledWith('Genesis 1:1–2', expect.objectContaining({ version: 'KJV' }));
   });
+  it('names an options[start..end] range as PHP did (referenceFromVerseIds)', async () => {
+    const rows = [...Array.from({ length: 31 }, (_, i) => meta(i + 1, 'Genesis', 'Gen.', 1, i + 1, 31)), meta(32, 'Genesis', 'Gen.', 2, 1, 25)];
+    repo.findVerseMeta.mockResolvedValue(rows);
+    await request(app).get('/passage?ref=x&version=KJV&options[start]=1&options[end]=32');
+    expect(lookup.lookup).toHaveBeenCalledWith('Genesis 1–2:1', expect.anything());
+  });
   it('reads JST passages as JST references', async () => {
     await request(app).get('/passage?ref=Mark%205&version=JST');
     expect(lookup.lookup).toHaveBeenCalledWith('JST Mark 5', expect.anything());

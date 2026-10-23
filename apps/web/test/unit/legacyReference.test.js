@@ -1,7 +1,7 @@
 import { describe, it, test, expect } from 'vitest';
 import {
   splitRuns,
-  formatReference, rowsReference, chapterRef, slugifyRef, versionImg, isConsecutive,
+  formatReference, referenceFromRows, chapterRef, slugifyRef, versionImg, isConsecutive,
 } from '../../src/domain/rules/legacyReference.js';
 
 // Synthetic book table: Genesis (book 1) chapters 1–3 with 31, 25, 24 verses, verse ids from 1;
@@ -41,18 +41,31 @@ describe('formatReference (referenceFromVerseIds)', () => {
 const gen = (verse_id, chapter, verse, chapter_max = 24) =>
   ({ verse_id, book_id: 1, chapter, verse, chapter_max, book_title: 'Genesis', book_title_short: 'Gen.' });
 
-describe('rowsReference (AJAX endpoints)', () => {
+describe('referenceFromRows (AJAX endpoints: referenceFromVerseIds over verse rows)', () => {
   it('formats a single verse and a range with an en dash', () => {
-    expect(rowsReference([gen(549, 22, 1)], 'book_title_short')).toBe('Gen. 22:1');
-    expect(rowsReference([gen(549, 22, 1), gen(550, 22, 2), gen(551, 22, 3)], 'book_title_short')).toBe('Gen. 22:1–3');
+    expect(referenceFromRows([gen(549, 22, 1)], 'book_title_short')).toBe('Gen. 22:1');
+    expect(referenceFromRows([gen(549, 22, 1), gen(550, 22, 2), gen(551, 22, 3)], 'book_title_short')).toBe('Gen. 22:1–3');
   });
   it('formats a whole chapter without verses', () => {
-    expect(rowsReference([gen(1, 1, 1, 2), gen(2, 1, 2, 2)])).toBe('Genesis 1');
+    expect(referenceFromRows([gen(1, 1, 1, 2), gen(2, 1, 2, 2)])).toBe('Genesis 1');
   });
-  it('formats ranges across chapters and separate runs', () => {
-    expect(rowsReference([gen(31, 1, 31, 31), gen(32, 2, 1, 25)])).toBe('Genesis 1:31–2:1');
-    expect(rowsReference([gen(5, 1, 5, 31), gen(9, 1, 9, 31)])).toBe('Genesis 1:5; Genesis 1:9');
+  it('a range from verse 1 into the next chapter starts with the bare chapter, as PHP printed it', () => {
+    const rows = [...range(1, 31).map(v => gen(v, 1, v, 31)), gen(32, 2, 1, 25), gen(33, 2, 2, 25)];
+    expect(referenceFromRows(rows)).toBe('Genesis 1–2:2');
   });
+  it('a one-verse chapter keeps its verse', () => {
+    const dc13 = { verse_id: 37991, book_id: 82, chapter: 13, verse: 1, chapter_max: 1, book_title: 'Doctrine and Covenants', book_title_short: 'D&C' };
+    expect(referenceFromRows([dc13], 'book_title_short')).toBe('D&C 13:1');
+  });
+  it('a range across a book end is one range', () => {
+    const eph = { verse_id: 29364, book_id: 49, chapter: 6, verse: 24, chapter_max: 24, book_title: 'Ephesians', book_title_short: 'Eph.' };
+    const phil = { verse_id: 29365, book_id: 50, chapter: 1, verse: 1, chapter_max: 30, book_title: 'Philippians', book_title_short: 'Philip.' };
+    expect(referenceFromRows([eph, phil], 'book_title_short')).toBe('Eph. 6:24–Philip. 1:1');
+  });
+  it('separate runs in a chapter share the chapter', () => {
+    expect(referenceFromRows([gen(5, 1, 5, 31), gen(9, 1, 9, 31)])).toBe('Genesis 1:5,9');
+  });
+  it('no rows give an empty string', () => expect(referenceFromRows([])).toBe(''));
 });
 
 describe('chapterRef', () => {

@@ -12,7 +12,7 @@ import { renderSettings, SETTINGS_VOLUMES } from '../../presentation/ajax/settin
 import {
   flattenText, transposeRef, baseVersion, highlightSearchTerm,
 } from '../../domain/rules/legacyText.js';
-import { rowsReference, chapterRef, slugifyRef, versionImg } from '../../domain/rules/legacyReference.js';
+import { referenceFromRows, chapterRef, slugifyRef, versionImg } from '../../domain/rules/legacyReference.js';
 import { logError } from '../log.js';
 
 // The PHP site's AJAX endpoints: vbox (versebox.php), passage (passage_script.php),
@@ -79,7 +79,7 @@ export class AjaxController {
       if (Number.isFinite(start) && Number.isFinite(end) && end >= start && end - start < 2000) {
         const ids = [];
         for (let i = start; i <= end; i++) ids.push(i);
-        ref = rowsReference(await this.repo.findVerseMeta(ids), 'book_title');
+        ref = referenceFromRows(await this.repo.findVerseMeta(ids), 'book_title');
       }
       ref = transposeRef(ref, version);
       // hversion (heading/format version) is not separate in the Node lookup yet; text version wins.
@@ -142,7 +142,7 @@ export class AjaxController {
         const first = group[0];
         const last = group[group.length - 1];
         const ids = rangeIds(first.verse_id, last.verse_id);
-        const ref = rowsReference(ids.map(id => metaById.get(id)).filter(Boolean), 'book_title_short');
+        const ref = referenceFromRows(ids.map(id => metaById.get(id)).filter(Boolean), 'book_title_short');
         const version = String(textById.get(first.verse_id)?.version || '');
         let text;
         if (group.length > 1) {
@@ -175,7 +175,7 @@ export class AjaxController {
           text: await this.originalText(str(p.verse_id), ver, ownText),
         },
         refs,
-        refslug: verse ? slugifyRef(rowsReference([metaById.get(verseId)].filter(Boolean), 'book_title')) : '',
+        refslug: verse ? slugifyRef(referenceFromRows([metaById.get(verseId)].filter(Boolean), 'book_title')) : '',
         versions: versions.map(v => ({
           version: v.version,
           verseId: v.verse_id,
