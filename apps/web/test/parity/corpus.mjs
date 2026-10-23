@@ -85,6 +85,10 @@ const EXTRA = [
   ['raw', '/john.3.16;jst.john.3.16;18'],
   ['meta', '/jst.john.3.16;18'],
   ['meta', '/john.3.16;jst.john.3.16;john.1.1'],
+  // latex prints each block in its own version; live dropped JST verses (decision 2026-10-23)
+  ['latex', '/jst.john.3.16'],
+  ['latex', '/jst.john.3.16;18'],
+  ['latex', '/jst.john.3.16;john.3.16'],
   ['raw', '/jst.john.3.16'],
   ['passage', '/passage?ref=Malachi+4%3A6&version=KJV&hversion=KJV&options%5Bstart%5D=23144&options%5Bend%5D=23147&searchterm='],
 ];

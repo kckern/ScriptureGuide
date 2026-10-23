@@ -108,3 +108,21 @@ describe('allow.json: latex of junk pieces after a leading cross-book range', ()
   });
 });
 
+
+describe('allowReason: "<format> re:<regex> && check:<name>" (latex JST verses)', () => {
+  const a = { 'latex re:(^|[/;])jst\\. && check:latexMissingVerses': 'PHP latex read LDS only' };
+  const verse = t => `\\versenum \\marks\\versemarker{\\thescriptureverse}${t} `;
+  const live = `STATUS 200\n\\begin{scripturechapter} ${verse('For God so loved the world.')}\\end{scripturechapter}`;
+  const node = `STATUS 200\n\\begin{scripturechapter} ${verse('Only Begotten.')}\\end{scripturechapter}\n\\begin{scripturechapter} ${verse('For God so loved the world.')}\\end{scripturechapter}`;
+  test('allowed when live lacks verses Node prints and has none Node lacks', () => {
+    expect(allowReason(a, 'latex', '/jst.john.3.16;john.3.16', '', { live, node })).toBe('PHP latex read LDS only');
+    expect(allowReason(a, 'latex', '/jst.john.3.16', '', { live: 'STATUS 200\n', node })).toBe('PHP latex read LDS only');
+  });
+  test('not when live has a verse Node lacks, or nothing is missing', () => {
+    expect(allowReason(a, 'latex', '/jst.john.3.16;john.3.16', '', { live: live.replace('loved', 'hated'), node })).toBeUndefined();
+    expect(allowReason(a, 'latex', '/jst.john.3.16;john.3.16', '', { live: node, node })).toBeUndefined();
+  });
+  test('not without a JST piece', () => {
+    expect(allowReason(a, 'latex', '/john.3.16;1ne.1.1', '', { live, node })).toBeUndefined();
+  });
+});
