@@ -161,6 +161,16 @@ describe('metaOnly: a JST piece among others (the package reads no JST books)', 
       { orig: 'JST John JST John 3:16', book: 'JST John', verse_ids: [68942] },
     ]);
   });
+  test('a bare piece after a JST piece is in the JST book (PHP\'s running book)', async () => {
+    const out = await meta('john.3.16;jst.john.3.16;18', [section('John 3:16', 'John', [26137]), section('JST John 3:16', 'JST John', [68942]), section('JST John 18', 'JST John', [69596, 69597])]);
+    expect(out[2]).toEqual({ orig: 'JST John 18', book: 'JST John', verse_ids: [69596, 69597] });
+    expect((await meta('jst.john.3.16;18', [section('JST John 3:16', 'JST John', [68942]), section('JST John 18', 'JST John', [69596])])).map(b => b.orig))
+      .toEqual(['JST John 3:16', 'JST John 18']);
+  });
+  test('a named piece after a JST piece repeats its book', async () => {
+    const out = await meta('john.3.16;jst.john.3.16;john.1.1', [section('John 3:16', 'John', [26137]), section('JST John 3:16', 'JST John', [68942]), section('John 1:1', 'John', [26046])]);
+    expect(out.map(b => b.orig)).toEqual(['John 3:16', 'JST John JST John 3:16', 'John John 1:1']);
+  });
   test('a first JST piece leads, and the named piece after it doubles its book', async () => {
     expect(await meta('jst.john.3.16;john.3.16', [section('JST John 3:16', 'JST John', [68942]), section('John 3:16', 'John', [26137])])).toEqual([
       { orig: 'JST John 3:16', book: 'JST John', verse_ids: [68942] },

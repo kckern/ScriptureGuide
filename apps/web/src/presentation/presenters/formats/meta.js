@@ -21,28 +21,25 @@ function blocksFor(ref, result) {
   return result?.legacyBlocks ?? [];
 }
 
-// A reference whose ";" pieces include a JST one ("john.3.16;jst.john.3.16"): the package reads
-// no JST books, so it drops that piece; the lookup resolved it (result.sections, one per piece).
-// The other pieces are the package's blocks; each JST piece is its section's block, and, as in
-// PHP, a named piece after the first repeats its book ("JST John JST John 3:16"). null otherwise.
+// A reference whose ";" pieces include a JST one ("john.3.16;jst.john.3.16;18"): the package reads
+// no JST books and drops that piece, losing the running book after it. The lookup resolved every
+// piece (result.sections, one per piece, a bare piece in the running book: "JST John 18"), so
+// each block is its section, with PHP's orig: the first piece as given, a named piece after it
+// with its book repeated ("JST John JST John 3:16", "John John 1:1"), a bare piece as its book and
+// numbers ("JST John 18"). null otherwise.
 const JST_PIECE = /^\s*jst\b/i;
 function withJstPieces(ref, result) {
   const pieces = String(ref ?? '').split(';');
-  const jst = pieces.flatMap((p, i) => (JST_PIECE.test(p) ? [i] : []));
   const sections = result?.sections;
-  if (!jst.length || pieces.length < 2 || pieces.some(p => !p.trim()) || sections?.length !== pieces.length) return null;
-  const rest = pieces.filter((_, i) => !jst.includes(i)).join(';');
-  const blocks = rest.trim() ? metaFromRef(rest) : [];
-  // the first remaining piece followed a JST one: PHP doubled its book too
-  if (jst[0] === 0 && blocks[0] && /[a-z]/i.test(pieces.find((_, i) => !jst.includes(i)) || '')) {
-    blocks[0] = { ...blocks[0], orig: `${blocks[0].book} ${blocks[0].orig}` };
-  }
-  for (const k of jst) {
+  if (pieces.length < 2 || !pieces.some(p => JST_PIECE.test(p)) || pieces.some(p => !p.trim()) || sections?.length !== pieces.length) return null;
+  const blocks = [];
+  for (const [k, piece] of pieces.entries()) {
     const r = sections[k]?.reference;
     if (!r?.verseIds?.length) return null;
     const book = (r.book || '').replace(/—/g, ' ');
     const orig = (r.normalized || '').replace(/—/g, ' ');
-    blocks.splice(k, 0, { orig: k > 0 ? `${book} ${orig}` : orig, book, verse_ids: [...r.verseIds] });
+    const named = /[a-z]/i.test(piece);
+    blocks.push({ orig: k > 0 && named ? `${book} ${orig}` : orig, book, verse_ids: [...r.verseIds] });
   }
   return blocks;
 }
