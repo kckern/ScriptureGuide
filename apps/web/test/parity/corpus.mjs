@@ -67,6 +67,15 @@ const EXTRA = [
   ['meta', '/gen.50.26-ex.1.2;3.4'],
   ['html', '/acts.28.31-rom.1.1;16.1'],
   ['html', '/gen.50.26-ex.1.2;3.4'],
+  // A JST piece after another piece (the package dropped it)
+  ['html', '/john.3.16;jst.john.3.16'],
+  ['api', '/john.3.16;jst.john.3.16'],
+  ['meta', '/john.3.16;jst.john.3.16'],
+  ['raw', '/john.3.16;jst.john.3.16'],
+  ['html', '/john.3;jst.john.3'],
+  ['api', '/john.3;jst.john.3'],
+  ['meta', '/john.3;jst.john.3'],
+  ['raw', '/john.3;jst.john.3'],
   ['passage', '/passage?ref=Malachi+4%3A6&version=KJV&hversion=KJV&options%5Bstart%5D=23144&options%5Bend%5D=23147&searchterm='],
 ];
 
