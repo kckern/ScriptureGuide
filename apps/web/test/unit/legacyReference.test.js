@@ -1,7 +1,7 @@
 import { describe, it, test, expect } from 'vitest';
 import {
   splitRuns,
-  formatReference, referenceFromRows, chapterRef, slugifyRef, versionImg, isConsecutive,
+  formatReference, referenceFromRows, slugifyRef, versionImg, isConsecutive,
 } from '../../src/domain/rules/legacyReference.js';
 
 // Synthetic book table: Genesis (book 1) chapters 1–3 with 31, 25, 24 verses, verse ids from 1;
@@ -66,13 +66,13 @@ describe('referenceFromRows (AJAX endpoints: referenceFromVerseIds over verse ro
     expect(referenceFromRows([gen(5, 1, 5, 31), gen(9, 1, 9, 31)])).toBe('Genesis 1:5,9');
   });
   it('no rows give an empty string', () => expect(referenceFromRows([])).toBe(''));
-});
-
-describe('chapterRef', () => {
-  it('uses the short book title', () => {
-    expect(chapterRef(gen(549, 22, 1))).toBe('Gen. 22');
+  it('takes the ids in caller order when given (PHP never sorted them)', () => {
+    const rows = [gen(1, 1, 1, 3), gen(2, 1, 0, 3), gen(3, 1, 2, 3), gen(4, 1, 3, 3)];
+    expect(referenceFromRows(rows, 'book_title', [1, 3, 4])).toBe('Genesis 1');
+    expect(referenceFromRows(rows)).toBe('Genesis 1:1,0,2–3');
   });
 });
+
 
 test('slugifyRef (scriptutil::slufigyRef)', () => {
   expect(slugifyRef('Isa. 1')).toBe('isa.1');

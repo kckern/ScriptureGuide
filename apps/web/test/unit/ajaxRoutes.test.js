@@ -19,6 +19,7 @@ const META = {
   1: meta(1, 'Genesis', 'Gen.', 1, 1, 31),
   2: meta(2, 'Genesis', 'Gen.', 1, 2, 31),
 };
+for (let v = 4; v <= 24; v++) META[548 + v] = meta(548 + v, 'Genesis', 'Gen.', 22, v, 24);
 const TEXTS = {
   549: '§¶｟And｠ it came to pass after these things, that God did tempt Abraham',
   550: '¶And he said, Take now thy son',
@@ -63,7 +64,9 @@ beforeEach(() => {
   const presenter = { serialize: r => ({ ref: r.ref, verses: [], h3ByVerse: {} }) };
   const references = { parse: ref => ({ verseIds: ref ? [26137] : [] }) };
   // PHP blocks of a non-numeric verse_id (LegacyBlockService), as cleanReference titled them
-  const blocks = { blocks: vi.fn(async ref => [{ orig: ref.charAt(0).toUpperCase() + ref.slice(1), book: ref, verse_ids: [] }]) };
+  // and the verse ids of a chapter (determineChapter's lookupVerseIds)
+  const CHAPTERS = { 'Genesis 22': Array.from({ length: 24 }, (_, i) => 549 + i), 'John 3': [26137], '1 John 4': [30613], 'Doctrine and Covenants 13': [37991] };
+  const blocks = { blocks: vi.fn(async ref => [{ orig: ref.charAt(0).toUpperCase() + ref.slice(1), book: ref, verse_ids: CHAPTERS[ref] || [] }]) };
   const controller = new AjaxController({ lookup, references, repo, presenter, render, blocks });
   app = express();
   app.use(express.urlencoded({ extended: true }));
@@ -134,6 +137,18 @@ describe('/vbox', () => {
     expect($('.verpanel tr').first().find('td.gridbox').length).toBe(3);
     // the comparison panel is empty, like the live site
     expect($('.diffpanel .original').text()).toBe('');
+  });
+  it('names the chapter of each verse as determineChapter did (referenceFromVerseIds over its verses)', async () => {
+    repo.findReferences.mockResolvedValue([{ verse_id: 37991, type: 'xref', significant: 0 }]);
+    repo.findTexts.mockResolvedValue([]);
+    const dc13 = { verse_id: 37991, book_id: 82, chapter: 13, verse: 1, chapter_max: 1, book_title: 'Doctrine and Covenants', book_title_short: 'D&C', volume_id: 4 };
+    const base = repo.findVerseMeta.getMockImplementation();
+    repo.findVerseMeta.mockImplementation(async ids => [...(await base(ids)), ...(ids.includes(37991) ? [dc13] : [])]);
+    const $ = cheerio.load((await request(app).get('/vbox?verse_id=26137')).text);
+    const ref = $('.refpanel tr.matches td.gridbox').eq(0);
+    expect(ref.find('a').text()).toBe('D&C 13:1');
+    expect(ref.find('.gridtext').attr('chapter')).toBe('d&c.13.1');
+    expect($('.refpanel tr.original .gridtext').attr('chapter')).toBe('john.3.16');
   });
   it('accepts POST and escapes request values', async () => {
     const res = await request(app).post('/vbox').type('form').send({ verse_id: '26137', seq: "'><script>" });

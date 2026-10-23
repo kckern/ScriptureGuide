@@ -12,7 +12,7 @@ import { renderSettings, SETTINGS_VOLUMES } from '../../presentation/ajax/settin
 import {
   flattenText, transposeRef, baseVersion, highlightSearchTerm,
 } from '../../domain/rules/legacyText.js';
-import { referenceFromRows, chapterRef, slugifyRef, versionImg } from '../../domain/rules/legacyReference.js';
+import { referenceFromRows, slugifyRef, versionImg } from '../../domain/rules/legacyReference.js';
 import { logError } from '../log.js';
 
 // The PHP site's AJAX endpoints: vbox (versebox.php), passage (passage_script.php),
@@ -102,6 +102,19 @@ export class AjaxController {
     return escapeHtml(await plainFor(await this.blocks.blocks(isEmptyReference(raw) ? '' : raw), { [ver]: ver }));
   }
 
+  // versebox.php chapterSlug: scriptutil::determineChapter named the chapter of a verse with
+  // referenceFromVerseIds over the verse ids of "<book_title> <chapter>" (book_title_short):
+  // "Gen. 22", but "D&C 13:1" (one verse) and "Dhpada 2:21–32" (verses numbered across chapters).
+  // "book_id|chapter" → reference, for the chapters of the given verse rows.
+  async chapterReferences(rows) {
+    const chapters = [...new Map(rows.map(r => [`${r.book_id}|${r.chapter}`, r])).entries()];
+    const idLists = await Promise.all(chapters.map(async ([, r]) =>
+      (await this.blocks.blocks(`${r.book_title} ${r.chapter}`)).flatMap(b => (Array.isArray(b.verse_ids) ? b.verse_ids : []))));
+    const all = [...new Set(idLists.flat())];
+    const meta = all.length ? await this.repo.findVerseMeta(all) : [];
+    return new Map(chapters.map(([key], i) => [key, referenceFromRows(meta, 'book_title_short', idLists[i])]));
+  }
+
   // GET|POST /vbox — the verse analysis box (versions, references, comparison).
   async vbox(req, res) {
     try {
@@ -136,7 +149,12 @@ export class AjaxController {
       ]);
       const metaById = new Map(meta.map(m => [m.verse_id, m]));
       const textById = new Map(texts.map(t => [t.verse_id, t]));
-      const chapterSlug = id => (metaById.has(id) ? slugifyRef(chapterRef(metaById.get(id))) : '');
+      const chapterIds = [verseId, ...groups.map(g => g[g.length - 1].verse_id), ...versions.map(v => v.verse_id)];
+      const chapters = await this.chapterReferences(chapterIds.map(id => metaById.get(id)).filter(Boolean));
+      const chapterSlug = id => {
+        const m = metaById.get(id);
+        return m ? slugifyRef(chapters.get(`${m.book_id}|${m.chapter}`)) : '';
+      };
 
       const refs = groups.map(group => {
         const first = group[0];

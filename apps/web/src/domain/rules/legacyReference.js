@@ -35,22 +35,18 @@ export function versionImg(version, volumeId) {
   return String(version).replace(/\*.*$/, '').toLowerCase();
 }
 
-// Chapter of a verse row: "Gen. 22" (versebox.php chapterSlug, before slugifyRef).
-export function chapterRef(row, bookField = 'book_title_short') {
-  return `${row[bookField]} ${row.chapter}`;
-}
-
 // referenceFromVerseIds over verse rows { verse_id, book_id, chapter, verse, chapter_max,
-// book_title, book_title_short } (VerseboxRepository.findVerseMeta), in row order: the AJAX
-// endpoints (versebox.php, passage_script.php) called referenceFromVerseIds on these ids.
-export function referenceFromRows(rows, bookField = 'book_title') {
+// book_title, book_title_short } (VerseboxRepository.findVerseMeta), for the ids in caller order
+// (row order by default): the AJAX endpoints (versebox.php, passage_script.php) called
+// referenceFromVerseIds on these ids.
+export function referenceFromRows(rows, bookField = 'book_title', ids = null) {
   const info = new Map();
   const max = new Map();
   for (const r of rows) {
     info.set(Number(r.verse_id), { book: r[bookField], bookId: r.book_id, chapter: r.chapter, verse: r.verse });
     max.set(`${r.book_id}|${r.chapter}`, r.chapter_max == null ? undefined : Number(r.chapter_max));
   }
-  return formatReference([...info.keys()], info, (b, c) => max.get(`${b}|${c}`));
+  return formatReference(ids ?? [...info.keys()], info, (b, c) => max.get(`${b}|${c}`));
 }
 
 const first = m => m.values().next().value;
