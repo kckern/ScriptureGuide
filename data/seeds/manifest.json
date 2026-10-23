@@ -6,6 +6,11 @@
     "lds_scriptures_verses": { "scope": "all", "blank": ["verse_scripture"] },
     "scripture_versions": { "scope": "version", "versionColumn": "id", "blank": ["desc"] },
     "scripture_verses": { "scope": "version", "versionColumn": "version" },
-    "scripture_headings": { "scope": "version", "versionColumn": "version" }
+    "scripture_headings": { "scope": "version", "versionColumn": "version" },
+    "scripture_references": {
+      "scope": "pairs",
+      "pairColumns": ["type", "source"],
+      "allow": [["JST", "JST"], ["1835", "concordance"], ["BOC", "concordance"], ["BoM", "Quotes"], ["BoM", "Allusions"]]
+    }
   }
 }

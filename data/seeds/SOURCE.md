@@ -11,6 +11,7 @@ Public seed data for local development, CI, and the `scripture-guide-seed` image
 | `04-scripture_versions.sql.gz` | 12 | Version metadata for the public versions below. `desc` is exported blank (the edition blurbs in the private database may be quoted from a modern source) | |
 | `05-scripture_verses.sql.gz` | 148,802 | Verse text, see the version table below | See below |
 | `06-scripture_headings.sql.gz` | 1,724 | Book titles, chapter headings, headnotes and chapter summaries of the public versions only | Printed with each public-domain edition |
+| `07-scripture_references.sql.gz` | 41,758 | Cross-references compiled by KC Kern, see below | Owner's own work; published by the owner, 2026-10-23 |
 
 ## Public versions
 
@@ -31,10 +32,22 @@ Public seed data for local development, CI, and the `scripture-guide-seed` image
 
 Owner decision #8 (2026-10-22) judged these transcriptions free to publish. Decision #9 allows headings, cross-references and footnotes, but only those attached to a public version.
 
+## Cross-references
+
+Compiled by KC Kern. Rows pair two verse ids with their reference strings; they hold no verse text. `manifest.json` lists the `(type, source)` pairs that may be exported, and `check-seeds.mjs` rejects any other pair.
+
+| `type` | `source` | Rows | Contents |
+|---|---|---|---|
+| `JST` | `JST` | 31,360 | Joseph Smith Translation ↔ KJV verse mapping |
+| `1835` | `concordance` | 5,636 | Modern D&C → 1835 Doctrine and Covenants |
+| `BOC` | `concordance` | 3,806 | Modern D&C → Book of Commandments |
+| `BoM` | `Quotes` | 777 | Bible passages quoted in the Book of Mormon |
+| `BoM` | `Allusions` | 179 | Bible passages alluded to in the Book of Mormon |
+
 ## Not seeded
 
-- Versions `GNV` (1599 Geneva) and `WYC` (Wycliffe): the database text is a modern-spelling edition, not the original, so it is likely a copyrighted modernisation. Held for the owner.
-- `scripture_references` (cross-references): rows are keyed by verse id and not tied to a version. Sources: LDS edition footnote cross-references (`footnote`), JST and Pearl of Great Price parallels, Bible quotations and allusions in the Book of Mormon, and the 1835 D&C and Book of Commandments concordances. Authorship not confirmed.
+- Versions `GNV` (1599 Geneva) and `WYC` (Wycliffe): the database text is a modern-spelling edition, not the original, so it is likely a copyrighted modernisation. Kept private (owner, 2026-10-22).
+- Cross-references not compiled by the owner: the LDS edition footnote cross-references (`xref`/`footnote`, © Intellectual Reserve) and the Pearl of Great Price parallels (`PGP`).
 - `scripture_footnotes`: only rows for licensed or non-public study editions exist.
 - Facsimile index, word index, annotations.
 

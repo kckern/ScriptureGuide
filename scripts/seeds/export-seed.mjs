@@ -10,8 +10,16 @@ const q = id => '`' + id + '`';
 export function buildSelect(table, spec, allColumns, publicVersions) {
   let cols = spec.columns ?? allColumns;
   if (spec.scope === 'version') cols = [spec.versionColumn, ...cols.filter(c => c !== spec.versionColumn)];
+  // Pair scope: only rows whose pair columns match an allowed pair, those columns written first
+  // so check-seeds can read them back.
+  if (spec.scope === 'pairs') cols = [...spec.pairColumns, ...cols.filter(c => !spec.pairColumns.includes(c))];
   const blank = new Set(spec.blank ?? []);
   const select = cols.map(c => (blank.has(c) ? `'' AS ${q(c)}` : q(c))).join(', ');
+  if (spec.scope === 'pairs') {
+    const tuple = `(${spec.pairColumns.map(() => '?').join(', ')})`;
+    const where = ` WHERE (${spec.pairColumns.map(q).join(', ')}) IN (${spec.allow.map(() => tuple).join(', ')})`;
+    return { sql: `SELECT ${select} FROM ${q(table)}${where} ORDER BY 1, 2, 3, 4`, params: spec.allow.flat(), cols };
+  }
   const where = spec.scope === 'version' ? ` WHERE ${q(spec.versionColumn)} IN (?)` : '';
   const order = spec.scope === 'version' ? ' ORDER BY 1, 2' : ' ORDER BY 1';
   return { sql: `SELECT ${select} FROM ${q(table)}${where}${order}`, params: spec.scope === 'version' ? [publicVersions] : [], cols };
