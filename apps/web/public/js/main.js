@@ -966,34 +966,6 @@ $(function(){
  	return false;
  }
 
-var loginCheck = function() {
-
-	$.featherlight.close()
-	if(auth2.isSignedIn.get() && typeof Cookies.get('sg_user') != "undefined")
-	{
-		
-          return true;
-	}
-	else
-	{
-		Cookies.remove('sg_user');
-		Cookies.remove('sg_mail');
-		Cookies.remove('sg_face');
-		$("#login_button")[0].click();
-		return false;
-	}
-
-
-};
-
-var logout = function() {
-		$.featherlight.close()
-		Cookies.remove('sg_user');
-		Cookies.remove('sg_mail');
-		Cookies.remove('sg_face');
-		auth2.signOut();
-};
-
 function matchFormat(selecter)
 {
 	$("select[vol="+$(selecter).attr("vol")+"][cmp=f] option:selected").removeAttr('selected', '');
@@ -1047,9 +1019,6 @@ function saveSettings()
 	  });
 }
 
-var googleUser = {};
-
-var signedIn = false;
 $(document).ready(function(){
 		
 		
@@ -1072,7 +1041,6 @@ $(document).ready(function(){
 		
 
 
-	$('#logout_button').click(function(){auth2.signOut()});
 		
 	$(window).scroll(function(){
 			

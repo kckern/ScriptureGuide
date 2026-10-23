@@ -110,7 +110,6 @@ function activateCopyButtons() {
     .map(i => i.outerHTML = `<div style="display:flex">${i.outerHTML}<div class="copyprose"><img onClick="copyToClipbord(this)" src="/img/copy.svg"/></div></div>`);
 }
 </script>
-<script src="https://apis.google.com/js/api:client.js"></script>
 <script src="/js/main.js"></script>
 </head>
 <body class="<%- typeof browserClass !== 'undefined' ? browserClass : '' %>">
