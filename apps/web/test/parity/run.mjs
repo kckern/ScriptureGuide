@@ -82,7 +82,7 @@ for (const [format, path] of requests) {
     expected = `STATUS ${l.status}\n` + safe(format, l);
     actual = `STATUS ${n.status}\n` + safe(format, n);
     const c = compare(expected, actual);
-    const reason = allowReason(allow, format, path, l.body);
+    const reason = allowReason(allow, format, path, l.body, { live: expected, node: actual });
     verdict = c.equal ? 'pass' : reason ? 'allowed' : 'fail';
     if (!c.equal) {
       const name = diffName(format, path);

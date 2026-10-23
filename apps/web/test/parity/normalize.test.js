@@ -1,5 +1,5 @@
 import { describe, test, expect } from 'vitest';
-import { canonicalHtml, canonicalJson, compare, canonicalAsset, encodeCacheEntry, decodeCacheEntry, homeCleanups, rawSearchterm } from './normalize.mjs';
+import { canonicalHtml, canonicalJson, compare, canonicalAsset, encodeCacheEntry, decodeCacheEntry, homeCleanups, rawSearchterm, staleSectionHeading } from './normalize.mjs';
 
 describe('canonicalHtml', () => {
   test('ignores quote style, attribute order and whitespace between tags', () => {
@@ -96,5 +96,48 @@ describe('rawSearchterm', () => {
   test('decodes the escaped "<" too, and leaves a different term different', () => {
     expect(rawSearchterm('searchterm = "\\u003cb\\u003e";')).toBe('searchterm = "<b>";');
     expect(rawSearchterm('searchterm = "faith";')).not.toBe('searchterm = "hope";');
+  });
+});
+
+// Canonical NRSV Ps. 23 (shortened): live heads it with Psalm 22's section and an ellipsis.
+describe('staleSectionHeading', () => {
+  const span = (id, text) => [`        <span class="verse v_${id} prose" verse_id="${id}">`, `          "${text}"`];
+  const nav = labels => ['      <div class="passage ver_">', '        <div class="chapterNav">',
+    '          <a class="prev" href="/nrsv/ps.22">', `            "${labels[0]}"`,
+    '          <a class="next" href="/nrsv/ps.24">', `            "${labels[1]}"`];
+  const page = (head, first, labels) => ['STATUS 200', 'TITLE Psalms 23 | Scripture Guide', '<div id="container">',
+    '      <div class="passage ver_NRSV">', ...head, '        <p class="prose">', ...span(14237, first), ...span(14238, 'He makes me lie down'),
+    ...nav(labels)].join('\n');
+  const stale = ['        <h3 class="heading" heading_verse_id="14206" last_verse_id="14236" verse_count="30">', '          "Plea for Deliverance"',
+    '        <p class="ellipses" heading_verse_id="14206" last_verse_id="14236" verse_count="31">', '          "..."'];
+  const own = ['        <h3 class="heading" heading_verse_id="14237" last_verse_id="14242" verse_count="5">', '          "The Divine Shepherd"'];
+  const live = page(stale, '§A Psalm of David.', ['◀ Psalms 22', 'Psalms 24 ▶']);
+  const node = page(own, '§A Psalm of David.', ['◀ Plea for Deliverance', 'Entrance into the Temple ▶']);
+
+  test('puts the heading of the first verse in place of live\'s heading before it, and the nav labels', () => {
+    expect(staleSectionHeading(live, node)).toBe(node);
+  });
+  test('leaves other differences', () => {
+    const other = node.replace('He makes me lie down', 'He maketh me to lie down');
+    expect(staleSectionHeading(live, other)).not.toBe(other);
+  });
+  test('only when the first verse opens with "§" but not "§¶"', () => {
+    expect(staleSectionHeading(live.replace('"§A', '"A'), node.replace('"§A', '"A'))).toBeNull();
+    expect(staleSectionHeading(live.replace('"§A', '"§¶A'), node.replace('"§A', '"§¶A'))).toBeNull();
+  });
+  test('only when the ellipsis ends right before the first verse', () => {
+    expect(staleSectionHeading(live.replace(/last_verse_id="14236"/g, 'last_verse_id="14235"'), node)).toBeNull();
+  });
+  test('only when Node heads the passage at the first verse', () => {
+    expect(staleSectionHeading(live, node.replace('heading_verse_id="14237"', 'heading_verse_id="14206"'))).toBeNull();
+  });
+  test('nav labels only where the links are the same', () => {
+    const moved = node.replace('href="/nrsv/ps.24"', 'href="/nrsv/ps.25"');
+    expect(staleSectionHeading(live, moved)).not.toBe(moved);
+  });
+  test('in the api "output" HTML', () => {
+    const json = out => 'STATUS 200\n' + JSON.stringify({ input: 'ps.23', output: out.split('\n').slice(3).join('\n') }, null, 1);
+    expect(staleSectionHeading(json(live), json(node))).toBe(json(node));
+    expect(staleSectionHeading(json(live), json(node).replace('ps.23', 'ps.24'))).not.toBe(json(node).replace('ps.23', 'ps.24'));
   });
 });

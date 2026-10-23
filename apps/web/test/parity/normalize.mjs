@@ -100,3 +100,73 @@ export function rawSearchterm(body) {
     try { return `${pre}"${JSON.parse(literal)}"${end}`; } catch { return all; }
   });
 }
+
+// The live site headed a passage whose first verse opens with § but not §¶ (a psalm
+// superscription, NIV Ps. 23:1 "§A psalm of David.¶▼…") with the section before it and an
+// ellipsis; Node heads it with the section at that verse (owner decision 2026-10-22), and a
+// whole chapter that is one section gets section nav. Given the canonical live and Node
+// responses (html, or api with its "output"), returns live with that heading and the nav labels
+// taken from Node, or null when live does not show the pattern. Only these lines are taken:
+// live's h3 and ellipsis must end right before the first verse, Node's h3 must be at that verse,
+// and a nav label only where both sides link to the same place. Everything else still compares.
+export function staleSectionHeading(live, node) {
+  const [liveHead, liveRest] = splitStatus(live);
+  const [nodeHead, nodeRest] = splitStatus(node);
+  const l = parseJsonObject(liveRest);
+  const n = parseJsonObject(nodeRest);
+  if (l || n) {
+    if (typeof l?.output !== 'string' || typeof n?.output !== 'string') return null;
+    const output = staleHeadingHtml(l.output, n.output);
+    return output === null ? null : liveHead + JSON.stringify({ ...l, output }, null, 1);
+  }
+  const html = staleHeadingHtml(liveRest, nodeRest);
+  return html === null ? null : liveHead + html;
+}
+
+function splitStatus(text) {
+  const m = text.match(/^STATUS \d+\n/);
+  return m ? [m[0], text.slice(m[0].length)] : ['', text];
+}
+
+function parseJsonObject(text) {
+  if (!text.trimStart().startsWith('{')) return null;
+  try { return JSON.parse(text); } catch { return null; }
+}
+
+const indent = line => line.match(/^\s*/)[0].length;
+// The lines of the element at i: its tag line and everything indented deeper after it
+function elementEnd(lines, i) {
+  let j = i + 1;
+  while (j < lines.length && indent(lines[j]) > indent(lines[i])) j++;
+  return j;
+}
+const attr = (line, name) => line.match(new RegExp(`\\s${name}="([^"]*)"`))?.[1];
+
+function staleHeadingHtml(live, node) {
+  const L = live.split('\n');
+  const N = node.split('\n');
+  const i = L.findIndex(line => /^\s*<h3 class="heading"/.test(line));
+  if (i < 0) return null;
+  const ellipsis = elementEnd(L, i);
+  if (!/^\s*<p class="ellipses"/.test(L[ellipsis] ?? '') || indent(L[ellipsis]) !== indent(L[i])) return null;
+  const last = Number(attr(L[ellipsis], 'last_verse_id'));
+  if (attr(L[i], 'last_verse_id') !== String(last) || attr(L[ellipsis], 'heading_verse_id') !== attr(L[i], 'heading_verse_id')) return null;
+  const rest = elementEnd(L, ellipsis);
+  // The first verse after it: the next span.verse and its text line
+  const s = L.findIndex((line, k) => k >= rest && /^\s*<span class="verse /.test(line));
+  if (s < 0 || L.slice(rest, s).some(line => !/^\s*<(p|blockquote) /.test(line))) return null;
+  const first = Number(attr(L[s], 'verse_id'));
+  const text = L[s + 1]?.trim() ?? '';
+  if (first !== last + 1 || !text.startsWith('"§') || text.startsWith('"§¶')) return null;
+  // Node: the same lines before, then its h3 at the first verse, then the same verse lines
+  if (L.slice(0, i).join('\n') !== N.slice(0, i).join('\n')) return null;
+  if (!/^\s*<h3 class="heading"/.test(N[i] ?? '') || attr(N[i], 'heading_verse_id') !== String(first)) return null;
+  const out = [...L.slice(0, i), ...N.slice(i, elementEnd(N, i)), ...L.slice(rest)];
+  // Nav labels where both sides link to the same place
+  for (let k = 0; k < out.length && k < N.length; k++) {
+    const link = /^\s*<a class="(prev|next)" href="[^"]*">$/;
+    if (link.test(out[k]) && out[k] === N[k] && out.slice(Math.max(0, k - 3), k).some(x => /<div class="chapterNav">/.test(x)) &&
+        /^\s*"/.test(out[k + 1] ?? '') && /^\s*"/.test(N[k + 1] ?? '')) out[k + 1] = N[k + 1];
+  }
+  return out.join('\n');
+}

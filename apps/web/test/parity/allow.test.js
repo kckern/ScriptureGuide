@@ -42,3 +42,22 @@ describe('allowReason', () => {
     expect(allowReason(a, 'html', '/abc-def1')).toBeUndefined();
   });
 });
+
+describe('allowReason: a "<format> check:<name>" key', () => {
+  const a = { '* check:staleSectionHeading': 'live heads the passage with the section before it' };
+  const head = (id, last) => `<h3 class="heading" heading_verse_id="${id}" last_verse_id="${last}">\n  "H${id}"`;
+  const verse = '<p class="prose">\n  <span class="verse v_9" verse_id="9">\n    "§A psalm."';
+  const live = `STATUS 200\n${head(5, 8)}\n<p class="ellipses" heading_verse_id="5" last_verse_id="8">\n  "..."\n${verse}`;
+  const node = `STATUS 200\n${head(9, 12)}\n${verse}`;
+  test('allows a request when the named check passes on the canonical live and Node responses', () => {
+    expect(allowReason(a, 'html', '/niv/ps.23', '', { live, node })).toBe('live heads the passage with the section before it');
+    expect(allowReason(a, 'api', '/niv/ps.23', '', { live, node })).toBe('live heads the passage with the section before it');
+  });
+  test('not when it fails, or without the responses', () => {
+    expect(allowReason(a, 'html', '/niv/ps.23', '', { live, node: node.replace('A psalm', 'Other') })).toBeUndefined();
+    expect(allowReason(a, 'html', '/niv/ps.23', '')).toBeUndefined();
+  });
+  test('an unknown check never matches', () => {
+    expect(allowReason({ 'html check:nope': 'x' }, 'html', '/', '', { live, node })).toBeUndefined();
+  });
+});
