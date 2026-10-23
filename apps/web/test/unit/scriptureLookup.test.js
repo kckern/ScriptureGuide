@@ -169,11 +169,12 @@ describe('splitBlocks: cost of a long junk reference', async () => {
 describe('lookup: the passage heading of a verse that starts a section', () => {
   const PS = { 22: [206, 207, 208], 23: [209, 210, 211], 24: [212, 213] };
   const SECTIONS = [[206, 'Psalm 22'], [209, 'Psalm 23'], [212, 'Psalm 24']];
+  const NO_ROW_AT_23 = SECTIONS.filter(([v]) => v !== 209);
   const chapterOf = id => Number(Object.keys(PS).find(c => PS[c].includes(id)));
   const verseOf = id => PS[chapterOf(id)].indexOf(id) + 1;
-  const lastOf = start => { const i = SECTIONS.findIndex(([v]) => v === start); return SECTIONS[i + 1] ? SECTIONS[i + 1][0] - 1 : 213; };
 
-  function service(firstText) {
+  function service(firstText, sections = SECTIONS) {
+    const lastOf = start => { const i = sections.findIndex(([v]) => v === start); return sections[i + 1] ? sections[i + 1][0] - 1 : 213; };
     const text = id => (id === 209 ? firstText : 'He leadeth me.');
     const refs = { parse: t => {
       const ch = Number(t.match(/^ps\.(\d+)$/)[1]);
@@ -188,13 +189,13 @@ describe('lookup: the passage heading of a verse that starts a section', () => {
     const navRow = chapter => ({ volume_id: 1, book_title: 'Psalms', book_title_short: 'Ps.', chapter });
     const headings = {
       findBookId: async () => ({ book_id: 19, lds_org: 'ps', book_title: 'Psalms', book_title_short: 'Ps.' }),
-      findByVerseIds: async ids => SECTIONS.filter(([v]) => ids.includes(v))
+      findByVerseIds: async ids => sections.filter(([v]) => ids.includes(v))
         .map(([verse_id, t]) => ({ verse_id, version: 'NIV', type: 'heading', text: t, last_verse_id: lastOf(verse_id) })),
       // Mirrors HeadingRepository.findChapterHeading: the latest heading at or before the
       // first verse, or before it when the passage does not start a section
       findChapterHeading: async (first, bookId, version, isNewSection) => {
         const at = isNewSection ? first : first - 1;
-        const s = SECTIONS.filter(([v]) => v <= at).pop();
+        const s = sections.filter(([v]) => v <= at).pop();
         return s ? { verse_id: s[0], version, heading: s[1], last: lastOf(s[0]) } : null;
       },
       findChapterNavRows: async first => ({ current: navRow(chapterOf(first)), prev: navRow(chapterOf(first) - 1), next: navRow(chapterOf(first) + 1) }),
@@ -229,5 +230,19 @@ describe('lookup: the passage heading of a verse that starts a section', () => {
   test('without "§" the chapter nav stays', async () => {
     const nav = (await service('The LORD is my shepherd').lookup('ps.23', { version: 'NIV' })).chapterNav;
     expect(nav.prev).toMatchObject({ href: '/ps.22', label: 'Psalms 22' });
+  });
+  // NET Ps. 90:1 "Book 4 (Psalms 90-106)§A prayer of Moses…": a division label before the §
+  test('a "§" after a leading label starts a section when the verse has a heading row (NET Ps. 90)', async () => {
+    const r = await service('Book 4 (Psalms 90-106)§A prayer of Moses.¶▼Lord, you have been our refuge').lookup('ps.23', { version: 'NIV' });
+    expect(r.chapterHeading).toMatchObject({ verse_id: 209, heading: 'Psalm 23' });
+    expect(r.chapterNav.prev).toMatchObject({ label: 'Psalm 22' });
+  });
+  test('not without a heading row at the verse', async () => {
+    const r = await service('Book 4 (Psalms 90-106)§A prayer of Moses.¶▼Lord', NO_ROW_AT_23).lookup('ps.23', { version: 'NIV' });
+    expect(r.chapterHeading).toMatchObject({ verse_id: 206, heading: 'Psalm 22' });
+  });
+  test('a verse that ends the section before and starts one with "§¶" keeps the heading before it', async () => {
+    const r = await service('Then Nathan went home.§¶The Lord struck the child').lookup('ps.23', { version: 'NIV' });
+    expect(r.chapterHeading).toMatchObject({ verse_id: 206, heading: 'Psalm 22' });
   });
 });

@@ -87,12 +87,15 @@ data.verses.forEach(verse => {
 
 // Each heading starts a new passage (<div class="passage ver_X">), as in the PHP renderer.
 // Header rows around the h3 follow scriptutil::buildHeading; the "extras" (titles, headnote,
-// background, summary) appear only when the passage has more than one verse and starts a section.
-const showExtras = data.verseCount > 1 && data.startsSection;
+// background, summary) appear only when the passage has more than one verse and starts a section,
+// or on the heading of a section that starts inside the first verse, after text that opens it
+// (a book's incipit, ESV Obad. 1 "¶The vision of Obadiah.§¶…": live shows the book title there).
+const extrasFor = h3 => data.verseCount > 1 &&
+  (data.startsSection || (h3 != null && data.firstVerseId != null && h3.verse_id === data.firstVerseId));
 const faxIds = new Set(data.faxIds || []);
 const types = id => (data.typesByVerse && data.typesByVerse[id]) || {};
 
-function headerRows(t, h3html, version) {
+function headerRows(t, h3html, version, showExtras) {
   let out = '';
   if (showExtras) {
     if (t.title) {
@@ -167,16 +170,22 @@ paraGroups.forEach(group => {
 });
 
 let passagesHtml = '';
-for (const p of passages) {
+for (const [i, p] of passages.entries()) {
   let header = '';
   if (p.h3) {
     const ids = [...new Set(p.ids)];
     const fax = ids.length > 0 && ids.every(id => faxIds.has(id));
-    header = headerRows(p.t, buildH3({ ...p.h3, fax }, version), p.h3.headVersion || version) + p.ellipsis;
+    header = headerRows(p.t, buildH3({ ...p.h3, fax }, version), p.h3.headVersion || version, extrasFor(p.h3)) + p.ellipsis;
   }
+  // Text of the first verse before the section that starts inside it (a division label, NIV
+  // Ps. 1:1 "§Psalms 1–41§¶…"; an incipit, ESV Obad. 1:1): a passage of its own in the version,
+  // as on live (which headed it with the section before; Node gives it none).
+  const leadIn = !p.h3 && i === 0 && passages[1]?.h3?.verse_id === data.firstVerseId &&
+    p.ids.length > 0 && p.ids.every(id => id === data.firstVerseId);
+  const passageVersion = p.h3 ? (p.h3.headVersion || version) : (leadIn ? version : '');
   passagesHtml += bare
     ? `${header}${p.body}`
-    : `\n      <div class="passage ver_${p.h3 ? (p.h3.headVersion || version) : ''}">${header}${p.body}\n      </div>`;
+    : `\n      <div class="passage ver_${passageVersion}">${header}${p.body}\n      </div>`;
 }
 
 // Chapter nav: its own passage after the text (no version on its first element)

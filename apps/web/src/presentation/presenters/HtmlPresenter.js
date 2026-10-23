@@ -4,6 +4,7 @@ import { displayReference, blankHeading } from '../../domain/rules/referencePars
 import { versionImg, formatReference as referenceFromVerseIds, splitRuns } from '../../domain/rules/legacyReference.js';
 import { isEmptyRange } from '../../domain/rules/blockIds.js';
 import { renderHeadingHtml, renderHeadingFields, RENDERED_HEADING_FIELDS, segmentFormats, escapeHtml, isCompoundLine } from '../../domain/rules/legacyText.js';
+import { verseStartsSection } from '../../domain/rules/sectionStart.js';
 
 // versionImg takes lds_scriptures_volumes.volume_id; Reference.volume is a volume code.
 // Verses outside the five volumes (null) have no LDS cover: 0 gives "lds".
@@ -435,7 +436,8 @@ export class HtmlPresenter {
       blank: result.verses.length ? null : escapeHtml(result.legacyBlock ? result.legacyBlock.orig : blankHeading(result.reference.query)),
       // A multi-book range whose ends matched nothing ([null]): PHP rendered an empty section
       emptySection: !!result.legacyBlock && isEmptyRange(result.legacyBlock),
-      startsSection: (result.verses[0]?.text || '').startsWith('§'),
+      startsSection: verseStartsSection(result.verses[0]?.text, !!h3ByVerse[result.verses[0]?.id]),
+      firstVerseId: result.verses[0]?.id ?? null,
       faxIds: result.config._faxIds || [],
       typesByVerse,
       query: result.reference.query,
@@ -464,12 +466,13 @@ export class HtmlPresenter {
             // Break paragraph if first linebreak part: meta has ¶, or single-segment verse with DB paraBreak
             paraBreak: lbIdx === 0 && (seg.meta.includes('¶') || (i === 0 && segments.length === 1 && v.paraBreak)),
             // §¶ in meta means this segment triggers the section heading for this verse_id.
-            // So does the start of a passage's first verse when it opens with § alone (a psalm
-            // superscription, "§A psalm of David.¶▼…") and no later segment does: the lookup
+            // So does the start of a passage's first verse when it starts a section with § alone
+            // (verseStartsSection: a psalm superscription "§A psalm of David.¶▼…", or a label
+            // before it, "Book 4 (Psalms 90-106)§A prayer…") and no later segment does: the lookup
             // heads the passage with the section at that verse, which PHP never showed (owner
-            // decision 2026-10-22).
+            // decision 2026-10-22). The heading row's presence is h3ByVerse's to decide.
             isSection: lbIdx === 0 && (/^§/.test(seg.meta) || (i === 0 && v === result.verses[0] &&
-              seg.text.startsWith('§') && !segments.some(s => /^§/.test(s.meta)))),
+              verseStartsSection(v.text, true) && !segments.some(s => /^§/.test(s.meta)))),
             segIndex: i,
             segCount: segments.length,
             lbIndex: lbIdx

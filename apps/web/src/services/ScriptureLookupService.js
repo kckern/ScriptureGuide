@@ -12,6 +12,7 @@ import { numericVerseIds, cleanReference } from '../domain/rules/cleanReference.
 import { parseVerseIdList } from '../domain/rules/referenceParsing.js';
 import { isCompoundLine } from '../domain/rules/legacyText.js';
 import { wantsChapterNav, chapterNavLinks, sectionNavLinks, sectionRef } from '../domain/rules/chapterNav.js';
+import { verseStartsSection } from '../domain/rules/sectionStart.js';
 
 // Verse rows grouped by chapter, in order, for one synthetic heading per chapter. A chapter whose
 // verses are all "*" lines (merged into an earlier verse: 2HRBOM, CTBOM) joins the run before it.
@@ -199,13 +200,15 @@ export class ScriptureLookupService {
 
       if (bookInfo) {
         const { book_id: bookId, lds_org: bookSlug, book_title_short: bookTitleShort, book_title: bookTitle } = bookInfo;
-        // A first verse that opens with § starts a section, so the passage takes the heading at
-        // that verse. PHP's loadHeading only did so for §¶, so a psalm whose superscription opens
-        // with § alone (NIV Ps. 23:1 "§A psalm of David.¶▼…") was headed by the psalm before it;
-        // fixed by owner decision 2026-10-22. Raw, meta and latex already read the heading there,
-        // and HtmlPresenter treats § as a section start.
+        // A first verse that starts a section (verseStartsSection: § at its start, or after a
+        // leading label when the verse has a heading row) gives the passage the heading at that
+        // verse. PHP's loadHeading only did so for §¶, so a psalm whose superscription opens with
+        // § alone (NIV Ps. 23:1 "§A psalm of David.¶▼…", NET Ps. 90:1 "Book 4 (Psalms 90-106)§A
+        // prayer…") was headed by the psalm before it; fixed by owner decision 2026-10-22. Raw,
+        // meta and latex already read the heading there.
         const firstVerseText = verseRows[0]?.text || '';
-        const isNewSection = firstVerseText.startsWith('§');
+        const isNewSection = verseStartsSection(firstVerseText,
+          headings.some(h => h.verse_id === firstVerseId && h.type === 'heading'));
         chapterHeading = await this.headingRepository.findChapterHeading(firstVerseId, bookId, headingVersion, isNewSection);
         // PHP tested the cleaned block ("abr.2.1-9.3-4" → "Abraham 2:1-9:3-4") for [,;:]
         if (!config._multiBlock && wantsChapterNav(reference.normalized) && !/[,;:]/.test(referenceString) &&
