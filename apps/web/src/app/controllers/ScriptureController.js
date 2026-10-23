@@ -76,6 +76,13 @@ export class ScriptureController {
         return next();
       }
 
+      // A reference of several blocks: index.php titled the page referenceFromVerseIds over all
+      // their verse ids (book_title), which joins a cross-book range without "; " and drops a
+      // repeated id ("John 3:16Malachi 4:5–Matthew 1:2; 3:1–15,17–36")
+      if (isHtml(config) && result.sections?.length > 1 && result.reference.verseIds?.length) {
+        result.title = await this.blockService.repo.referenceFromVerseIds(result.reference.verseIds) || undefined;
+      }
+
       // Attach result for output middleware
       req.scriptureResult = result;
       next();

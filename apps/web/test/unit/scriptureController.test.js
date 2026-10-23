@@ -102,3 +102,25 @@ describe('ScriptureController: one budget per request', async () => {
     expect(blocks.mock.calls[0][1]).toBe(budget);
   });
 });
+
+describe('ScriptureController: the title of a reference of several blocks', () => {
+  // index.php titled the page referenceFromVerseIds($all_verse_ids, 'book_title'), which
+  // dropped a repeated id ("John 3:16; …; John 3" → "…; 3:1–15,17–36")
+  const run = async (result, outputFormat = 'html') => {
+    const blockService = { blocks: async () => [], repo: { referenceFromVerseIds: vi.fn(async ids => `ref of ${ids.join(',')}`) } };
+    const ctl = new ScriptureController({ lookup: async () => result }, references, blockService);
+    const req = { config: { outputFormat, reference: 'a;b', legacy: { ref: 'a;b' } }, params: {}, headers: {} };
+    await ctl.show(req, {}, () => {});
+    return req.scriptureResult;
+  };
+  const several = () => ({ reference: { isEmpty: false, verseIds: [26137, 23144, 26137] }, sections: [{}, {}] });
+  test('is the reference of every verse id, in order', async () => {
+    expect((await run(several())).title).toBe('ref of 26137,23144,26137');
+  });
+  test('one block keeps its own title', async () => {
+    expect((await run({ reference: { isEmpty: false, verseIds: [1] } })).title).toBeUndefined();
+  });
+  test('only on html', async () => {
+    expect((await run(several(), 'api')).title).toBeUndefined();
+  });
+});
