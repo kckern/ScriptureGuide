@@ -83,7 +83,7 @@ before. No standard system font has this family name, but a machine with Goudy S
 - Replacing the font: browsers and proxies may keep the old file for 30 days, so give the new
   file a new name (e.g. `scripture-2.woff2`) and set `FONT_GOUDY_FILE` to it instead of
   overwriting `scripture.woff2`.
-- Content Security Policy is off (`helmet({ contentSecurityPolicy: false })` in `src/app.js`).
+- Content Security Policy is off (`contentSecurityPolicy: false` in `src/app/middleware/headers.js`).
   When it is turned on, it has to allow the font and the block that declares it: `font-src
   'self'` plus the `FONT_BASE` origin when that is external, and `style-src` that permits this
   inline `<style>` (`'unsafe-inline'`, which the layout's other inline styles already need, or a
