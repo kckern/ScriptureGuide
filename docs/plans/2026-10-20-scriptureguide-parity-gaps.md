@@ -48,6 +48,13 @@ Cutover itself (gate, switch, rollback, PHP retirement) is in the private infras
 ### Post-cutover queue
 
 1. Server-side URL canonicalization (decided 2026-10-20): one 301 to a clean lowercase slug, junk characters stripped from search URLs. Until cutover, URL behavior stays identical to live so parity stays measurable. Once it ships, the proxy's space-to-dot rewrite is removed.
+2. Drop the `single_heading` allow entry in `apps/web/test/parity/allow.json` once live is retired (Node already keeps the verses PHP dropped).
+3. A § section break in the middle of a passage: draw it as an inline h3 instead of following PHP.
+4. Division labels: drop the literal "§" text PHP prints.
+5. Poetry: live prints prose where Node prints blockquotes on some passages (`/niv/ps.1`, `/esv/obad.1`); settle on one.
+6. JST compounds in the `scripture-guide` package (the web app already handles them).
+
+These change rendered output, so they wait for cutover: before it, every new difference from live weakens the parity gate.
 
 ---
 
