@@ -1,10 +1,11 @@
 {
-  "publicVersions": ["KJV", "ASV", "WEB"],
+  "publicVersions": ["KJV", "ASV", "WEB", "TYN", "1830", "1837", "1840", "1841", "1879", "1920", "1833", "1835"],
   "tables": {
     "lds_scriptures_volumes": { "scope": "all" },
     "lds_scriptures_books": { "scope": "all" },
     "lds_scriptures_verses": { "scope": "all", "blank": ["verse_scripture"] },
-    "scripture_versions": { "scope": "version", "versionColumn": "id" },
-    "scripture_verses": { "scope": "version", "versionColumn": "version" }
+    "scripture_versions": { "scope": "version", "versionColumn": "id", "blank": ["desc"] },
+    "scripture_verses": { "scope": "version", "versionColumn": "version" },
+    "scripture_headings": { "scope": "version", "versionColumn": "version" }
   }
 }

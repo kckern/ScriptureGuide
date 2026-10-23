@@ -1,5 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { readFileSync } from 'fs';
 import { findViolations, versionsInSeed } from './check-seeds.mjs';
 
 const manifest = { publicVersions: ['KJV'], tables: { scripture_verses: { scope: 'version', versionColumn: 'version' } } };
@@ -14,6 +15,18 @@ test('rejects a seed containing a non-public version', () => {
 
 test('rejects a seed file for a table missing from the manifest', () => {
   assert.deepEqual(findViolations(manifest, { scripture_headings: [] }), ['scripture_headings: not in manifest']);
+});
+
+test('the real manifest lists no licensed or held-back version', () => {
+  const real = JSON.parse(readFileSync(new URL('../../data/seeds/manifest.json', import.meta.url), 'utf8'));
+  // GNV and WYC in the private database are modern-spelling editions, held for the owner.
+  const held = ['NIV', 'ESV', 'NRSV', 'NASB', 'NLT', 'NKJV', 'RSV', 'LDS', '1981', '2013', 'GNV', 'WYC', 'printer', 'EARLIEST'];
+  assert.deepEqual(real.publicVersions.filter(v => held.includes(v)), []);
+});
+
+test('every version-scoped table in the real manifest is checked against publicVersions', () => {
+  const real = JSON.parse(readFileSync(new URL('../../data/seeds/manifest.json', import.meta.url), 'utf8'));
+  for (const t of ['scripture_versions', 'scripture_verses', 'scripture_headings']) assert.equal(real.tables[t]?.scope, 'version', t);
 });
 
 test('reads the leading version value of every row tuple', () => {
