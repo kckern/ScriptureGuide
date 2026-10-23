@@ -146,4 +146,22 @@ describe('findParallels', () => {
     // chapter 1 is whole (2 of 2 verses), chapter 2 is not (1 of 5)
     expect(out[1]).toBe('JST*kjv/gen.1~gen.1;2.1');
   });
+  // referenceFromVerseIds printed one verse with its number even when it is the whole chapter
+  // ("1835 D&C 49:1"); only the Tao Te Ching drops ":1"
+  async function srcSlug(book, chapterSize) {
+    const row = { src_verse_id: 500, dst_verse_id: 1, significant: 1, src_chapter: 49, src_verse: 1, src_book_id: 9, src_book_slug: book, src_book_title: book, vol_org: '1835' };
+    query.mockImplementation(async (sql, params) => {
+      if (/FROM scripture_references r/.test(sql)) return [row];
+      if (/COUNT\(\*\) AS cnt/.test(sql)) return params[0].map(([b, c]) => ({ book_id: b, chapter: c, cnt: chapterSize }));
+      throw new Error(`unexpected query: ${sql}`);
+    });
+    const out = await repo.findParallels([{ from: 1, to: 1, ids: [1], verseNums: [1], bookSlug: 'd&c', chapter: 26, firstVerse: 1, lastVerse: 1, wholeChapter: true }], 'LDS');
+    return out[1].split('~')[1];
+  }
+  test('a one-verse source chapter keeps its verse', async () => {
+    expect(await srcSlug('1835 D&C', 1)).toBe('1835.d&c.49.1');
+  });
+  test('except in the Tao Te Ching', async () => {
+    expect(await srcSlug('Tao', 1)).toBe('tao.49');
+  });
 });

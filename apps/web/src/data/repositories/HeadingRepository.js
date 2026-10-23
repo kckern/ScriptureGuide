@@ -96,8 +96,10 @@ function buildSrcSlug(labelRows, chapterSizeMap) {
     const verses = [...new Set(seg.map(r => r.src_verse))].sort((a, b) => a - b);
     const isWholeChapter = chSize > 0 && verses[0] === 1 && verses.length === chSize &&
       verses.every((v, i) => i === 0 || v === verses[i - 1] + 1);
+    // One verse keeps its number even when it is the whole chapter ("1835 D&C 49:1"): PHP tested
+    // min == max before the whole chapter; its Tao Te Ching rule then dropped ":1" ("Tao 49")
+    if (verses.length === 1 && !(isWholeChapter && /^tao\b/.test(srcBookSlug))) return `${srcBookSlug}.${ch}.${verses[0]}`;
     if (isWholeChapter) return `${srcBookSlug}.${ch}`;
-    if (verses.length === 1) return `${srcBookSlug}.${ch}.${verses[0]}`;
     return `${srcBookSlug}.${ch}.${buildVerseRanges(verses)}`;
   });
 
