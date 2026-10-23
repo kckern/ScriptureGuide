@@ -77,9 +77,15 @@ export function metaFromRef(ref) {
   if (!normalized) return [];
   const blocks = [];
   let book = '';
-  for (const piece of blockTexts(ref, normalized)) {
+  const texts = blockTexts(ref, normalized);
+  const inputs = String(ref).split(';');
+  for (const [k, piece] of texts.entries()) {
     let orig = trimChars(piece, ';:');
     if (!orig.trim()) continue;
+    // After a "Multi" block the package names the book again ("…; John 3"); PHP's piece was
+    // bare (" 3") when the request's was, so it took the running book once
+    if (blocks.at(-1)?.book === 'Multi' && book && texts.length === inputs.length && !/[a-z]/i.test(inputs[k]) &&
+        orig.trim().startsWith(`${book} `)) orig = ` ${orig.trim().slice(book.length + 1)}`;
     // A range across a book end: cleanReference wrote it without spaces ("Malachi 4:5-Matthew
     // 1:2"), and loadMetaFromRef made it one "Multi" block before getBook, keeping the book
     const joined = orig.trim().replace(/\s+-\s+/g, '-');
@@ -92,6 +98,16 @@ export function metaFromRef(ref) {
     if (orig.startsWith(' ')) orig = book + orig;
     const ids = lookupIds(/[a-z]/i.test(bare) ? bare : `${book} ${bare}`);
     blocks.push({ orig, book, verse_ids: ids });
+  }
+  // Bare pieces after a leading "Multi" block, which the package drops (no book to read them
+  // by): PHP's getBook read junk from them (" 16:1" no book, verse_ids false; "3: 3:4")
+  if (blocks.length === 1 && blocks[0].book === 'Multi' && inputs.length > 1) {
+    for (const input of inputs.slice(1)) {
+      if (/[a-z]/i.test(input) || !input.trim()) return blocks;
+      const cleaned = ` ${input.trim().replace(/(\d+)\.(\d+)/g, '$1:$2')}`;
+      const junkBook = getBook(cleaned, book);
+      blocks.push({ orig: junkBook + cleaned, book: junkBook, verse_ids: junkBook ? lookupIds(junkBook + cleaned) : false });
+    }
   }
   return blocks;
 }

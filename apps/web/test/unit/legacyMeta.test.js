@@ -33,6 +33,17 @@ describe('metaFromRef (scriptures::loadMetaFromRef)', () => {
     ]);
   });
 
+  test('a bare piece after a "Multi" block takes the book before it, without doubling it', () => {
+    expect(metaFromRef('john.3.16;mal.4.5-matt.1.2;3').map(b => [b.orig, b.book])).toEqual([
+      ['John 3:16', 'John'], ['Malachi 4:5-Matthew 1:2', 'Multi'], ['John 3', 'John'],
+    ]);
+  });
+
+  test('a bare piece after a leading "Multi" block has no book: PHP\'s getBook junk', () => {
+    expect(metaFromRef('acts.28.31-rom.1.1;16.1')[1]).toEqual({ orig: ' 16:1', book: '', verse_ids: false });
+    expect(metaFromRef('gen.50.26-ex.1.2;3.4')[1]).toEqual({ orig: '3: 3:4', book: '3:', verse_ids: [] });
+  });
+
   test('a block after a "Multi" one still repeats its own book, as PHP did', () => {
     expect(metaFromRef('mal.4.6-matt.1.1;john.3.16').map(b => [b.orig, b.book])).toEqual([
       ['Malachi 4:6-Matthew 1:1', 'Multi'], ['John John 3:16', 'John'],
