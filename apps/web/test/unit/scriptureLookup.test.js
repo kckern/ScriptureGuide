@@ -29,6 +29,11 @@ describe('splitBlocks', () => {
     const parse = t => (books[t] ? { isEmpty: false, book: books[t][0], normalized: books[t][1] } : { isEmpty: true, book: '' });
     expect(new ScriptureLookupService({ parse }, null, null).splitBlocks('john.3.16;mal.4.5-matt.1.2;3')).toEqual(['john.3.16', 'mal.4.5-matt.1.2', 'John 3']);
   });
+  test('a JST piece keeps its own book: the package does not read JST books, the lookup does', () => {
+    const parse = t => (t === 'john.3.16' ? { isEmpty: false, book: 'John', normalized: 'John 3:16' } : { isEmpty: true, book: '' });
+    expect(new ScriptureLookupService({ parse }, null, null).splitBlocks('john.3.16;jst.john.3.16')).toEqual(['john.3.16', 'jst.john.3.16']);
+    expect(new ScriptureLookupService({ parse }, null, null).splitBlocks('john.3.16; JST John 3:18')).toEqual(['john.3.16', 'JST John 3:18']);
+  });
   test('an all-numeric reference stays verse ids', () => {
     expect(svc.splitBlocks('1; 5-6')).toEqual(['1', '5-6']);
   });

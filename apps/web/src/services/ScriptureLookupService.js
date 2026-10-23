@@ -65,7 +65,10 @@ export class ScriptureLookupService {
       let text = piece;
       let ref = this.referenceService.parse(text);
       const words = /[a-z]/i.test(piece);
-      if (ref.isEmpty && book && (resolved || !words)) {
+      // A JST piece names its own book ("jst.john.3.16"); the lookup reads JST books, the
+      // package (parse) does not, so it must not take the running book
+      const jst = /^jst\b/i.test(piece);
+      if (ref.isEmpty && book && !jst && (resolved || !words)) {
         text = `${book} ${piece}`;
         ref = this.referenceService.parse(text);
       }
