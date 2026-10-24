@@ -140,3 +140,19 @@ describe('allow.json: a trailing subverse letter keeps the digit before it', () 
     expect(reason('/xx386', page(''), page('6'))).toBeUndefined();
   });
 });
+
+describe('allow.json: highlight spans for a query with leading or trailing punctuation', () => {
+  const allow = JSON.parse(readFileSync(new URL('./allow.json', import.meta.url), 'utf8'));
+  const span = '            <span class="searchterm">';
+  const live = ['<li>', span, '  "The"', span, '"more ', span, '  "igniting"', '</li>'].join('\n');
+  const node = ['<li>', '  "The more "', span, '  "igniting"', '</li>'].join('\n');
+  const reason = (path, l, n) => allowReason(allow, 'html', path, l, { live: l, node: n });
+  test('allowed where only the highlight spans differ', () => {
+    expect(reason('/_ignition', live, node)).toMatch(/punctuation/);
+  });
+  test('not where the text or markup differs, nor for a plain query', () => {
+    expect(reason('/_ignition', live, node.replace('more', 'less'))).toBeUndefined();
+    expect(reason('/_ignition', live, node.replace('</li>', '</ul>'))).toBeUndefined();
+    expect(reason('/ignition', live, node)).toBeUndefined();
+  });
+});

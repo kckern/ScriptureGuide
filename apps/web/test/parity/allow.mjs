@@ -30,6 +30,20 @@ const CHECKS = {
     const oneDigitLess = (a, b) => b.length === a.length + 1 && [...b].some((ch, i) => /\d/.test(ch) && b.slice(0, i) + b.slice(i + 1) === a);
     return l.some((line, i) => line !== n[i]) && l.every((line, i) => line === n[i] || oneDigitLess(line, n[i]));
   },
+  // Only the search highlight spans differ: without them, the same markup lines in order and the
+  // same text (quoted lines joined, whitespace ignored)
+  highlightOnly: ({ live, node }) => {
+    if (typeof live !== 'string' || typeof node !== 'string') return false;
+    const strip = body => {
+      const lines = body.split('\n').map(l => l.trim()).filter(l => l !== '<span class="searchterm">');
+      return {
+        markup: lines.filter(l => !l.startsWith('"')).join('\n'),
+        text: lines.filter(l => l.startsWith('"')).map(l => l.replace(/^"|"$/g, '')).join('').replace(/\s+/g, ''),
+      };
+    };
+    const l = strip(live), n = strip(node);
+    return l.markup === n.markup && l.text === n.text;
+  },
   // PHP latex read the request's version only and dropped verses (JST) Node prints: every live
   // verse is in Node's output, and Node has more
   latexMissingVerses: ({ live, node }) => {

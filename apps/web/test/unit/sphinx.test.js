@@ -75,6 +75,16 @@ describe('SphinxClient', () => {
     expect(connect).toHaveBeenCalledTimes(2);
   });
 
+  test('a query searchd cannot parse finds nothing, as live does', async () => {
+    // /).split( : PHP ran the query through the mysql CLI, got no rows on the syntax error and
+    // showed 0 results
+    const bad = Object.assign(new Error("index 'sgindex': syntax error, unexpected ')'"), { code: 'ER_PARSE_ERROR' });
+    const connect = vi.fn(async () => ({ query: vi.fn(async () => { throw bad; }), end: vi.fn(async () => {}) }));
+    const client = new SphinxClient({ host: 'sphinx' }, connect);
+    await expect(client.search(') split(')).resolves.toEqual([]);
+    await expect(client.query('SELEC')).rejects.toThrow('syntax error');
+  });
+
   test('createSphinxClient is null without a host', () => {
     expect(createSphinxClient({ host: '' })).toBeNull();
     expect(createSphinxClient({ host: 'sphinx', port: 9306 })).toBeInstanceOf(SphinxClient);

@@ -63,7 +63,15 @@ export class SphinxClient {
   }
 
   async search(query, opts) {
-    const rows = await this.query(buildSearchSql(query, opts));
+    let rows;
+    try {
+      rows = await this.query(buildSearchSql(query, opts));
+    } catch (err) {
+      // Operators pass through as typed, so searchd rejects some queries (/).split( ). PHP ran
+      // them through the mysql CLI, got no rows and showed 0 results.
+      if (err.code === 'ER_PARSE_ERROR') return [];
+      throw err;
+    }
     return rows.map(r => ({ verse_id: Number(r.verse_id), version: String(r.version) }));
   }
 
