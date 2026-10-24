@@ -31,6 +31,8 @@ describe('response headers', () => {
     expect(res.headers['cross-origin-opener-policy']).toBeUndefined();
     // Kept from helmet.
     expect(res.headers['strict-transport-security']).toMatch(/max-age=\d+/);
+    // Each host only: pages link http://img.350.scripture.guide, whose TLS fails
+    expect(res.headers['strict-transport-security']).not.toMatch(/includeSubDomains/i);
     expect(res.headers['x-frame-options']).toBe('SAMEORIGIN');
     expect(res.headers['x-content-type-options']).toBe('nosniff');
   });
