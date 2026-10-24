@@ -124,3 +124,16 @@ describe('ScriptureController: the title of a reference of several blocks', () =
     expect((await run(several(), 'api')).title).toBeUndefined();
   });
 });
+
+describe('ScriptureController: notes', () => {
+  test('a notes path is a word id: no reference lookup or PHP blocks', async () => {
+    // notes.scripture.guide/31103-0008 read as a reference is a 31,000-verse range
+    const lookup = vi.fn(async () => empty());
+    const blocks = vi.fn(async () => []);
+    const ctl = new ScriptureController({ lookup }, references, { blocks });
+    const result = await show('31103-0008', 'notes', '31103-0008', ctl);
+    expect(lookup).not.toHaveBeenCalled();
+    expect(blocks).not.toHaveBeenCalled();
+    expect(result).toBeDefined();
+  });
+});

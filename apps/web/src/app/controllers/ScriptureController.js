@@ -64,6 +64,13 @@ export class ScriptureController {
 
       if (isEmptyReference(reference) && !config.parallel && !answersEmpty(config)) return this.home(req, res);
 
+      // notes: the path is a word id (31103-0008) that NotesPresenter reads itself; looked up as
+      // a reference it can be a range of tens of thousands of verses
+      if (config.outputFormat === 'notes') {
+        req.scriptureResult = new ScriptureResult({ reference: new Reference({ query: reference, normalized: '', verseIds: [] }), verses: [], config });
+        return next();
+      }
+
       const result = await this.lookupService.lookup(isEmptyReference(reference) ? '' : reference, config);
       result.bookOnly = await this.bookOnly(result, config);
       result.legacyBlocks = await this.legacyBlocks(result, config);
