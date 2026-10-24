@@ -126,3 +126,17 @@ describe('allowReason: "<format> re:<regex> && check:<name>" (latex JST verses)'
     expect(allowReason(a, 'latex', '/john.3.16;1ne.1.1', '', { live, node })).toBeUndefined();
   });
 });
+
+describe('allow.json: a trailing subverse letter keeps the digit before it', () => {
+  const allow = JSON.parse(readFileSync(new URL('./allow.json', import.meta.url), 'utf8'));
+  const page = n => `STATUS 200\nTITLE xx38${n} | Scripture Guide\n<div id="container">\n  "Xx 38${n}"`;
+  const reason = (path, live, node) => allowReason(allow, 'html', path, live, { live, node });
+  test('allowed where each differing line is Node\'s with one digit gone', () => {
+    expect(reason('/xx386b', page(''), page('6'))).toMatch(/subverse/);
+  });
+  test('not where anything else differs, nor without the letter', () => {
+    expect(reason('/xx386b', page('').replace('Xx', 'Yy'), page('6'))).toBeUndefined();
+    expect(reason('/xx386b', page('7'), page('6'))).toBeUndefined();
+    expect(reason('/xx386', page(''), page('6'))).toBeUndefined();
+  });
+});

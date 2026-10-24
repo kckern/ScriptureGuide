@@ -161,6 +161,9 @@ export class SearchService {
   // Sphinx-equivalent hits: [{verse_id, version}]. The fallback stops when `budget` is spent and
   // sets budget.truncated.
   async hits(query, versions, { range = null, limit = 99999, stopAfter = Infinity, budget = this.budget() } = {}) {
+    // No versions (a path version naming no version or volume, /places/edom): PHP queried
+    // version IN (''), which matches nothing
+    if (!versions.length) return [];
     if (this.sphinx) return this.sphinx.search(query, { versions, range, limit });
     const stems = queryStems(query);
     const terms = queryTerms(query);

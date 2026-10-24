@@ -21,6 +21,15 @@ const CHECKS = {
   // passage_script.php dropped the first verse of every later section (single_heading)
   // dropRaw: live's raw entries of the dropped verses (run.mjs singleHeadingRaw)
   singleHeadingDrop: ({ live, node, dropRaw }) => typeof live === 'string' && typeof node === 'string' && singleHeadingDrops(live, node, dropRaw),
+  // PHP's /\d[a-z]$/ dropped the digit before a trailing subverse letter too; Node keeps it: every
+  // line is equal, or live's is Node's with one digit removed
+  subverseDigit: ({ live, node }) => {
+    if (typeof live !== 'string' || typeof node !== 'string') return false;
+    const l = live.split('\n'), n = node.split('\n');
+    if (l.length !== n.length) return false;
+    const oneDigitLess = (a, b) => b.length === a.length + 1 && [...b].some((ch, i) => /\d/.test(ch) && b.slice(0, i) + b.slice(i + 1) === a);
+    return l.some((line, i) => line !== n[i]) && l.every((line, i) => line === n[i] || oneDigitLess(line, n[i]));
+  },
   // PHP latex read the request's version only and dropped verses (JST) Node prints: every live
   // verse is in Node's output, and Node has more
   latexMissingVerses: ({ live, node }) => {

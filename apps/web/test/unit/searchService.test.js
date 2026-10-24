@@ -158,6 +158,14 @@ describe('SearchService with Sphinx', () => {
     expect(sphinx.search.mock.calls[0][1]).toMatchObject({ limit: 99999 });
     expect(repo.candidates).not.toHaveBeenCalled();
   });
+  test('a path version that names no version or volume finds nothing, as live does', async () => {
+    // /places/edom: PHP read "places" as the version, found no versions, and queried
+    // version IN (''), so 0 results and a "Home" title
+    const sphinx = { search: vi.fn(async () => [{ verse_id: 28679, version: 'LDS' }]) };
+    const r = await new SearchService(fakeRepo(), sphinx).search('edom', { forcedVersion: 'PLACES' });
+    expect(r.count).toBe(0);
+    expect(sphinx.search).not.toHaveBeenCalled();
+  });
   test('uses Sphinx hits and requeries LDS/KJV by volume when over 300', async () => {
     const many = Array.from({ length: 301 }, (_, i) => ({ verse_id: 28679, version: `V${i}` }));
     const sphinx = { search: vi.fn(async (q, { range }) => (range ? (range[0] === 23146 ? [{ verse_id: 28679, version: 'LDS' }] : []) : many)) };
