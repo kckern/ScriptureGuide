@@ -53,6 +53,28 @@ describe('SphinxClient', () => {
     expect(connect).toHaveBeenCalledTimes(2);
   });
 
+  test('retries once on a fresh connection when the old one was closed under it', async () => {
+    // searchd restarts or idle timeouts close the socket; mysql2 then fails the next query with a
+    // fatal "closed state" error. Searches are read-only, so one retry is safe.
+    const closed = Object.assign(new Error("Can't add new command when connection is in closed state"), { fatal: true });
+    let calls = 0;
+    const connect = vi.fn(async () => ({
+      query: vi.fn(async () => { if (calls++ === 0) throw closed; return [[{ verse_id: '1', version: 'LDS' }]]; }),
+      end: vi.fn(async () => {}),
+    }));
+    const client = new SphinxClient({ host: 'sphinx' }, connect);
+    await expect(client.search('faith')).resolves.toEqual([{ verse_id: 1, version: 'LDS' }]);
+    expect(connect).toHaveBeenCalledTimes(2);
+  });
+
+  test('does not retry a fatal error twice', async () => {
+    const closed = Object.assign(new Error('closed'), { fatal: true });
+    const connect = vi.fn(async () => ({ query: vi.fn(async () => { throw closed; }), end: vi.fn(async () => {}) }));
+    const client = new SphinxClient({ host: 'sphinx' }, connect);
+    await expect(client.query('SELECT 1')).rejects.toThrow('closed');
+    expect(connect).toHaveBeenCalledTimes(2);
+  });
+
   test('createSphinxClient is null without a host', () => {
     expect(createSphinxClient({ host: '' })).toBeNull();
     expect(createSphinxClient({ host: 'sphinx', port: 9306 })).toBeInstanceOf(SphinxClient);

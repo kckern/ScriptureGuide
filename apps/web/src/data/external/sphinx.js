@@ -46,15 +46,18 @@ export class SphinxClient {
     return this.conn;
   }
 
-  async query(sql) {
+  async query(sql, retry = true) {
     const conn = await this.connection();
     try {
       const [rows] = await conn.query(sql);
       return rows;
     } catch (err) {
       // A dropped connection is replaced on the next call
-      this.conn = null;
+      if (this.conn && (await this.conn.catch(() => null)) === conn) this.conn = null;
       try { await conn.end(); } catch { /* already closed */ }
+      // mysql2 marks socket-level failures fatal (searchd restart, idle timeout). Searches are
+      // read-only, so retry once on a fresh connection instead of failing the request.
+      if (retry && err.fatal) return this.query(sql, false);
       throw err;
     }
   }
