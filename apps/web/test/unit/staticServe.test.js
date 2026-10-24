@@ -19,6 +19,12 @@ describe('public static files', () => {
     expect(res.headers['content-type']).toBe('image/vnd.microsoft.icon');
     expect(Buffer.compare(res.body, readFileSync(new URL('../../public/favicon.ico', import.meta.url)))).toBe(0);
   });
+  it('lets browsers keep assets for an hour instead of revalidating on every page', async () => {
+    // Live sends no Cache-Control, so browsers kept its year-old assets by heuristic; max-age=0
+    // made every page view revalidate each asset
+    const res = await request(app).get('/css/style.css');
+    expect(res.headers['cache-control']).toBe('public, max-age=3600');
+  });
   it('leaves other types alone', async () => {
     const res = await request(app).get('/js/main.js');
     expect(res.status).toBe(200);

@@ -11,8 +11,11 @@ function setHeaders(res, filePath) {
   if (path.extname(filePath).toLowerCase() === '.ico') res.setHeader('Content-Type', 'image/vnd.microsoft.icon');
 }
 
+// An hour of browser caching: live sent no Cache-Control and browsers kept its assets by
+// heuristic, while max-age=0 revalidated every asset on every page. Names are not fingerprinted,
+// so a deploy reaches browsers within the hour.
 export function publicStatic(dir = PUBLIC_DIR) {
-  return express.static(dir, { setHeaders });
+  return express.static(dir, { setHeaders, maxAge: '1h' });
 }
 
 // FONT_DIR (licensed fonts that must not be published) at /private-fonts; no route when unset.
