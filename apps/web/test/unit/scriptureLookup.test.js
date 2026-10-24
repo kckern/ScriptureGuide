@@ -341,3 +341,15 @@ describe('lookup: a range across a book end', async () => {
     expect(d.verses.map(v => v.book ?? d.book)).toEqual(['Malachi', 'Malachi', 'Matthew', 'Matthew']);
   });
 });
+
+describe('lookup for meta', async () => {
+  // meta lists reference blocks only (MetaPresenter): no verse text, headings or navigation
+  const { Reference } = await import('../../src/domain/entities/Reference.js');
+  const refs = { parse: () => new Reference({ query: 'john.3.16', normalized: 'John 3:16', verseIds: [26137], _book: 'John' }) };
+  const untouched = new Proxy({}, { get: (_, name) => () => { throw new Error(`repository read: ${String(name)}`); } });
+  test('resolves the reference without reading verses or headings', async () => {
+    const r = await new ScriptureLookupService(refs, untouched, untouched).lookup('john.3.16', { outputFormat: 'meta' });
+    expect(r.reference.verseIds).toEqual([26137]);
+    expect(r.reference.book).toBe('John');
+  });
+});

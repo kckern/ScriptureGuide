@@ -145,7 +145,8 @@ export class ScriptureLookupService {
       reference = new Reference({ query: referenceString, normalized: '', verseIds: [] });
     }
 
-    if (reference.isEmpty) {
+    // meta lists reference blocks only (MetaPresenter): no text, headings or navigation to load
+    if (reference.isEmpty || config.outputFormat === 'meta') {
       return new ScriptureResult({ reference, verses: [], headings: [], config });
     }
 
