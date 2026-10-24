@@ -396,6 +396,34 @@ const strToHash = function(str) {
 }
 
 
+// cleanReference's compiled regexes, built once per language config: a config holds thousands
+// of book aliases, and compiling them on every call dominated lookup time
+const cleanRulesCache = new WeakMap();
+const cleanRules = function(config) {
+    let rules = cleanRulesCache.get(config);
+    if (rules) return rules;
+
+    // pre_rules are {pattern, replacement} objects (legacy: [pattern, replacement]).
+    const pre = (config.raw_regex.pre_rules || []).map(rule =>
+        [new RegExp(rule.pattern ?? rule[0], "ig"), rule.replacement ?? rule[1] ?? ""]);
+
+    //Handle non-latin languages because \b only works for latin alphabet
+    const [wordBreak, buffer] = config.raw_regex.spacing || ["\\b", ""];
+
+    let srcbooks = config.raw_regex.books;
+    let dstbooks = buffer ? config.raw_regex.books.map(i => [i[1], i[1]]) : [];
+    let bookMatchList = [...dstbooks, ...srcbooks].sort((a, b) => b[0].length - a[0].length);
+    let hashCypher = {};
+    for (const [, book] of bookMatchList) hashCypher[book] = strToHash(book);
+    const bookRules = bookMatchList.map(([pattern, book]) =>
+        [new RegExp(wordBreak + buffer + pattern + buffer + "\\.*" + wordBreak, "ig"), hashCypher[book] || book]);
+    const hashes = Object.values(hashCypher);
+
+    rules = { pre, buffer, books: Object.keys(hashCypher), hashes, bookRules, hashRe: new RegExp(hashes.join("|"), "g") };
+    cleanRulesCache.set(config, rules);
+    return rules;
+}
+
 const cleanReference = function(messyReference, config) {
 
     let ref = messyReference.replace(/[\s]+/g, " ").trim();
@@ -407,13 +435,8 @@ const cleanReference = function(messyReference, config) {
     ref = ref.replace(/[()]/g, " ");
     ref = ref.replace(/\bsec(?:tion)?\b\.?/ig, " ");
 
-    //Build Regex rules
-    let regex = config.raw_regex.pre_rules;
-    for (let i in regex) {
-        // pre_rules are {pattern, replacement} objects (legacy: [pattern, replacement]).
-        var re = new RegExp(regex[i].pattern ?? regex[i][0], "ig");
-        ref = ref.replace(re, regex[i].replacement ?? regex[i][1] ?? "");
-    }
+    const rules = cleanRules(config);
+    for (const [re, replacement] of rules.pre) ref = ref.replace(re, replacement);
 
     //Turn dots into colons
     ref = ref.replace(/(\d+)[.](\d+)/g, "$1:$2");
@@ -427,27 +450,11 @@ const cleanReference = function(messyReference, config) {
     //spaces around book ranges !!! Breaks vietnamese, which uses dashes (optionally) instead of spaces in book names
     ref = ref.replace(/([–-])(\D+)/g, " $1 $2 ");
 
-    //Handle non-latin languages because \b only works for latin alphabet
-    const [wordBreak, buffer] = config.raw_regex.spacing || ["\\b", ""];
-
-    let srcbooks = config.raw_regex.books;
-    let dstbooks = buffer ? config.raw_regex.books.map(i => [i[1], i[1]]) : [];
-    let bookMatchList = [...dstbooks, ...srcbooks].sort((a, b) => b[0].length - a[0].length);
-    regex = bookMatchList;
-    let hashCypher = {};
-    for (let i in regex) {
-        const [,book] = regex[i];
-        const hash = strToHash(book);
-        hashCypher[book] = hash;
-    }
-    for (let i in regex) {
-        var re = new RegExp( wordBreak + buffer + regex[i][0] + buffer + "\\.*"+wordBreak, "ig");
-        let replacement = hashCypher[regex[i][1]] || regex[i][1];
+    const { buffer, books, hashes } = rules;
+    for (const [re, replacement] of rules.bookRules) {
         ref = (buffer+ref+buffer).replace(re, replacement).trim();
     }
-    const books = Object.keys(hashCypher);
-    const hashes = Object.values(hashCypher);
-    ref = ref.replace(new RegExp(hashes.join("|"), "g"), function (match) {
+    ref = ref.replace(rules.hashRe, function (match) {
        const bookValue = books[hashes.indexOf((match))];
          return bookValue + " ";
     }
@@ -1068,10 +1075,18 @@ const applyDetectionFlags = (records, opts) => {
     return out;
 }
 
+// Built once per language and canon; callers only read it (and cleanRules caches by its identity)
+const languageConfigCache = new Map();
 const getLanguageConfig = function(language, canon = null) {
     // Default to English if no language specified or not found
     const effectiveLanguage = language && raw_lang[language] ? language : 'en';
     const effectiveCanon = canon && extraCanons[canon] ? canon : DEFAULTS.canon;
+    const key = `${effectiveLanguage}|${effectiveCanon}`;
+    if (!languageConfigCache.has(key)) languageConfigCache.set(key, buildLanguageConfig(effectiveLanguage, effectiveCanon));
+    return languageConfigCache.get(key);
+}
+
+const buildLanguageConfig = function(effectiveLanguage, effectiveCanon) {
 
     const config = {
         language: effectiveLanguage,
