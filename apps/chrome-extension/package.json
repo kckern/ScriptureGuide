@@ -1,7 +1,7 @@
 {
   "name": "scripture-guide-chrome-extension",
   "private": true,
-  "version": "2.0.1",
+  "version": "2.0.2",
   "description": "Chrome extension for in-browser scripture reference detection and linking",
   "scripts": {
     "build": "webpack --mode=production",
@@ -10,7 +10,7 @@
     "sync-manifest": "node scripts/sync-manifest-version.mjs"
   },
   "dependencies": {
-    "scripture-guide": "^1.0.98"
+    "scripture-guide": "^1.1.0"
   },
   "devDependencies": {
     "@babel/core": "^7.22.0",
