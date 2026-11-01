@@ -11,10 +11,10 @@ export const FAMILY = 'Goudy Scripture';
 const SAFE = /^[A-Za-z0-9._~:/?#@!$&*+,;=%-]*$/; // no quotes, parentheses, spaces or angle brackets
 const FORMATS = { woff2: 'woff2', woff: 'woff', ttf: 'truetype', otf: 'opentype' };
 
-const face = (style, src) => `@font-face {
+const face = (style, weight, src) => `@font-face {
   font-family: '${FAMILY}';
   src: ${src};
-  font-weight: 400;
+  font-weight: ${weight};
   font-style: ${style};
   font-display: swap;
 }`;
@@ -26,9 +26,11 @@ export function goudyFontFace({ base, goudyFile }) {
   }
   const format = FORMATS[goudyFile.split('.').pop().toLowerCase()];
   return [
-    face('normal', `url('${base}/${goudyFile}')${format ? ` format('${format}')` : ''}`),
+    // The file's outlines are already heavy, whatever its metadata says. Covering the whole
+    // weight range stops browsers thickening it further for bold text and headings.
+    face('normal', '400 1000', `url('${base}/${goudyFile}')${format ? ` format('${format}')` : ''}`),
     // The licensed file is upright only; a real italic beats the browser's synthesized oblique.
-    face('italic', "url('/css/webfont/SortsMillGoudy-Italic.woff') format('woff')"),
+    face('italic', '400', "url('/css/webfont/SortsMillGoudy-Italic.woff') format('woff')"),
   ].join('\n');
 }
 

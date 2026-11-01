@@ -1,6 +1,9 @@
 Copyright (c) 2010, Barry Schwartz (chemoelectric@chemoelectric.org)
 Copyright 2010 The Yanone Kaffeesatz Project Authors (https://github.com/yanone/kaffeesatz)
 Copyright (c) 2010, Kimberly Geswein (kimberlygeswein.com)
+Copyright 2014 Ministry of Culture, Sports and Tourism and Korea Publishers Society (kopus@kopus.org), with Reserved Font Name 'KoPub Dotum', 'KoPub Batang'
+  SGBatang-*.woff2 are Modified Versions: subsets of KoPub Batang, renamed 'SG Batang' as the Reserved Font Name requires.
+Copyright 2022 The Noto Project Authors (https://github.com/notofonts/devanagari)
 
 This Font Software is licensed under the SIL Open Font License, Version 1.1.
 This license is copied below, and is also available with a FAQ at:

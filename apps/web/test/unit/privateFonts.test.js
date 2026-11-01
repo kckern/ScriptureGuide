@@ -62,11 +62,12 @@ describe('goudyFontFace', () => {
   test('no base: no @font-face', () => {
     expect(goudyFontFace({ base: '', goudyFile: 'scripture.woff2' })).toBe('');
   });
-  test('upright face: Goudy Scripture, 400, swap, from base/file', () => {
+  test('upright face: Goudy Scripture, covers every weight it is asked for, swap, from base/file', () => {
     const upright = faces.find(f => f.includes('font-style: normal'));
     expect(upright).toContain("font-family: 'Goudy Scripture'");
     expect(upright).toContain("src: url('/private-fonts/scripture.woff2') format('woff2')");
-    expect(upright).toContain('font-weight: 400');
+    // The file's outlines are already heavy. A range stops browsers thickening it for bold text.
+    expect(upright).toContain('font-weight: 400 1000');
     expect(upright).toContain('font-display: swap');
   });
   test('italic face: the same family from Sorts Mill Goudy Italic (a real italic, not a synthesized one)', () => {
@@ -133,7 +134,7 @@ describe('style.css', () => {
     expect(STYLE).not.toMatch(/font-family:\s*'Goudy';/);
   });
   test("body stack puts the private 'Goudy Scripture' first, Sorts Mill Goudy as the fallback", () => {
-    expect(STYLE).toContain("font-family: 'Goudy Scripture', 'Sorts Mill Goudy', Georgia, serif;");
+    expect(STYLE).toContain("font-family: 'Goudy Scripture', 'Sorts Mill Goudy', 'SG Hangul', 'Noto Serif Devanagari', Georgia, serif;");
     expect(STYLE).not.toMatch(/'Goudy'/);
   });
 });
