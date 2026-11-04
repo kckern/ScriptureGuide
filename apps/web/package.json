@@ -1,7 +1,7 @@
 {
   "name": "@scripture-guide/web",
   "private": true,
-  "version": "2.0.0",
+  "version": "2.0.1",
   "description": "Scripture reference lookup and display - Node.js SSR",
   "type": "module",
   "main": "src/app.js",
@@ -36,7 +36,7 @@
     "fluent-ffmpeg": "^2.1.2",
     "helmet": "^7.1.0",
     "mysql2": "^3.24.6",
-    "scripture-guide": "^1.0.98"
+    "scripture-guide": "^1.1.0"
   },
   "devDependencies": {
     "cheerio": "^1.1.0",

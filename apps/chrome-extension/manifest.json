@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "Scripture Guide",
   "description": "Detects scripture references on any page and links them to scripture.guide",
-  "version": "2.0.1",
+  "version": "2.0.2",
   "background": {
     "service_worker": "background.js"
   },
