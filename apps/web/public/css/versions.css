@@ -267,46 +267,72 @@
   }
   
   /*
- * KoPub Batang (Korean) http://www.google.com/fonts/earlyaccess
+ * Korean: 'SG Batang', a subset of KoPub Batang. Hindi: Noto Serif Devanagari. Both are self-hosted
+ * under the OFL (docs/fonts.md) and load only on pages that use them. They have real bold weights
+ * and Korean is not set in italics, so Korean turns off synthesized bold and oblique.
  */
 @font-face {
-  font-family: 'KoPub Batang';
-  font-style: normal;
-  font-weight: 300;
-  src: url(//fonts.gstatic.com/ea/kopubbatang/v3/KoPubBatang-Light.eot);
-  src: url(//fonts.gstatic.com/ea/kopubbatang/v3/KoPubBatang-Light.eot?#iefix) format('embedded-opentype'),
-       url(//fonts.gstatic.com/ea/kopubbatang/v3/KoPubBatang-Light.woff2) format('woff2'),
-       url(//fonts.gstatic.com/ea/kopubbatang/v3/KoPubBatang-Light.woff) format('woff'),
-       url(//fonts.gstatic.com/ea/kopubbatang/v3/KoPubBatang-Light.ttf) format('truetype');
-}
-@font-face {
-  font-family: 'KoPub Batang';
+  font-family: 'SG Batang';
   font-style: normal;
   font-weight: 400;
-  src: url(//fonts.gstatic.com/ea/kopubbatang/v3/KoPubBatang-Regular.eot);
-  src: url(//fonts.gstatic.com/ea/kopubbatang/v3/KoPubBatang-Regular.eot?#iefix) format('embedded-opentype'),
-       url(//fonts.gstatic.com/ea/kopubbatang/v3/KoPubBatang-Regular.woff2) format('woff2'),
-       url(//fonts.gstatic.com/ea/kopubbatang/v3/KoPubBatang-Regular.woff) format('woff'),
-       url(//fonts.gstatic.com/ea/kopubbatang/v3/KoPubBatang-Regular.ttf) format('truetype');
+  font-display: swap;
+  src: url('/css/webfont/SGBatang-Regular.woff2') format('woff2');
 }
 @font-face {
-  font-family: 'KoPub Batang';
+  font-family: 'SG Batang';
   font-style: normal;
   font-weight: 700;
-  src: url(//fonts.gstatic.com/ea/kopubbatang/v3/KoPubBatang-Bold.eot);
-  src: url(//fonts.gstatic.com/ea/kopubbatang/v3/KoPubBatang-Bold.eot?#iefix) format('embedded-opentype'),
-       url(//fonts.gstatic.com/ea/kopubbatang/v3/KoPubBatang-Bold.woff2) format('woff2'),
-       url(//fonts.gstatic.com/ea/kopubbatang/v3/KoPubBatang-Bold.woff) format('woff'),
-       url(//fonts.gstatic.com/ea/kopubbatang/v3/KoPubBatang-Bold.ttf) format('truetype');
+  font-display: swap;
+  src: url('/css/webfont/SGBatang-Bold.woff2') format('woff2');
 }
-
+/* The same files for Hangul in the site-wide stack (parallel view, labels). The range keeps English
+   pages from downloading them. */
+@font-face {
+  font-family: 'SG Hangul';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('/css/webfont/SGBatang-Regular.woff2') format('woff2');
+  unicode-range: U+1100-11FF, U+3000-303F, U+3130-318F, U+AC00-D7A3;
+}
+@font-face {
+  font-family: 'SG Hangul';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url('/css/webfont/SGBatang-Bold.woff2') format('woff2');
+  unicode-range: U+1100-11FF, U+3000-303F, U+3130-318F, U+AC00-D7A3;
+}
+@font-face {
+  font-family: 'Noto Serif Devanagari';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('/css/webfont/NotoSerifDevanagari-Regular.woff2') format('woff2');
+  unicode-range: U+0900-097F, U+1CD0-1CFF, U+200C-200D, U+20B9, U+25CC, U+A8E0-A8FF;
+}
+@font-face {
+  font-family: 'Noto Serif Devanagari';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url('/css/webfont/NotoSerifDevanagari-Bold.woff2') format('woff2');
+  unicode-range: U+0900-097F, U+1CD0-1CFF, U+200C-200D, U+20B9, U+25CC, U+A8E0-A8FF;
+}
   .ver_KRSEB,
   .ver_KRLDS,
   .ver_KRBOM,
   .ver_ERKRB,
-  .ver_KRBOM67
+  .ver_KRBOM67,
+  .ver_KRREB,
+  .ver_KLB
   {
-  	font-family: 'KoPub Batang', serif;
+  	font-family: 'SG Batang', serif;
+  	font-synthesis: small-caps;
+  }
+  .ver_HIBOM
+  {
+  	font-family: 'Noto Serif Devanagari', 'Goudy Scripture', 'Sorts Mill Goudy', serif;
   }
   
   .ver_KRSEB p .verse,
