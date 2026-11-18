@@ -353,3 +353,52 @@ describe('lookup for meta', async () => {
     expect(r.reference.book).toBe('John');
   });
 });
+
+describe('splitBlocks: references with no separator', () => {
+  const normalized = {
+    'D&C 88:1-17 Matthew 11:28-30': 'Doctrine and Covenants 88:1-17; Matthew 11:28-30',
+    'Doctrine and Covenants 88:1-17': 'Doctrine and Covenants 88:1-17',
+    'Matthew 11:28-30': 'Matthew 11:28-30',
+    '1 Nephi 3:7': '1 Nephi 3:7',
+  };
+  const parse = t => (normalized[t]
+    ? { isEmpty: false, book: normalized[t].replace(/ [\d:-]+.*$/, ''), normalized: normalized[t] }
+    : { isEmpty: true, book: '' });
+  const svc = new ScriptureLookupService({ parse }, null, null);
+
+  test('become one block per reference', () => {
+    expect(svc.splitBlocks('D&C 88:1-17 Matthew 11:28-30')).toEqual(['Doctrine and Covenants 88:1-17', 'Matthew 11:28-30']);
+  });
+  test('a single reference is not split', () => {
+    expect(svc.splitBlocks('1 Nephi 3:7')).toBeNull();
+  });
+});
+
+describe('lookup: the canonical slug of several references', () => {
+  class Stubbed extends ScriptureLookupService {
+    async lookup(ref, config = {}) {
+      if (!config._block) return super.lookup(ref, config);
+      const slug = { 'gen.1.1': 'gen.1.1', 'john.3.16': 'john.3.16' }[ref];
+      return {
+        reference: { isEmpty: !slug && ref !== 'lof.1', normalized: ref === 'lof.1' ? 'Lectures on Faith 1' : ref, verseIds: [1] },
+        verses: [], headings: [], chapterHeading: null,
+        config: { _canonicalRefSlug: slug },
+      };
+    }
+  }
+  const parse = t => ({ isEmpty: false, book: 'Book', normalized: t });
+  const svc = new Stubbed({ parse }, null, null);
+
+  test('keeps every reference, not only the first', async () => {
+    const r = await svc.lookup('gen.1.1;john.3.16');
+    expect(r.config._canonicalRefSlug).toBe('gen.1.1;john.3.16');
+  });
+  test('a block without a canonical slug uses its normalized reference', async () => {
+    const r = await svc.lookup('gen.1.1;lof.1');
+    expect(r.config._canonicalRefSlug).toBe('gen.1.1;lectures.on.faith.1');
+  });
+  test('does not change the first section\'s config', async () => {
+    const r = await svc.lookup('gen.1.1;john.3.16');
+    expect(r.sections[0].config._canonicalRefSlug).toBe('gen.1.1');
+  });
+});

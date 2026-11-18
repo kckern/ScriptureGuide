@@ -435,6 +435,12 @@ const cleanReference = function(messyReference, config) {
     ref = ref.replace(/[()]/g, " ");
     ref = ref.replace(/\bsec(?:tion)?\b\.?/ig, " ");
 
+    //A dot between a number and a word separates them: "88:1-17.Matthew", "3:16.1.ne"
+    ref = ref.replace(/(\d)[.](?=(?:\d[.\s]*)?\p{L})/gu, "$1 ");
+    //A numbered book after a number starts a new reference ("3:16 1 Nephi 3:7"); the rules below
+    //would otherwise read the two numbers as chapter and verse
+    ref = ref.replace(/(\d)\s+(?=\d[\s.]*\p{L}[\p{L}\s.&'-]{0,40}?[\s.]\d)/gu, "$1; ");
+
     const rules = cleanRules(config);
     for (const [re, replacement] of rules.pre) ref = ref.replace(re, replacement);
 
@@ -454,6 +460,8 @@ const cleanReference = function(messyReference, config) {
     for (const [re, replacement] of rules.bookRules) {
         ref = (buffer+ref+buffer).replace(re, replacement).trim();
     }
+    //A book and chapter straight after a number starts a new reference (books are hashes here)
+    ref = ref.replace(/(\d)\s*(==\d+==)(?=\s*\d)/g, "$1; $2");
     ref = ref.replace(rules.hashRe, function (match) {
        const bookValue = books[hashes.indexOf((match))];
          return bookValue + " ";

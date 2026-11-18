@@ -7,7 +7,7 @@ import { Reference } from '../domain/entities/Reference.js';
 import VerseSerializer from '../presentation/serializers/VerseSerializer.js';
 import { defaultVersions, versionOrder } from '../domain/rules/defaultVersions.js';
 import { applyFormatOverride } from '../domain/rules/formatOverride.js';
-import { getBook, splitRuns } from '../domain/rules/legacyReference.js';
+import { getBook, slugifyRef, splitRuns } from '../domain/rules/legacyReference.js';
 import { numericVerseIds, cleanReference } from '../domain/rules/cleanReference.js';
 import { parseVerseIdList } from '../domain/rules/referenceParsing.js';
 import { isCompoundLine } from '../domain/rules/legacyText.js';
@@ -55,7 +55,8 @@ export class ScriptureLookupService {
   // "corianton; 38" is "corianton 38", not verse id 38.
   // Pieces past `limit` (what the request budget has left) are kept as typed, not parsed.
   splitBlocks(referenceString, limit = Infinity) {
-    const pieces = String(referenceString || '').split(';').map(p => p.trim()).filter(Boolean);
+    let pieces = String(referenceString || '').split(';').map(p => p.trim()).filter(Boolean);
+    if (pieces.length < 2) pieces = this.impliedPieces(referenceString);
     if (pieces.length < 2) return null;
     const blocks = [];
     let book = null;
@@ -80,6 +81,15 @@ export class ScriptureLookupService {
       blocks.push(text);
     }
     return blocks;
+  }
+
+  // "D&C 88:1 Matthew 11:28" names several references with nothing between them: the package
+  // finds them. A comma is left alone, since "John 3:16, 4:1" normalizes with a semicolon too.
+  impliedPieces(referenceString) {
+    const text = String(referenceString || '');
+    if (text.includes(',') || !/\d[\s.]+(?:\d[\s.]*)?\p{L}/u.test(text)) return [];
+    const { isEmpty, normalized } = this.referenceService.parse(text);
+    return isEmpty ? [] : String(normalized || '').split(';').map(p => p.trim()).filter(Boolean);
   }
 
   async lookup(referenceString, config = {}) {
@@ -110,7 +120,11 @@ export class ScriptureLookupService {
         chapterHeading: first.chapterHeading,
         chapterNav: null,
         annotations: [],
-        config: first.config,
+        // The address bar is rewritten to this slug, so it names every reference found
+        config: {
+          ...first.config,
+          _canonicalRefSlug: found.map(r => r.config?._canonicalRefSlug || slugifyRef(r.reference.normalized)).join(';'),
+        },
         sections,
       });
     }
