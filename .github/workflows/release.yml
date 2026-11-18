@@ -32,22 +32,19 @@ jobs:
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
           NPM_CONFIG_PROVENANCE: 'true'
 
-  # Every push builds :edge and :sha-<short>; a commit that bumps apps/web's
-  # version (the merged Version PR) also tags :<version> and :latest.
-  web-image:
-    runs-on: ubuntu-latest
+  # Each architecture builds on its own runner and is pushed by digest. Emulating arm64 under
+  # QEMU crashed `npm ci` and hung the job until the 6-hour limit.
+  web-image-build:
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 30
+    strategy:
+      fail-fast: true
+      matrix:
+        include:
+          - { platform: linux/amd64, arch: amd64, runner: ubuntu-latest }
+          - { platform: linux/arm64, arch: arm64, runner: ubuntu-24.04-arm }
     steps:
       - uses: actions/checkout@v7
-        with: { fetch-depth: 2 }
-      - id: v
-        run: |
-          version=$(node -p "require('./apps/web/package.json').version")
-          tags="ghcr.io/kckern/scripture-guide:edge,ghcr.io/kckern/scripture-guide:sha-$(git rev-parse --short HEAD)"
-          if git diff HEAD^1 HEAD -- apps/web/package.json | grep -q '^[-+]  "version"'; then
-            tags="$tags,ghcr.io/kckern/scripture-guide:$version,ghcr.io/kckern/scripture-guide:latest"
-          fi
-          echo "tags=$tags" >> "$GITHUB_OUTPUT"
-      - uses: docker/setup-qemu-action@v4
       - uses: docker/setup-buildx-action@v4
       - uses: docker/login-action@v4
         with: { registry: ghcr.io, username: '${{ github.actor }}', password: '${{ secrets.GITHUB_TOKEN }}' }
@@ -56,14 +53,59 @@ jobs:
         with:
           context: .
           file: apps/web/Dockerfile
-          platforms: linux/amd64,linux/arm64
-          push: true
-          tags: ${{ steps.v.outputs.tags }}
+          platforms: ${{ matrix.platform }}
           labels: org.opencontainers.image.source=https://github.com/kckern/ScriptureGuide
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          outputs: type=image,name=ghcr.io/kckern/scripture-guide,push-by-digest=true,name-canonical=true,push=true
+          cache-from: type=gha,scope=web-${{ matrix.arch }}
+          cache-to: type=gha,scope=web-${{ matrix.arch }},mode=max
+      - name: Record the digest
+        env: { DIGEST: '${{ steps.build.outputs.digest }}' }
+        run: |
+          mkdir -p "$RUNNER_TEMP/digests"
+          touch "$RUNNER_TEMP/digests/${DIGEST#sha256:}"
+      - uses: actions/upload-artifact@v7
+        with:
+          name: web-digest-${{ matrix.arch }}
+          path: ${{ runner.temp }}/digests/*
+          if-no-files-found: error
+          retention-days: 1
+
+  # Every push tags :edge and :sha-<short>; a commit that bumps apps/web's version (the merged
+  # Version PR) also tags :<version> and :latest.
+  web-image:
+    needs: web-image-build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      IMAGE: ghcr.io/kckern/scripture-guide
+    steps:
+      - uses: actions/checkout@v7
+        with: { fetch-depth: 2 }
+      - uses: actions/download-artifact@v8
+        with:
+          path: ${{ runner.temp }}/digests
+          pattern: web-digest-*
+          merge-multiple: true
+      - uses: docker/setup-buildx-action@v4
+      - uses: docker/login-action@v4
+        with: { registry: ghcr.io, username: '${{ github.actor }}', password: '${{ secrets.GITHUB_TOKEN }}' }
+      - name: Publish the multi-architecture tags
+        id: publish
+        working-directory: ${{ runner.temp }}/digests
+        run: |
+          sha_tag="$IMAGE:sha-$(git -C "$GITHUB_WORKSPACE" rev-parse --short HEAD)"
+          tags=(-t "$IMAGE:edge" -t "$sha_tag")
+          if git -C "$GITHUB_WORKSPACE" diff HEAD^1 HEAD -- apps/web/package.json | grep -q '^[-+]  "version"'; then
+            version=$(node -p "require('$GITHUB_WORKSPACE/apps/web/package.json').version")
+            tags+=(-t "$IMAGE:$version" -t "$IMAGE:latest")
+          fi
+          sources=()
+          for digest in *; do sources+=("$IMAGE@sha256:$digest"); done
+          docker buildx imagetools create "${tags[@]}" "${sources[@]}"
+          echo "digest=$(docker buildx imagetools inspect "$sha_tag" --format '{{json .Manifest}}' | jq -r .digest)" >> "$GITHUB_OUTPUT"
       - uses: sigstore/cosign-installer@v3
-      - run: cosign sign --yes ghcr.io/kckern/scripture-guide@${{ steps.build.outputs.digest }}
+      - env: { DIGEST: '${{ steps.publish.outputs.digest }}' }
+        run: cosign sign --yes "$IMAGE@$DIGEST"
 
   # Uploads to the Chrome Web Store only on the commit that bumps the extension's version.
   extension:
