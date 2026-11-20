@@ -26,6 +26,8 @@ jobs:
         run: npm run test:jest -w scripture-guide -- --ci --testPathIgnorePatterns known-issues
       - name: website
         run: npm test -w @scripture-guide/web
+      - name: seed data
+        run: npm run check-seeds
       - name: Chrome extension
         run: |
           npm test -w scripture-guide-chrome-extension -- --ci

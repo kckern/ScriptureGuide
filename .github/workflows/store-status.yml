@@ -30,4 +30,8 @@ jobs:
           line=$(scripts/release/cws.sh status); code=$?
           echo "$line"
           echo "### Chrome Web Store: $line" >> "$GITHUB_STEP_SUMMARY"
-          [ "$code" = 0 ] || { echo "::error::the store rejected the latest submission or took the item down: $line"; exit 1; }
+          case "$code" in
+            0) ;;
+            2) echo "::error::the store rejected the latest submission or took the item down: $line"; exit 1 ;;
+            *) echo "::error::could not read the store status (exit $code); see the log above"; exit 1 ;;
+          esac

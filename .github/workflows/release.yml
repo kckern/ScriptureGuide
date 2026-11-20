@@ -27,24 +27,30 @@ jobs:
   # jobs below build and publish that commit. A push without changesets passes through
   # unchanged: the website still deploys, and nothing is published to npm or the store.
   # The bump is pushed with GITHUB_TOKEN, so it does not start another run of this workflow.
+  # Only the commit the tests ran on is released: if master moved during the run, this run sets
+  # skip and publishes nothing, and the run for the newer commit releases everything instead.
+  # Runs on master only, so a dispatch from another branch can neither publish nor push.
   version:
     needs: test
+    if: github.ref == 'refs/heads/master'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     outputs:
+      skip: ${{ steps.v.outputs.skip }}
       sha: ${{ steps.v.outputs.sha }}
       package: ${{ steps.v.outputs.package }}
       web: ${{ steps.v.outputs.web }}
       extension: ${{ steps.v.outputs.extension }}
     steps:
-      # Full history so the rebase onto a master that moved during the run can find the merge base
       - uses: actions/checkout@v7
-        with: { fetch-depth: 0 }
       - uses: actions/setup-node@v7
         with: { node-version: '24', cache: 'npm' }
       - id: v
         run: |
           ver() { node -p "require('./$1/package.json').version"; }
+          newer() { echo "::notice::master moved past $GITHUB_SHA during this run; the run for the newer commit releases it"; echo "skip=true" >> "$GITHUB_OUTPUT"; exit 0; }
+          git fetch -q --depth=1 origin master
+          [ "$(git rev-parse FETCH_HEAD)" = "$GITHUB_SHA" ] || newer
           before_pkg=$(ver packages/scripture-guide); before_web=$(ver apps/web); before_ext=$(ver apps/chrome-extension)
           if find .changeset -name '*.md' ! -name README.md | grep -q .; then
             npm ci --ignore-scripts
@@ -58,8 +64,8 @@ jobs:
             git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
             git add -A
             git commit -m "$msg"
-            git pull --rebase origin master
-            git push origin HEAD:master
+            # Rejected if master moved since the fetch above
+            git push origin HEAD:master || newer
           fi
           echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
           [ "$(ver packages/scripture-guide)" != "$before_pkg" ] && echo "package=true" >> "$GITHUB_OUTPUT"
@@ -72,7 +78,7 @@ jobs:
   # Dispatch with npm: true to publish a version that is already bumped.
   npm:
     needs: version
-    if: vars.NPM_PUBLISH == 'true' && (needs.version.outputs.package == 'true' || inputs.npm)
+    if: needs.version.outputs.skip != 'true' && vars.NPM_PUBLISH == 'true' && (needs.version.outputs.package == 'true' || inputs.npm)
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
@@ -92,6 +98,7 @@ jobs:
   # QEMU crashed `npm ci` and hung the job until the 6-hour limit.
   web-image-build:
     needs: version
+    if: needs.version.outputs.skip != 'true'
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 30
     strategy:
@@ -181,6 +188,7 @@ jobs:
   # publisher's service account. Needs the repo variable CWS_PUBLISHER_ID.
   extension:
     needs: version
+    if: needs.version.outputs.skip != 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     env:
@@ -223,7 +231,10 @@ jobs:
         run: echo "::warning::CWS_PUBLISHER_ID is not set; built the extension but did not upload it"
 
   # Rebuilds the public seed image when data/seeds changes.
+  # Waits for the tests (which include the seed checks) and runs on master only.
   seed-image:
+    needs: test
+    if: github.ref == 'refs/heads/master'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7

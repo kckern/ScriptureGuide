@@ -14,7 +14,16 @@ API=https://chromewebstore.googleapis.com
 ITEM="publishers/${PUBLISHER_ID}/items/${EXTENSION_ID}"
 AUTH=(-H "Authorization: Bearer ${TOKEN}")
 
-fetch_status() { curl -sS --fail-with-body "${AUTH[@]}" "${API}/v2/${ITEM}:fetchStatus"; }
+# curl that prints the response body, or on an HTTP error writes Google's reason to stderr and fails
+api() {
+  local out code
+  out=$(mktemp)
+  code=$(curl -sS -o "$out" -w '%{http_code}' "${AUTH[@]}" "$@") || { cat "$out" >&2; rm -f "$out"; return 1; }
+  if [ "$code" -ge 400 ]; then echo "HTTP $code from $*: $(cat "$out")" >&2; rm -f "$out"; return 1; fi
+  cat "$out"; rm -f "$out"
+}
+
+fetch_status() { api "${API}/v2/${ITEM}:fetchStatus"; }
 
 case "${1:-}" in
   status)
@@ -27,22 +36,24 @@ case "${1:-}" in
     echo "live=${live} submitted=${sub}${subv:+ (${subv})} takenDown=${down}$([ "$warned" = true ] && echo ' warned=true')"
     if [ "$sub" = REJECTED ] || [ "$down" = true ]; then exit 2; fi ;;
   cancel-pending)
-    sub=$(fetch_status | jq -r '.submittedItemRevisionStatus.state // "none"')
+    s=$(fetch_status)
+    sub=$(jq -r '.submittedItemRevisionStatus.state // "none"' <<<"$s")
     if [ "$sub" = PENDING_REVIEW ]; then
       # POST with an empty body; -d '' sends Content-Length: 0
-      curl -sS --fail-with-body "${AUTH[@]}" -X POST -d '' "${API}/v2/${ITEM}:cancelSubmission"
+      api -X POST -d '' "${API}/v2/${ITEM}:cancelSubmission"
       echo "cancelled the submission that was pending review"
     fi ;;
   upload)
     zip="${2:?usage: cws.sh upload ZIP}"
-    r=$(curl -sS --fail-with-body "${AUTH[@]}" -H 'Content-Type: application/zip' --data-binary @"$zip" "${API}/upload/v2/${ITEM}:upload")
+    r=$(api -H 'Content-Type: application/zip' --data-binary @"$zip" "${API}/upload/v2/${ITEM}:upload")
     echo "upload: $r"
     state=$(jq -r .uploadState <<<"$r")
     for _ in $(seq 1 30); do
       # The reference names the in-progress value both IN_PROGRESS and UPLOAD_IN_PROGRESS
       case "$state" in IN_PROGRESS|UPLOAD_IN_PROGRESS) ;; *) break ;; esac
       sleep 10
-      state=$(fetch_status | jq -r '.lastAsyncUploadState // "NOT_FOUND"')
+      s=$(fetch_status)
+      state=$(jq -r '.lastAsyncUploadState // "NOT_FOUND"' <<<"$s")
       echo "upload state: $state"
     done
     [ "$state" = SUCCEEDED ] || { echo "::error::upload ended in state $state"; exit 1; } ;;

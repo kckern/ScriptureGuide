@@ -27,4 +27,4 @@ A push that contains a changeset for `scripture-guide-chrome-extension` uploads 
 ## Rejections
 - INVALID_ITEM_METADATA: the listing (privacy tab, permission justifications) is incomplete. KC fixes it in the Developer Dashboard. The privacy policy URL is https://scripture.guide/privacy-policy.
 - A new permission in manifest.json needs a justification in the dashboard before submitting. Tell KC first.
-- To retry an upload without a new version: `gh workflow run release.yml -f extension=true`. It also redeploys the website from master.
+- To retry an upload without a new version: `gh workflow run release.yml -f extension=true`. It also redeploys the website from master. If a submission is still pending review, the retry cancels it before uploading, so a failed upload leaves nothing in review. Check `gh workflow run store-status.yml` first.
