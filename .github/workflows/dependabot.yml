@@ -17,7 +17,7 @@ jobs:
       ecosystem: ${{ steps.m.outputs.package-ecosystem }}
     steps:
       - id: m
-        uses: dependabot/fetch-metadata@v2
+        uses: dependabot/fetch-metadata@v3
   test:
     needs: meta
     if: needs.meta.outputs.ecosystem == 'npm_and_yarn' && contains(fromJSON('["version-update:semver-patch","version-update:semver-minor"]'), needs.meta.outputs.type)
