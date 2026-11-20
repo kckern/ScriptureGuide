@@ -13,6 +13,7 @@
    const av = typeof assetVersion !== 'undefined' && assetVersion ? '?v=' + encodeURIComponent(assetVersion) : ''; %>
 <%# Preferences (localStorage); sets the <html> classes the CSS reads before the first paint %>
 <script src="/js/prefs.js<%= av %>"></script>
+<link rel="preload" href="/css/webfont/GoudyScripture.woff2" as="font" type="font/woff2" crossorigin>
 <% if (typeof ogMeta !== 'undefined' && ogMeta) { %>
 <meta property="og:title" content="<%= ogMeta.title %>" />
 <meta property="og:image" content="<%= ogMeta.image %>" />
@@ -118,6 +119,7 @@ function activateCopyButtons() {
 </script>
 <script src="/js/main.js<%= av %>"></script>
 <script src="/js/prefsPanel.js<%= av %>"></script>
+<script src="/js/columns.js<%= av %>"></script>
 </head>
 <body class="<%- typeof browserClass !== 'undefined' ? browserClass : '' %>">
 
@@ -153,6 +155,8 @@ document.body.onkeyup = function(e){
 };
 if(typeof activateAnnotations === 'function') activateAnnotations();
 if(typeof activateCopyButtons === 'function') activateCopyButtons();
+// Split two-column verse sections into window-high blocks before the first paint (columns.js)
+if(window.SGColumns) SGColumns.layout();
 
 // Smooth page transitions: fade in on load (opacity:0 set in CSS head)
 requestAnimationFrame(function() {

@@ -130,6 +130,7 @@ function replacePassage(version,hversion,seq,options)
  					$(".passage.fading").html(replaceHTML);
  					$(".passage.fading").html(replaceHTML);
  					if(SGPrefs.get('verseNumbers')) setVerseNumbers(true);
+ 					if(window.SGColumns) SGColumns.layout();
  					$(".passage.fading h3.heading").addClass("paddedH3");
  					
  					
@@ -396,6 +397,7 @@ function setVerseNumbers(on)
 		});
 	}
 	else $(".verse sup.vnum").remove();
+	if(window.SGColumns) SGColumns.layout();
 }
 
 function postFLAjax()

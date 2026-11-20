@@ -550,3 +550,26 @@
     margin-top: 0.8ex;
     user-select: none;
 }
+
+/* One verse per paragraph (KJV, LDS): section.ejs wraps the paragraphs in .vcols. With the
+   "Two columns" preference on (the default; prefs.js sets sg-one-column when off) the verses sit
+   closer, and wide screens set them in two columns, split into window-high blocks by columns.js. */
+html:not(.sg-one-column) .vcols:not(.vcols-split) {
+    clear: both; /* below the heading's floated cover */
+    margin-top: .5em;
+}
+html:not(.sg-one-column) .vcols p.prose {
+    margin: 0 0 .45em;
+}
+@media (min-width: 700px) {
+    html:not(.sg-one-column) .vcols {
+        column-count: 2;
+        column-gap: 2em;
+        overflow-anchor: none;
+        margin-bottom: .8em;
+    }
+    html:not(.sg-one-column) .vcols + .vcols {
+        border-top: 1px dotted #a89a86;
+        padding-top: .8em;
+    }
+}

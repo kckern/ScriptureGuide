@@ -9,6 +9,7 @@
   var TOGGLES = [
     { group: 'Text' },
     { key: 'verseNumbers', label: 'Verse numbers' },
+    { key: 'twoColumn', label: 'Two columns', note: 'For editions with one verse per paragraph, like the KJV. Wide screens only.' },
     { group: 'Heading buttons' },
     { key: 'parallel', label: 'Parallel passages' },
     { key: 'facsimile', label: 'Facsimiles' },

@@ -132,7 +132,8 @@ function headerRows(t, h3html, version, showExtras) {
 const passages = [];
 let current = null;
 function startPassage(h3, t, ellipsis) {
-  current = { h3, t, ellipsis, body: '', ids: [] };
+  // paras: what each paragraph of the passage is, to decide whether it is verse-per-paragraph
+  current = { h3, t, ellipsis, body: '', ids: [], paras: [], parasAt: null, mixed: false };
   passages.push(current);
 }
 
@@ -152,6 +153,7 @@ paraGroups.forEach(group => {
     startPassage(group.h3, t, '');
   }
 
+  if (group.versebreak) current.mixed = true;
   group.inlineItems.forEach(h => {
     if (h.type === 'verse_head' && h.text) {
       current.body += `\n\t\t<div class="verse_head">${h.textHtml ?? h.text}</div>`;
@@ -161,6 +163,9 @@ paraGroups.forEach(group => {
   });
 
   const content = group.spans.join(' ');
+  if (current.paras.length && group.inlineItems.some(h => h.text && (h.type === 'verse_head' || (!group.h3 && headerTypes.has(h.type))))) current.mixed = true;
+  if (current.parasAt == null) current.parasAt = current.body.length;
+  current.paras.push(group.fmt === 'prose' && !group.cls && group.spans.length === 1);
   if (group.fmt === 'poetry') {
     current.body += `\n\t\t<blockquote class="poetry${group.cls ? ' ' + group.cls : ''}">${content}</blockquote>`;
   } else {
@@ -184,6 +189,11 @@ for (const [i, p] of passages.entries()) {
   const leadIn = !p.h3 && i === 0 && passages[1]?.h3?.verse_id === data.firstVerseId &&
     p.ids.length > 0 && p.ids.every(id => id === data.firstVerseId);
   const passageVersion = p.h3 ? (p.h3.headVersion || version) : (leadIn ? version : '');
+  // One verse per paragraph (each verse starts with ¶, as in the KJV and LDS editions): the
+  // paragraphs go in <div class="vcols">, which the CSS sets in two columns on wide screens
+  // (unless the visitor turned that off) and public/js/columns.js splits into screen-high blocks.
+  const versePerPara = p.paras.length > 1 && !p.mixed && p.paras.every(Boolean);
+  if (versePerPara) p.body = `${p.body.slice(0, p.parasAt)}\n\t\t<div class="vcols">${p.body.slice(p.parasAt)}\n\t\t</div>`;
   passagesHtml += bare
     ? `${header}${p.body}`
     : `\n      <div class="passage ver_${passageVersion}">${header}${p.body}\n      </div>`;
