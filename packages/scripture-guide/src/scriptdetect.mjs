@@ -25,7 +25,10 @@ const findMatches = (content,books,lang_extra) => {
     });
 
     const tail = lang_extra.tail ? new RegExp(lang_extra.tail,"ig") : /[^0-9]+$/;
-    const preBookMatch = lang_extra.book || `(First|I|1|1st|Second|II|2|2nd|Third|III|3|3rd|Fourth|IV|4|4th)*\\s*(books* of)*\\s*`;
+    // At most one numeral or ordinal, then an optional "book of". The old repeated groups,
+    // (I|II|III|1|...)*\s*(books* of)*\s*, backtracked exponentially on "hiiii..." and
+    // polynomially on long runs of spaces or digits, freezing pages for seconds.
+    const preBookMatch = lang_extra.book || `(?:(?:First|Second|Third|Fourth|1st|2nd|3rd|4th|III|II|IV|I|[1-4])\\s*)?(?:books? of\\s*)?`;
     const matchingBooks = findMatchingBooks(normalizedContent,books);
     // Bind a book name to its chapter:verse. Structure (not a loose class) to
     // avoid ReDoS and cross-sentence false positives:
@@ -50,13 +53,11 @@ const findMatches = (content,books,lang_extra) => {
         return stringMatch;
     }).filter(x=>!!x);
 
-    const bookSubStrings = fullBookMatches.map(bookMatch=>{
+    const allBookSubStrings = fullBookMatches.map(bookMatch=>{
         const substrings = normalizedContent.match(new RegExp(bookMatch,"ig")).flat();
         return substrings;
-    }).flat().reduce((prev,current)=>{
-        if(prev.includes(current)) return prev;
-        return [...prev,current]
-    },[]).filter(i=>!!i).filter(substring=>{
+    }).flat();
+    const bookSubStrings = [...new Set(allBookSubStrings)].filter(i=>!!i).filter(substring=>{
         // A handful of abbreviations are also ordinary English words ("is" ->
         // Isaiah, "am" -> Amos, "he" -> Hebrews). Matching them case-insensitively
         // turns prose into citations: "the aspect ratio is 16:9" became
@@ -87,14 +88,17 @@ const findMatches = (content,books,lang_extra) => {
     }).filter(i=>!!i);
 
     const possiblyOverlappingMatches = bookSubStrings.map(([substring,positions])=>{
+        // One sticky regex per book substring, matched at each position. Building a regex per
+        // position and matching it against the rest of the text was quadratic in page length.
+        let pattern = null;
+        try{
+           pattern = new RegExp(substring+postBookMatch,"iy");
+        }catch(e){
+            return [];
+        }
         return positions.map(i=>{
-            let pattern = null;
-            try{
-               pattern = new RegExp(substring+postBookMatch,"ig");
-            }catch(e){
-                return null;
-            }
-            const match = normalizedContent.slice(i).match(pattern)?.[0]?.replace(tail,"").trim();
+            pattern.lastIndex = i;
+            const match = pattern.exec(normalizedContent)?.[0]?.replace(tail,"").trim();
             if(!match) return null;
             const len = match.length;
             const pos = i;
@@ -108,26 +112,38 @@ const findMatches = (content,books,lang_extra) => {
             return [match,posIn,posOut];
         }
     )}).flat().filter(i=>!!i);
+    // Each match is cut where the earliest other match that runs past its end begins. Sorted by
+    // start with a running max of ends, the first such match is found by binary search instead
+    // of scanning every match for every match.
+    const byStart = [...possiblyOverlappingMatches].sort((a,b)=>a[1]-b[1]);
+    const maxEndUpTo = [];
+    byStart.forEach(([,,e1],i)=>maxEndUpTo.push(Math.max(e1, i ? maxEndUpTo[i-1] : -Infinity)));
+    const cutPoint = (string,end)=>{
+        let lo = 0, hi = byStart.length - 1, first = byStart.length;
+        while (lo <= hi) {
+            const mid = (lo + hi) >> 1;
+            if (maxEndUpTo[mid] > end) { first = mid; hi = mid - 1; } else lo = mid + 1;
+        }
+        for (let k = first; k < byStart.length && byStart[k][1] < end; k++) {
+            const [s,s1,e1] = byStart[k];
+            if (s !== string && e1 > end) return s1;
+        }
+        return end;
+    };
     const matchesWithReferences = possiblyOverlappingMatches.map(([string,start,end])=>{
-        const overLappingItems = possiblyOverlappingMatches.filter(([s,s1,e1])=>s!==string && s1<end && e1>end);
-        const hasOverlap = overLappingItems.length > 0;
-        const newEnd = hasOverlap ? Math.min(...overLappingItems.map(([s,s1,e1])=>s1)) : end;
+        const newEnd = cutPoint(string,end);
         const newString = normalizedContent.slice(start,newEnd);
         return newString.replace(tail,"").trim();
     }).filter(i=>!!i);
-    const matches =  matchesWithReferences.map(string=>{
+    const matches =  [...new Set(matchesWithReferences)].map(string=>{
         // `string` is a literal matched span, re-found to enumerate occurrences;
         // it may contain regex metacharacters (e.g. "(" from "Philippians (3:20").
         const pattern = (new RegExp(string.replace(/[.*+?^${}()|[\]\\]/g,"\\$&"),"ig"));
         const matches = normalizedContent.match(pattern)?.map(i=>i.trim().replace(tail,""));
         //console.log({string,matches,tail});
         return matches;
-    }).flat()
-    .reduce((prev,current)=>{
-        if(prev.includes(current)) return prev;
-        return [...prev,current]
-    },[]).filter(i=>!!i);
-    return matches;
+    }).flat();
+    return [...new Set(matches)].filter(i=>!!i);
 }
 
 

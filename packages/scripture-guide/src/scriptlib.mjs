@@ -24,13 +24,18 @@ export const removeOverlaps = (matches, content, preferenceResolver = null) => {
     if (matches.length <= 1) return matches;
     
     const result = [];
+    // When matches are sorted by start (the usual case), a match can only overlap an included
+    // one if some included match ends after it starts, and only overlap later matches until
+    // one starts at or after its end. Same result as comparing every pair, in linear time.
+    const sorted = matches.every((m, i) => i === 0 || m[0] >= matches[i - 1][0]);
+    let includedMaxEnd = -Infinity;
     
     for (let i = 0; i < matches.length; i++) {
         const current = matches[i];
         let shouldInclude = true;
         
         // Check for overlaps with already included matches
-        for (const included of result) {
+        if (!sorted || includedMaxEnd > current[0]) for (const included of result) {
             if (rangesOverlap(current, included)) {
                 shouldInclude = false;
                 break;
@@ -41,6 +46,7 @@ export const removeOverlaps = (matches, content, preferenceResolver = null) => {
             // Check for overlaps with remaining matches
             for (let j = i + 1; j < matches.length; j++) {
                 const next = matches[j];
+                if (sorted && next[0] >= current[1]) break;
                 if (rangesOverlap(current, next)) {
                     // Use preference resolver or default to longer match
                     if (preferenceResolver) {
@@ -65,10 +71,30 @@ export const removeOverlaps = (matches, content, preferenceResolver = null) => {
         
         if (shouldInclude) {
             result.push(current);
+            includedMaxEnd = Math.max(includedMaxEnd, current[1]);
         }
     }
     
     return result;
+};
+
+/**
+ * Index [start, end] spans for "does any span cover this position?" queries in log time.
+ * @param {Array} spans - Array of [start, end] tuples, in any order
+ * @returns {Function} (position) => true when some span has start <= position < end
+ */
+export const spanCoverage = (spans) => {
+    const sorted = [...(spans || [])].sort((a, b) => a[0] - b[0]);
+    const maxEnd = [];
+    for (let i = 0; i < sorted.length; i++) maxEnd.push(Math.max(sorted[i][1], i ? maxEnd[i - 1] : -Infinity));
+    return (position) => {
+        let lo = 0, hi = sorted.length - 1, last = -1;
+        while (lo <= hi) {
+            const mid = (lo + hi) >> 1;
+            if (sorted[mid][0] <= position) { last = mid; lo = mid + 1; } else hi = mid - 1;
+        }
+        return last >= 0 && maxEnd[last] > position;
+    };
 };
 
 /**
@@ -171,6 +197,9 @@ export const mergeAdjacentMatches = (matches, gapMergeFlags, compatibilityCheck 
  */
 export const gapCanMerge = (gapString, joiners) => {
     if (!/\S/.test(gapString)) return true;
+    // A period straight after the first reference ends its sentence: "John 3:16. Mosiah 2:17
+    // was next" is two citations. ("cf. Mosiah" still merges: its period follows "cf".)
+    if (/^\s*\./.test(gapString)) return false;
     const list = Array.isArray(joiners) ? joiners : (joiners && joiners.patterns) || [];
     let residue = gapString;
     for (const joiner of list) {

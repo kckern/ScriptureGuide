@@ -9,8 +9,7 @@ import {
     calculateNegativeSpace,
     mergeAdjacentMatches,
     buildFinalOutput,
-    gapCanMerge
-} from './scriptlib.mjs';
+    gapCanMerge, spanCoverage } from './scriptlib.mjs';
 
 // Context-aware collection: the positional core shared by the string-output
 // detectReferencesWithContext and the public findReferences. Returns records:
@@ -267,6 +266,7 @@ const findImpliedReferences = (content, explicitMatches, explicitIndices, lookup
     
     // Also handle standalone chapter:verse patterns
     const chapterVersePattern = /\b(\d+):(\d+(?:[–—-]\d+)?(?:\s*,\s*\d+(?:[–—-]\d+)?)*)/g;
+    const insideExplicit = spanCoverage(explicitIndices || []);
     while ((match = chapterVersePattern.exec(content)) !== null) {
         const fullMatch = match[0];
         const chapter = match[1];
@@ -274,14 +274,17 @@ const findImpliedReferences = (content, explicitMatches, explicitIndices, lookup
         const position = match.index;
         
         // Skip if this is part of an explicit reference we already found
-        const isPartOfExplicit = explicitIndices && explicitIndices.some(([start, end]) => 
-            position >= start && position < end
-        );
+        const isPartOfExplicit = insideExplicit(position);
         
         if (isPartOfExplicit) {
             continue;
         }
-        
+
+        // "met at 4:15 pm" is a clock time, not a verse of the book in context
+        if (/^\s*(?:[ap]\.?\s?m\b\.?|o['’]?clock\b)/i.test(content.slice(position + fullMatch.length))) {
+            continue;
+        }
+
         // Find the nearest book context
         const context = getNearestBookContext(position, bookContexts, options.maxContextDistance);
         if (context && (options.strictImpliedBooks === false ||

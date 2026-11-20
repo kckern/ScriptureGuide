@@ -43,12 +43,23 @@ for (const [canonKey, canonData] of Object.entries(extraCanons)) {
   }
 }
 
-// Module-level caches for performance
-const indexCache = {
-  refIndex: null,
-  refIndexHash: null,
-  verseIdIndex: null,
-  verseIdIndexHash: null
+// Module-level caches for performance. A few language/canon pairs stay cached at once:
+// a one-slot cache rebuilt the ~40k-verse index on every switch, which a failed lookup's
+// language fallback did eleven times per call.
+const INDEX_CACHE_LIMIT = 4;
+const refIndexCache = new Map();
+const verseIdIndexCache = new Map();
+const cachedIndex = (cache, key, build) => {
+  if (cache.has(key)) {
+    const value = cache.get(key);
+    cache.delete(key);
+    cache.set(key, value); // most recently used last
+    return value;
+  }
+  const value = build();
+  cache.set(key, value);
+  if (cache.size > INDEX_CACHE_LIMIT) cache.delete(cache.keys().next().value);
+  return value;
 };
 
 const hashConfig = (config) => {
@@ -240,6 +251,18 @@ const lookupInLanguage = function(query, language, canon = null) {
     };
 }
 
+
+// The lookup the detectors call for each candidate span, for one detection call. A candidate
+// is looked up several times (plain pass, context pass, merging), so results are remembered
+// per string. No fallback to other languages: a span that is not a reference in the page's
+// language is not linked, and the fallback rebuilt indexes for every non-reference.
+const detectionLookup = function(language) {
+    const seen = new Map();
+    return (query) => {
+        if (!seen.has(query)) seen.set(query, lookupReference(query, { language, noMulti: true }));
+        return seen.get(query);
+    };
+}
 
 const lookupWithLanguageFallback = function(query, targetLanguage, canon = null) {
     // Define fallback order: English first (if not already tried), then all other languages
@@ -755,13 +778,10 @@ const loadRefsFromRanges = function(ranges, config) {
 }
 
 const loadRefIndex = function(config) {
-    const configHash = hashConfig(config);
+    return cachedIndex(refIndexCache, hashConfig(config), () => buildRefIndex(config));
+}
 
-    // Return cached if available and config unchanged
-    if (indexCache.refIndex && indexCache.refIndexHash === configHash) {
-        return indexCache.refIndex;
-    }
-
+const buildRefIndex = function(config) {
     let refIndex = {};
     let verse_id = 1;
     let book_list = Object.keys(config.raw_index);
@@ -779,22 +799,15 @@ const loadRefIndex = function(config) {
         }
     }
 
-    // Cache the result
-    indexCache.refIndex = refIndex;
-    indexCache.refIndexHash = configHash;
-
     return refIndex;
 }
 
 
 const loadVerseIdIndex = function(config) {
-    const configHash = hashConfig(config);
+    return cachedIndex(verseIdIndexCache, hashConfig(config), () => buildVerseIdIndex(config));
+}
 
-    // Return cached if available and config unchanged
-    if (indexCache.verseIdIndex && indexCache.verseIdIndexHash === configHash) {
-        return indexCache.verseIdIndex;
-    }
-
+const buildVerseIdIndex = function(config) {
     let verseIdIndex = [null]; // 1-indexed
     let book_list = Object.keys(config.raw_index);
     for (let a in book_list) {
@@ -807,10 +820,6 @@ const loadVerseIdIndex = function(config) {
             }
         }
     }
-
-    // Cache the result
-    indexCache.verseIdIndex = verseIdIndex;
-    indexCache.verseIdIndexHash = configHash;
 
     return verseIdIndex;
 }
@@ -899,11 +908,11 @@ const detectReferences = (content, callBack, options = null) => {
 
     // Use enhanced processing if context-aware mode is enabled
     if (finalOptions.contextAware) {
-        return detectReferencesWithContext(content, books, langExtra, (query) => lookupReference(query, effectiveLanguage), callBack, finalOptions, generateReference);
+        return detectReferencesWithContext(content, books, langExtra, detectionLookup(effectiveLanguage), callBack, finalOptions, generateReference);
     }
 
     // Fallback to original processing
-    return processReferenceDetection(content, books, langExtra, (query) => lookupReference(query, effectiveLanguage), callBack);
+    return processReferenceDetection(content, books, langExtra, detectionLookup(effectiveLanguage), callBack);
 }
 
 // Position-based sibling of detectReferences: instead of returning a
@@ -939,7 +948,7 @@ const findReferences = (content, options = null) => {
     const src = config.raw_regex.books.map(i => i[0]);
     const dst = [...new Set(config.raw_regex.books.map(i => i[1]))];
     const books = [...dst, ...src];
-    const lookup = (query) => lookupReference(query, effectiveLanguage);
+    const lookup = detectionLookup(effectiveLanguage);
     // Clone rather than mutate: config.lang_extra is shared and cached.
     const langExtra = finalOptions.chainAcrossMarkers === false
         ? restrictJoinersToStructural(config.lang_extra)
