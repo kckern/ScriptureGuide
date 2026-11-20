@@ -461,7 +461,10 @@
      border: 1px solid #cbbcb4;
      border-radius: 5px;
      position: relative;
-     bottom: 0.7em;
+     /* main.js adds these buttons after load. Top-aligned, their tall line box stays inside the
+        heading's line, so the heading keeps its height and the text below does not jump. */
+     vertical-align: top;
+     bottom: -0.5em;
      margin-left: 0.5em;
      padding-left: 0.6em;
      padding-top: 0.2em;
