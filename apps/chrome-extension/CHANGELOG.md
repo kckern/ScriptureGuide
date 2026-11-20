@@ -1,5 +1,11 @@
 # scripture-guide-chrome-extension
 
+## 2.2.0
+
+### Minor Changes
+
+- 1f25f2c: Reference badges use the Goudy Scripture font, the same typeface as scripture.guide.
+
 ## 2.1.1
 
 ### Patch Changes
