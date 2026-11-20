@@ -27,7 +27,7 @@ jobs:
       # the repo variable NPM_PUBLISH is 'true'. Until then this job only opens version PRs.
       - if: vars.NPM_PUBLISH != 'true'
         run: echo "::notice::NPM_PUBLISH is not 'true'; skipped publishing scripture-guide to npm"
-      - uses: changesets/action@v1
+      - uses: changesets/action@v2
         with:
           version: npm run version-packages
           publish: ${{ vars.NPM_PUBLISH == 'true' && 'npm run release' || '' }}
