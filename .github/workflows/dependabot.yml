@@ -1,0 +1,31 @@
+name: dependabot
+# Merges Dependabot's patch and minor updates once the full test suite passes, then starts a
+# release (a merge made with GITHUB_TOKEN does not trigger release.yml by itself).
+# Major updates stay open for a person.
+on: pull_request
+permissions:
+  contents: write
+  pull-requests: write
+  actions: write
+jobs:
+  meta:
+    if: github.event.pull_request.user.login == 'dependabot[bot]'
+    runs-on: ubuntu-latest
+    outputs:
+      type: ${{ steps.m.outputs.update-type }}
+    steps:
+      - id: m
+        uses: dependabot/fetch-metadata@v2
+  test:
+    needs: meta
+    if: needs.meta.outputs.type != 'version-update:semver-major'
+    uses: ./.github/workflows/test.yml
+  merge:
+    needs: test
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      PR: ${{ github.event.pull_request.html_url }}
+    steps:
+      - run: gh pr merge --squash "$PR"
+      - run: gh workflow run release.yml --repo "$GITHUB_REPOSITORY" --ref master
