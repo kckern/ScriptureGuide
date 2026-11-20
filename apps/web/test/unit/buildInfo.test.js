@@ -38,6 +38,7 @@ describe('buildInfo', () => {
       runUrl: 'https://github.com/kckern/ScriptureGuide/actions/runs/987654321',
       builtAt: '2026-11-20T18:04:11Z',
       image: `ghcr.io/kckern/scripture-guide@${DIGEST}`,
+      imageUrl: 'https://github.com/kckern/ScriptureGuide/pkgs/container/scripture-guide',
       node: process.version,
     });
   });

@@ -6,6 +6,8 @@ import { readFileSync } from 'node:fs';
 
 const REPO = 'https://github.com/kckern/ScriptureGuide';
 const IMAGE = 'ghcr.io/kckern/scripture-guide';
+// The registry page lists every tag and digest; ghcr has no per-digest URL.
+const IMAGE_PAGE = `${REPO}/pkgs/container/scripture-guide`;
 
 // Paths resolve the same in the repo and in the image (/repo/apps/web/src/app/).
 const versionOf = path => JSON.parse(readFileSync(new URL(path, import.meta.url), 'utf8')).version;
@@ -35,6 +37,7 @@ export function buildInfo() {
     runUrl: runId ? `${REPO}/actions/runs/${runId}` : null,
     builtAt: env('SG_BUILT_AT'),
     image: /^sha256:[0-9a-f]{64}$/.test(digest ?? '') ? `${IMAGE}@${digest}` : null,
+    imageUrl: IMAGE_PAGE,
     versions: { ...VERSIONS },
     node: process.version,
     startedAt: STARTED_AT,
