@@ -9,7 +9,7 @@ import { ogRoute } from './og.js';
 
 const router = Router();
 
-// AJAX endpoints (vbox, passage, versionselect, settings, save_prefs), legacy .php URLs, /healthz
+// AJAX endpoints (vbox, passage, versionselect; settings and save_prefs answer 410), legacy .php URLs, /healthz
 router.use(ajaxRouter());
 router.use(legacyRouter());
 

@@ -8,7 +8,6 @@ import verseboxRepository from '../../data/repositories/VerseboxRepository.js';
 import HtmlPresenter from '../../presentation/presenters/HtmlPresenter.js';
 import { renderVersebox } from '../../presentation/ajax/versebox.js';
 import { renderVersionSelect } from '../../presentation/ajax/versionSelect.js';
-import { renderSettings, SETTINGS_VOLUMES } from '../../presentation/ajax/settings.js';
 import {
   flattenText, transposeRef, baseVersion, highlightSearchTerm,
 } from '../../domain/rules/legacyText.js';
@@ -17,7 +16,7 @@ import { defaultVersions } from '../../domain/rules/defaultVersions.js';
 import { logError } from '../log.js';
 
 // The PHP site's AJAX endpoints: vbox (versebox.php), passage (passage_script.php),
-// versionselect (version_select.php), settings (settings.php) and save_prefs (save.php).
+// versionselect (version_select.php), and the retired settings (settings.php) and save_prefs (save.php).
 // Like the PHP, each reads its parameters from the query string or the form body.
 const params = req => ({ ...(req.query || {}), ...(req.body || {}) });
 const str = v => (Array.isArray(v) ? v[0] : v) ?? '';
@@ -145,8 +144,9 @@ export class AjaxController {
       const verseId = parseInt(str(p.verse_id), 10) || 0;
       const ver = baseVersion(str(p.ver) || 'LDS');
       const seq = str(p.seq);
-      const prefs = req.cookies?.sg_user ? await this.repo.findPrefs(req.cookies.sg_mail) : null;
-      const panelPref = prefs?.options?.verpanel;
+      // The panel to open on, from the visitor's browser preferences (public/js/prefs.js):
+      // "ref" leads with references when there are any; anything else leads with versions.
+      const panelPref = str(p.panel) === 'ref' ? 'ref' : 'ver';
 
       const [verse, versions, faxes, refRows] = await Promise.all([
         this.repo.findVerse(verseId),
@@ -236,24 +236,11 @@ export class AjaxController {
     } catch (err) { this.fail(res, err); }
   }
 
-  // GET|POST /settings — the preferences form. Anonymous visitors get the defaults.
-  async settings(req, res) {
-    try {
-      const c = req.cookies || {};
-      const prefs = c.sg_mail ? await this.repo.findPrefs(c.sg_mail) : null;
-      const lists = await Promise.all(SETTINGS_VOLUMES.map(v => this.repo.findAvailableVersions([v.verseId])));
-      const versionsByVol = Object.fromEntries(SETTINGS_VOLUMES.map((v, i) => [v.vol, lists[i]]));
-      this.send(res, renderSettings({ user: { name: c.sg_user, mail: c.sg_mail, face: c.sg_face }, prefs, versionsByVol }));
-    } catch (err) { this.fail(res, err); }
-  }
-
-  // GET|POST /save_prefs — intentionally a no-op.
-  // save.php upserted user_prefs for whatever address the request named, with no login check
-  // and with the values interpolated into SQL (injectable). Until the site has a real login
-  // model this endpoint accepts the request and stores nothing. Like save.php it answers with
-  // an empty body when no user is named; otherwise PHP echoed a debug dump, which is dropped.
-  async savePrefs(req, res) {
-    res.type('html').send('');
+  // GET|POST /settings and /save_prefs — retired. Preferences are kept in the browser
+  // (public/js/prefs.js, localStorage "sg_prefs"); nothing reads account cookies or user_prefs.
+  // Old links and bookmarks get 410 Gone.
+  async gone(req, res) {
+    res.status(410).type('text').send('Gone. Preferences are kept in your browser now: use the gear in the toolbar.');
   }
 }
 

@@ -12,6 +12,7 @@ import { notFoundHandler, errorHandler } from './middleware/error.js';
 import { requestLog } from './middleware/requestLog.js';
 import { responseHeaders } from './middleware/headers.js';
 import { TRUST_PROXY } from './trustProxy.js';
+import { commit } from './buildInfo.js';
 import db from '../data/db/connection.js';
 
 const VIEWS = path.join(path.dirname(fileURLToPath(import.meta.url)), '../presentation/views');
@@ -61,6 +62,12 @@ export function createApp({ log = config.env !== 'test' } = {}) {
       }
     }
     res.locals.verNames = verNamesCache;
+    next();
+  });
+
+  // Asset URLs carry the build's commit (layouts/main.ejs), so a deploy reaches cached browsers at once
+  app.use((req, res, next) => {
+    res.locals.assetVersion = commit();
     next();
   });
 

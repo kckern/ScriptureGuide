@@ -8,8 +8,8 @@ export function ajaxRouter(controller = createAjaxController()) {
     '/vbox': 'vbox',
     '/passage': 'passage',
     '/versionselect': 'versionSelect',
-    '/settings': 'settings',
-    '/save_prefs': 'savePrefs',
+    '/settings': 'gone',
+    '/save_prefs': 'gone',
   };
   for (const [path, method] of Object.entries(routes)) {
     router.all(path, (req, res, next) => {

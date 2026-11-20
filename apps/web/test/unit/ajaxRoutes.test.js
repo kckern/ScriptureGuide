@@ -53,7 +53,6 @@ function makeRepo() {
       { id: 'ASV', title: 'American Standard Version', title_long: 'American Standard Version' },
     ]),
     findVolumeId: vi.fn(async () => 2),
-    findPrefs: vi.fn(async () => null),
   };
 }
 
@@ -204,12 +203,22 @@ describe('/vbox', () => {
     const res = await request(app).get('/vbox?verse_id=%3Cimg%20src%3Dx%3E');
     expect(res.text).not.toContain('<img src=x>');
   });
-  it('leads with references when the saved preference says so', async () => {
-    repo.findPrefs.mockResolvedValue({ options: { verpanel: 'ref' } });
-    const res = await request(app).get('/vbox?verse_id=26137').set('Cookie', 'sg_user=Someone; sg_mail=a@example.com');
-    const $ = cheerio.load(res.text);
+  it('leads with references when the browser asks for them (panel=ref)', async () => {
+    const $ = cheerio.load((await request(app).post('/vbox').type('form').send({ verse_id: '26137', panel: 'ref' })).text);
     expect($('li[link=refpanel]').attr('lead')).toBe('1');
     expect($('li[link=verpanel]').attr('lead')).toBe('0');
+  });
+  it('leads with versions by default and for panel=ver', async () => {
+    for (const q of ['', '&panel=ver', '&panel=bogus']) {
+      const $ = cheerio.load((await request(app).get(`/vbox?verse_id=26137${q}`)).text);
+      expect($('li[link=verpanel]').attr('lead')).toBe('1');
+      expect($('li[link=refpanel]').attr('lead')).toBe('0');
+    }
+  });
+  it('ignores the old account cookies', async () => {
+    const res = await request(app).get('/vbox?verse_id=26137').set('Cookie', 'sg_user=Someone; sg_mail=a@example.com; sg_face=x');
+    const $ = cheerio.load(res.text);
+    expect($('li[link=verpanel]').attr('lead')).toBe('1');
   });
 });
 
@@ -240,42 +249,18 @@ describe('/passage', () => {
   });
 });
 
-describe('/settings', () => {
-  it('renders the anonymous defaults', async () => {
-    const res = await request(app).get('/settings');
-    expect(res.status).toBe(200);
-    const $ = cheerio.load(res.text);
-    expect($('h3').text()).toBe('Scripture.Guide Preferences for ');
-    expect($('select[vol]').length).toBe(14);
-    expect($('select[vol=bible][cmp=t] option').first().text()).toBe('📚 Current LDS Scriptures');
-    expect($('select[vol=bible][cmp=t] option[selected]').length).toBe(0);
-    expect($('input[type=checkbox][checked]').length).toBe(5);
-    expect($('input[name=verpanel][value=ref]').attr('checked')).toBe('checked');
-    expect($('#mail').attr('value')).toBe('');
-    expect(repo.findPrefs).not.toHaveBeenCalled();
-  });
-  it('has no Logout button now that Google sign-in is gone (decision #11)', async () => {
-    const res = await request(app).get('/settings');
-    expect(cheerio.load(res.text)('#logout').length).toBe(0);
-    expect(res.text).not.toContain('logout()');
-  });
-  it('marks saved choices for a signed-in visitor', async () => {
-    repo.findPrefs.mockResolvedValue({ versions: { bible: { t: 'KJV' } }, options: { audio: 'false', voice: 'female', verpanel: 'ver' } });
-    const res = await request(app).post('/settings').set('Cookie', 'sg_user=Ann; sg_mail=ann@example.com');
-    const $ = cheerio.load(res.text);
-    expect($('h3').text()).toBe('Scripture.Guide Preferences for Ann');
-    expect($('select[vol=bible][cmp=t] option[selected]').attr('value')).toBe('KJV');
-    expect($('input[name=audio]').attr('checked')).toBeUndefined();
-    expect($('select[key=voice] option[selected]').attr('value')).toBe('female');
-    expect($('input[name=verpanel][value=ver]').attr('checked')).toBe('checked');
-  });
-});
-
-describe('/save_prefs', () => {
-  it('accepts the request and stores nothing', async () => {
-    const res = await request(app).post('/save_prefs').type('form').send({ 'payload[user][mail]': "x' OR 1=1 --" });
-    expect(res.status).toBe(200);
-    expect(res.text).toBe('');
-    for (const fn of Object.values(repo)) expect(fn).not.toHaveBeenCalled();
-  });
+// Preferences live in the browser now (public/js/prefs.js). The old endpoints answer 410 Gone
+// and read nothing: no cookies, no user_prefs.
+describe('/settings and /save_prefs', () => {
+  for (const path of ['/settings', '/save_prefs']) {
+    it(`${path} is gone (GET and POST) and touches nothing`, async () => {
+      const get = await request(app).get(path).set('Cookie', 'sg_user=Ann; sg_mail=ann@example.com');
+      const post = await request(app).post(path).type('form').send({ 'payload[user][mail]': "x' OR 1=1 --" });
+      for (const res of [get, post]) {
+        expect(res.status).toBe(410);
+        expect(res.text).not.toContain('Ann');
+      }
+      for (const fn of Object.values(repo)) expect(fn).not.toHaveBeenCalled();
+    });
+  }
 });

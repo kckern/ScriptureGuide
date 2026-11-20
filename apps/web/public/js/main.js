@@ -129,6 +129,7 @@ function replacePassage(version,hversion,seq,options)
  					//$(".passage.fading").hide();
  					$(".passage.fading").html(replaceHTML);
  					$(".passage.fading").html(replaceHTML);
+ 					if(SGPrefs.get('verseNumbers')) setVerseNumbers(true);
  					$(".passage.fading h3.heading").addClass("paddedH3");
  					
  					
@@ -218,7 +219,9 @@ function activateVersionIMGs(el,time)
 		}
 		$(this).prepend("<h4><div><a target='_blank' href='/"+reflink(ver)+"/"+reflink($(this).attr("ref"))+"'>"+$(this).attr("ref")+"</a></div>"+imgHTML+searchcount+"</h4>");
 
-		if(typeof $(this).attr("parallel")!="undefined"   &&  user_prefs['parallel'] != "false" )  
+		// Parallel, facsimile and audio buttons are always added; the preferences hide them by CSS
+		// (prefs.js sets sg-no-parallel, sg-no-facsimile, sg-no-audio on <html>).
+		if(typeof $(this).attr("parallel")!="undefined")
 		{
 			
 			var parallel = $(this).attr("parallel").split("|");
@@ -232,14 +235,14 @@ function activateVersionIMGs(el,time)
 			}
 		
 		}
-		if(typeof $(this).attr("fax")!="undefined" &&  user_prefs['facsimile'] != "false" )  
+		if(typeof $(this).attr("fax")!="undefined")
 		{
 			if(parseInt($(this).attr("fax"))!=1) return false;
 			
 			$(this).append("<span class='b fax_button' unselectable=\"on\" >"+decodeURIComponent("%F0%9F%93%96")+"&nbsp;&nbsp;</span>");
 
 		}
-		if(typeof $(this).attr("audio")!="undefined" &&  user_prefs['audio'] != "false" )  
+		if(typeof $(this).attr("audio")!="undefined")
 		{
 			if(parseInt($(this).attr("audio"))!=1) return false;
 			$(this).append("<span class='b audio' unselectable=\"on\" >"+decodeURIComponent("%F0%9F%94%8A")+"&nbsp;&nbsp;</span>");
@@ -376,30 +379,24 @@ function activateVersionIMGs(el,time)
 	}); //each
 }
 
+// The toolbar's verse-number button: flips the preference (prefs.js); setVerseNumbers follows it.
 function showversenums()
 {
-	if($(".verse sup").length==0)
-	{
-		$(".verse").prepend(function(){ 
-			
-			if($(this).attr("verse_label")+"" == "undefined") return "";
-			
-			return "<sup class='vnum'>"+$(this).attr("verse_label")+" <sup>"  
-			
-		});
-		//$(".verse sup").css("width",0).animate({width:'auto'},350);
-	//	$(".verse sup").hide().show('slide',{direction:'left'},1000);
-		localStorage.setItem('verses', '1');
+	SGPrefs.set('verseNumbers', !SGPrefs.get('verseNumbers'));
+}
 
-	}
-	else 
+// Add or remove the verse numbers (from each verse's verse_label)
+function setVerseNumbers(on)
+{
+	if(on)
 	{
-		$(".verse sup").remove();
-		localStorage.setItem('verses', '0');
-		
+		$(".verse").not(":has(sup.vnum)").prepend(function(){
+			if($(this).attr("verse_label")+"" == "undefined") return "";
+			return "<sup class='vnum'>"+$(this).attr("verse_label")+" <sup>"
+		});
 	}
-	
-} 
+	else $(".verse sup.vnum").remove();
+}
 
 function postFLAjax()
 {
@@ -966,59 +963,6 @@ $(function(){
  	return false;
  }
 
-function matchFormat(selecter)
-{
-	$("select[vol="+$(selecter).attr("vol")+"][cmp=f] option:selected").removeAttr('selected', '');
-	$("select[vol="+$(selecter).attr("vol")+"][cmp=f] option[value="+$(selecter).children(":selected").first().val()+"]").attr('selected', 'selected');
-}
-
-function saveSettings() 
-{
-	json = {};
-	json.versions = {};
-	json.options = {};
-	json.user = {};
-	$("#settings #versions_prefs select option:selected").each(function(){
-		var vol = $(this).parent().attr("vol");
-		var cmp = $(this).parent().attr("cmp");
-		var ver = $(this).attr("value");
-		if(typeof json.versions[vol] == "undefined") json.versions[vol] = {};
-		json.versions[vol][cmp] = ver;
-	});
-	
-	
-	$("#settings #options select option:selected").each(function(){
-		var key = $(this).parent().attr("key");
-		var val = $(this).attr("value");
-		json.options[key] = val;
-	});
-	
-	$("input[type=checkbox]").each(function(){
-		
-		json.options[$(this).attr("name")] = $(this).is(':checked');
-	});
-	$("input[type=radio]").each(function(){
-		if($(this).is(':checked'))
-		{
-			json.options[$(this).attr("name")] = $(this).val();
-		}
-	});
-	
-	json.user.name = $("#settings #name").val();
-	json.user.mail = $("#settings #mail").val();
-	json.user.face = $("#settings #face").val();
-
-	$.ajax({
-	  method: "POST",
-	  url: "/save.php",
-	  data: {payload:json}
-	})
-	  .done(function( msg ) {
-	    $.featherlight.close();
-	    location.reload();
-	  });
-}
-
 $(document).ready(function(){
 		
 		
@@ -1070,5 +1014,8 @@ $(document).ready(function(){
 		$(document).mouseup( function(e) { selectedText();	});
     	document.addEventListener('copy', hidePasteBin);
 		
-		if(localStorage.getItem('verses')=="1") showversenums();
+		if(SGPrefs.get('verseNumbers')) setVerseNumbers(true);
+		SGPrefs.on(function(key, value){
+			if(key == 'verseNumbers') setVerseNumbers(value);
+		});
 	});

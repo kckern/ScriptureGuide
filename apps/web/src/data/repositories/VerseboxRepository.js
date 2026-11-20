@@ -1,7 +1,7 @@
 import db from '../db/connection.js';
 
-// Queries behind the AJAX endpoints (vbox, versionselect, settings), ported from versebox.php,
-// version_select.php, settings.php and scriptutil.php.inc.
+// Queries behind the AJAX endpoints (vbox, versionselect), ported from versebox.php,
+// version_select.php and scriptutil.php.inc.
 //
 // The PHP queries GROUP BY one column and select the rest without aggregates, which MySQL 8
 // rejects under ONLY_FULL_GROUP_BY. ANY_VALUE() keeps the same GROUP BY + ORDER BY plan, so rows
@@ -147,14 +147,6 @@ export class VerseboxRepository {
       [verseIds]
     );
     return rows[0]?.volume_id || 3;
-  }
-
-  // scriptutil::loadPrefs — saved preferences for a user, read only.
-  async findPrefs(username) {
-    if (!username) return null;
-    const rows = await db.query('SELECT prefs_json FROM user_prefs WHERE username = ? LIMIT 1', [username]);
-    if (!rows[0]?.prefs_json) return null;
-    try { return JSON.parse(rows[0].prefs_json); } catch { return null; }
   }
 }
 

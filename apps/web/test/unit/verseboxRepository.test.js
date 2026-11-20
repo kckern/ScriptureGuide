@@ -64,3 +64,10 @@ describe('findChapterVerses', () => {
     expect(params).toEqual([[[1, 22], [82, 13]]]);
   });
 });
+
+describe('user_prefs', () => {
+  // Preferences are kept in the browser (public/js/prefs.js); the table is left as it is, unread.
+  test('the repository no longer reads saved account preferences', () => {
+    expect(repo.findPrefs).toBeUndefined();
+  });
+});

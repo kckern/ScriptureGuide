@@ -369,7 +369,7 @@
 						
 						
 					/* we are using load so one can specify a target with: url.html #targetelement */
-					var $container = $('<div></div>').load(url, {verse_id:self.$currentTarget.attr("verse_id"),ver:self.$currentTarget.parents(".passage").children("h3").attr("ver"),seq:self.$currentTarget.parents(".passage").find("h3").index("h3")},function(response, status){
+					var $container = $('<div></div>').load(url, {verse_id:self.$currentTarget.attr("verse_id"),ver:self.$currentTarget.parents(".passage").children("h3").attr("ver"),seq:self.$currentTarget.parents(".passage").find("h3").index("h3"),panel:(window.SGPrefs ? SGPrefs.get("verpanel") : "")},function(response, status){
 						if ( status !== "error" ) {
 							deferred.resolve($container.contents());
 							postFLAjax();
