@@ -1,5 +1,11 @@
 # scripture-guide-chrome-extension
 
+## 2.2.2
+
+### Patch Changes
+
+- c000fcf: Clicked reference badges no longer show a blue focus ring; keyboard focus shows a thin brown outline instead.
+
 ## 2.2.1
 
 ### Patch Changes
