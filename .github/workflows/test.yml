@@ -1,0 +1,45 @@
+name: test
+# Gates every release (called by release.yml and dependabot.yml) and checks pull requests.
+on:
+  pull_request:
+  workflow_call:
+    inputs:
+      ref:
+        description: Commit to test (defaults to the triggering commit)
+        type: string
+        required: false
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      # An empty ref (pull_request, or a caller that passes none) checks out the triggering commit.
+      - uses: actions/checkout@v7
+        with: { ref: '${{ inputs.ref }}' }
+      - uses: actions/setup-node@v7
+        with: { node-version: '24', cache: 'npm' }
+      - run: npm ci
+      - run: npm run build -w scripture-guide
+      - name: scripture-guide package
+        run: npm run test:jest -w scripture-guide -- --ci --testPathIgnorePatterns known-issues
+      - name: website
+        run: npm test -w @scripture-guide/web
+      - name: Chrome extension
+        run: |
+          npm test -w scripture-guide-chrome-extension -- --ci
+          npm run build -w scripture-guide-chrome-extension
+
+  # Report only: parser cases known to fail. Never blocks a release.
+  known-issues:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with: { node-version: '24', cache: 'npm' }
+      - run: npm ci
+      - run: npm run build -w scripture-guide
+      - run: npm run test:known-issues -w scripture-guide -- --ci
