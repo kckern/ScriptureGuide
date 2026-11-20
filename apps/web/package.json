@@ -1,7 +1,7 @@
 {
   "name": "@scripture-guide/web",
   "private": true,
-  "version": "2.0.1",
+  "version": "2.0.2",
   "description": "Scripture reference lookup and display - Node.js SSR",
   "type": "module",
   "main": "src/app.js",

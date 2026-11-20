@@ -1,5 +1,11 @@
 # @scripture-guide/web
 
+## 2.0.2
+
+### Patch Changes
+
+- 65141e3: /build-info reports the live commit, CI run, build time, image digest and package versions.
+
 ## 2.0.1
 
 ### Patch Changes
