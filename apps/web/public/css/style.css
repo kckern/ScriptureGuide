@@ -553,7 +553,9 @@
 
 /* One verse per paragraph (KJV, LDS): section.ejs wraps the paragraphs in .vcols. With the
    "Two columns" preference on (the default; prefs.js sets sg-one-column when off) the verses sit
-   closer, and wide screens set them in two columns, split into window-high blocks by columns.js. */
+   closer, and screens 700px and up set them like the printed scriptures: two columns with a rule
+   between, each verse on a new line with a small indent and no space between verses, in blocks
+   that fit the screen (columns.js). */
 html:not(.sg-one-column) .vcols:not(.vcols-split) {
     clear: both; /* below the heading's floated cover */
     margin-top: .5em;
@@ -564,12 +566,59 @@ html:not(.sg-one-column) .vcols p.prose {
 @media (min-width: 700px) {
     html:not(.sg-one-column) .vcols {
         column-count: 2;
-        column-gap: 2em;
+        column-gap: 1.3em;
+        column-rule: 1px solid #5a4636;
         overflow-anchor: none;
-        margin-bottom: .8em;
+        margin-bottom: .6em;
+    }
+    html:not(.sg-one-column) .vcols.vcols-lead {
+        column-count: 1;
     }
     html:not(.sg-one-column) .vcols + .vcols {
-        border-top: 1px dotted #a89a86;
-        padding-top: .8em;
+        border-top: 1px solid #5a4636;
+        padding-top: .6em;
+    }
+    html:not(.sg-one-column) .vcols p.prose,
+    html:not(.sg-one-column) .vcols .verse {
+        margin: 0;
+        line-height: 1.15em;
+    }
+    html:not(.sg-one-column) .vcols p.prose {
+        text-indent: 1em;
+    }
+    /* Verse numbers on the line, as in print ("6 And it came to pass") */
+    html:not(.sg-one-column) .vcols sup.vnum {
+        vertical-align: baseline;
+        font-family: inherit;
+        font-size: .8em;
+        line-height: 0;
+        color: #7a5a48;
+    }
+    /* The copy button (layout activateCopyButtons) leaves the column: it shows over the top
+       right of the verse under the pointer, so it takes no width and moves nothing. */
+    html:not(.sg-one-column) .vcols p.prose > div {
+        display: block !important;
+        position: relative;
+    }
+    html:not(.sg-one-column) .vcols .copyprose {
+        position: absolute;
+        top: 0;
+        right: 0;
+        line-height: 1;
+        text-indent: 0;
+        padding: 1px 0 3px 6px;
+        background: #ece6da;
+        border-radius: 0 0 0 4px;
+        visibility: hidden;
+    }
+    html:not(.sg-one-column) .vcols p.prose > div:hover .copyprose {
+        visibility: visible;
+    }
+    html:not(.sg-one-column) .vcols .copyprose img {
+        margin: 0;
+        opacity: .5;
+    }
+    html:not(.sg-one-column) .vcols .copyprose img:hover {
+        opacity: 1;
     }
 }

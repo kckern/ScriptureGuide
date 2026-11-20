@@ -76,20 +76,25 @@ describe('columns.js partition', async () => {
 
   test('every verse once, in order, and each block within the limit', () => {
     const h = Array.from({ length: 176 }, (_, i) => 40 + ((i * 37) % 90));
-    const groups = partition(h, 700, 52);
+    const groups = partition(h, [700], 52);
     expect(groups.flat()).toEqual(h.map((_, i) => i));
     for (const s of sums(groups, h)) expect(s + 52).toBeLessThanOrEqual(700);
     expect(groups.length).toBeGreaterThan(1);
   });
   test('a short section stays one block', () => {
-    expect(partition([60, 80, 60, 40], 700, 52)).toEqual([[0, 1, 2, 3]]);
+    expect(partition([60, 80, 60, 40], [700], 52)).toEqual([[0, 1, 2, 3]]);
   });
   test('a short last block shares the verses of the one before', () => {
     const h = Array(13).fill(100); // 12 fit a block (600 + 52 ≤ 700); one would be left alone
-    const groups = partition(h, 700, 52);
+    const groups = partition(h, [700], 52);
     expect(groups.map(g => g.length)).toEqual([7, 6]);
   });
+  test('the first block gets its own room; a short last block is not shared with it', () => {
+    const h = Array(13).fill(100);
+    expect(partition(h, [300, 700], 52).map(g => g.length)).toEqual([4, 9]);
+    expect(partition(Array(10).fill(100), [300, 700], 52).map(g => g.length)).toEqual([4, 6]);
+  });
   test('a verse taller than the limit gets a block of its own', () => {
-    expect(partition([100, 2000, 100], 700, 52)).toEqual([[0], [1], [2]]);
+    expect(partition([100, 2000, 100], [700], 52)).toEqual([[0], [1], [2]]);
   });
 });
