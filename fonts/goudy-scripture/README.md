@@ -18,7 +18,8 @@ It is a Modified Version of Sorts Mill Goudy by Barry Schwartz, under the SIL Op
 
 - `GoudyScripture.woff2`: the web font. Copies: `apps/web/public/css/webfont/` and
   `apps/chrome-extension/fonts/`.
-- `GoudyScripture.otf`: the same font for desktop use.
+- `GoudyScripture.otf`: the same font for desktop use (CFF outlines).
+- `GoudyScripture.ttf`: the same font with TrueType outlines, for Windows and tools that cannot read CFF (bookofmormon.online uses it for share-card images).
 - `OFL.txt`: the copyright notices and the full licence.
 
 ## Rebuilding
