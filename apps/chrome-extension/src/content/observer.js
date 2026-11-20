@@ -17,7 +17,8 @@ export function createObserver(target, onTextNodes, { debounceMs = 250 } = {}) {
 
   const isOwnAnnotation = (node) =>
     node.nodeType === 1 && node.classList &&
-    (node.classList.contains('sg_autolink') || node.classList.contains('sg_reflink'));
+    (node.classList.contains('sg_autolink') || node.classList.contains('sg_reflink') ||
+     node.classList.contains('sg_origlink'));
 
   const flushSoon = () => {
     if (!pending.size) return;

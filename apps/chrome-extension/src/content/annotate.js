@@ -47,7 +47,8 @@ export function annotateTextNode(textNode, matches, processed) {
 // Undo all annotations under `root`, restoring plain text (used when a site is
 // disabled live). Merges the resulting adjacent text nodes.
 export function removeAllAnnotations(root) {
-  const links = [...root.querySelectorAll('a.sg_autolink')];
+  // Badges that replaced a site's own link are restored by removeAllReflinks instead
+  const links = [...root.querySelectorAll('a.sg_autolink:not(.sg_takeover)')];
   for (const a of links) {
     const parent = a.parentNode;
     if (!parent) continue;

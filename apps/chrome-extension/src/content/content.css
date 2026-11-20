@@ -53,3 +53,22 @@ a.sg_reflink svg {
   vertical-align: -0.1em !important;
   display: inline-block !important;
 }
+
+/* The chain-link icon after a site's reference link we turned into a badge: it keeps the
+   site's original destination. Small and quiet, like the 🔗 above. */
+a.sg_origlink,
+a.sg_origlink:link,
+a.sg_origlink:visited {
+  text-decoration: none !important;
+  margin-left: 0.15em !important;
+  opacity: 0.55 !important;
+  cursor: pointer !important;
+  color: inherit !important;
+}
+a.sg_origlink:hover { opacity: 1 !important; }
+a.sg_origlink svg {
+  width: 0.85em !important;
+  height: 0.85em !important;
+  vertical-align: -0.1em !important;
+  display: inline-block !important;
+}

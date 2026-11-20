@@ -13,11 +13,11 @@ const waitFor = async (check, ms = 4000) => {
   return false;
 };
 
-function installChrome(send) {
+function installChrome(send, appearance = { footnoteLinks: false, useKreonFont: false }) {
   const listeners = [];
   global.chrome = {
     storage: {
-      sync: { get: async () => ({ appearance: { footnoteLinks: false, useKreonFont: false } }) },
+      sync: { get: async () => ({ appearance }) },
       local: { get: async () => ({}), set: async () => {} },
       onChanged: { addListener() {} }
     },
@@ -75,5 +75,19 @@ describe('content script', () => {
     const reply = jest.fn();
     listeners.forEach((fn) => fn({ type: 'sg-get-state' }, {}, reply));
     expect(reply).toHaveBeenCalledWith({ state: 'normal' });
+  });
+
+  test('a site link whose text is a reference becomes a badge, keeping the original link', async () => {
+    document.body.innerHTML = '<p>saved.\u201d\u2014<a class="jsBibleLink" href="https://www.jw.org/acts/4/">Acts 4:12</a>. And <a href="/fn1">see note 3 on page 12</a>.</p>';
+    installChrome(jest.fn(async (msg) => (msg.type === 'sg-parse' ? parseChunks(msg) : undefined)),
+      { footnoteLinks: true, useKreonFont: false });
+    runContentScript();
+    expect(await waitFor(() => document.querySelector('a.sg_takeover'))).toBe(true);
+    const badge = document.querySelector('a.sg_takeover');
+    expect(badge.textContent).toBe('Acts 4:12');
+    expect(badge.getAttribute('href')).toBe('https://scripture.guide/acts.4.12');
+    expect(badge.nextElementSibling.getAttribute('href')).toBe('https://www.jw.org/acts/4/');
+    expect(document.querySelector('a.jsBibleLink')).toBeNull();
+    expect(document.querySelector('a[href="/fn1"]')).not.toBeNull();
   });
 });

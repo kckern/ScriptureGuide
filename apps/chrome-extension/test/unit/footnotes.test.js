@@ -1,4 +1,4 @@
-import { collectAnchorCandidates, annotateAnchor, removeAllReflinks } from '../../src/content/footnotes.js';
+import { collectAnchorCandidates, annotateAnchor, removeAllReflinks, isWholeReference, takeOverAnchor } from '../../src/content/footnotes.js';
 
 const body = (html) => { document.body.innerHTML = html; return document.body; };
 
@@ -114,5 +114,52 @@ describe('annotateAnchor after caller-marking (real-flow regression)', () => {
     const link = annotateAnchor(anchor, [{ ref: 'Doctrine and Covenants 28:7' }]);
     expect(link).not.toBeNull();
     expect(document.querySelectorAll('a.sg_reflink').length).toBe(1);
+  });
+});
+
+describe('taking over a link whose whole text is a reference', () => {
+  const setup = (html) => { document.body.innerHTML = html; return document.querySelector('a'); };
+
+  test('isWholeReference: the match must be all of the link text, apart from brackets and punctuation', () => {
+    expect(isWholeReference('Acts 4:12', { start: 0, end: 9 })).toBe(true);
+    expect(isWholeReference('(John 3:16).', { start: 1, end: 10 })).toBe(true);
+    expect(isWholeReference(' Matthew 28:18, 19 ', { start: 1, end: 18 })).toBe(true);
+    expect(isWholeReference('see Acts 4:12 here', { start: 4, end: 13 })).toBe(false);
+    expect(isWholeReference('Acts 4:12', null)).toBe(false);
+  });
+
+  test('replaces the link with a badge to scripture.guide and keeps the original as an icon link', () => {
+    const a = setup('<p>saved.”—<a class="jsBibleLink" href="/en/bible/acts/4/#v44004012" target="_blank">Acts 4:12</a>.</p>');
+    takeOverAnchor(a, { start: 0, end: 9, ref: 'Acts 4:12' });
+    const p = document.querySelector('p');
+    const badge = p.querySelector('a.sg_autolink');
+    expect(badge.textContent).toBe('Acts 4:12');
+    expect(badge.getAttribute('href')).toBe('https://scripture.guide/acts.4.12');
+    expect(badge.classList.contains('jsBibleLink')).toBe(false);
+    const orig = badge.nextElementSibling;
+    expect(orig.classList.contains('sg_origlink')).toBe(true);
+    expect(orig.getAttribute('href')).toBe('/en/bible/acts/4/#v44004012');
+    expect(orig.getAttribute('target')).toBe('_blank');
+    expect(orig.getAttribute('aria-label')).toBe('Open the original link for Acts 4:12');
+    expect(orig.querySelector('svg')).not.toBeNull();
+    expect(orig.textContent).toBe('');
+    expect(p.querySelector('a.jsBibleLink')).toBeNull();
+    expect(p.textContent).toBe('saved.”—Acts 4:12.');
+  });
+
+  test('turning the site off restores the original link', () => {
+    const a = setup('<p>See <a class="jsBibleLink" href="/x">Acts 4:12</a>.</p>');
+    takeOverAnchor(a, { start: 0, end: 9, ref: 'Acts 4:12' });
+    removeAllReflinks(document);
+    const p = document.querySelector('p');
+    expect(p.querySelector('.sg_autolink, .sg_origlink')).toBeNull();
+    expect(p.querySelector('a.jsBibleLink').getAttribute('href')).toBe('/x');
+    expect(p.innerHTML).toBe('See <a class="jsBibleLink" href="/x">Acts 4:12</a>.');
+  });
+
+  test('our icon links are never candidates themselves', () => {
+    const a = setup('<p><a href="/x">Acts 4:12</a></p>');
+    takeOverAnchor(a, { start: 0, end: 9, ref: 'Acts 4:12' });
+    expect(collectAnchorCandidates(document.body)).toEqual([]);
   });
 });

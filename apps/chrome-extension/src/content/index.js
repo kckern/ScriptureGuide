@@ -12,7 +12,7 @@ import { mergeSettings, siteEnabled } from '../shared/settings.js';
 import { startState, rememberVisit, STORAGE_KEY } from '../shared/hostMemory.js';
 import { collectCandidates, isCandidate } from './detect.js';
 import { removeAllAnnotations } from './annotate.js';
-import { collectAnchorGroups, annotateAnchor, removeAllReflinks, MARK } from './footnotes.js';
+import { collectAnchorGroups, annotateAnchor, removeAllReflinks, isWholeReference, takeOverAnchor, MARK } from './footnotes.js';
 import { createQueue } from './scheduler.js';
 import { createObserver } from './observer.js';
 import { chunkText } from './chunker.js';
@@ -101,24 +101,33 @@ const CHANGED_TEXT_DELAY_MS = 3000; // text that keeps changing is re-parsed at 
     });
   };
 
-  // A run of back-to-back reference anchors ("D&C 28:7; D&C 64:5") gets one 🔗
-  // after the last anchor, linking to all of them together. Anchor text is at most 60
-  // characters, so it is parsed on the page thread, and the time counts toward the budget.
+  // Links the page already has. A link whose whole text is one reference (jw.org's
+  // "Acts 4:12") becomes our badge, with a small icon after it keeping the site's own link.
+  // References in other links (footnotes with extra words) get one 🔗 after the last link of
+  // a back-to-back run ("D&C 28:7; D&C 64:5"). Link text is at most 60 characters, so it is
+  // parsed on the page thread, and the time counts toward the budget.
   const processGroup = (group) => {
     if (!governor.canParse) return;
     const anchors = group.filter((a) => a.isConnected && !a.hasAttribute(MARK));
     if (!anchors.length) return;
     const combined = [];
+    let lastKept = null;
     const options = { ...detectOptions(), contextAware: governor.contextAware && settings.detection.contextAware };
     const start = performance.now();
     for (const anchor of anchors) {
       let matches = null;
       try { matches = findReferences(anchor.textContent, options); } catch (e) { /* skip */ }
       anchor.setAttribute(MARK, 'true');
-      if (matches && matches.length) combined.push(...matches);
+      if (!matches || !matches.length) continue;
+      if (matches.length === 1 && isWholeReference(anchor.textContent, matches[0])) {
+        takeOverAnchor(anchor, matches[0]);
+      } else {
+        combined.push(...matches);
+        lastKept = anchor;
+      }
     }
     governor.recordLocal(performance.now() - start);
-    if (combined.length) annotateAnchor(anchors[anchors.length - 1], combined);
+    if (combined.length && lastKept) annotateAnchor(lastKept, combined);
   };
 
   const queue = createQueue((item) => {

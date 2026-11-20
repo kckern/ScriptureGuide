@@ -18,11 +18,18 @@ const ICON_SVG =
   '9V4M20 4H15M20 4L13 11" stroke="currentColor" stroke-width="2" stroke-linecap="round" ' +
   'stroke-linejoin="round"/></svg>';
 
+// Chain-link glyph for the icon that keeps a site's original link after we take the link over.
+const ORIGINAL_LINK_SVG =
+  '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" ' +
+  'stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">' +
+  '<path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/>' +
+  '<path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>';
+
 // Build the icon element without innerHTML (Trusted-Types/CSP safe), falling
 // back to a text glyph if SVG parsing is unavailable.
-function makeIcon(doc) {
+function makeIcon(doc, svgSource = ICON_SVG) {
   try {
-    const parsed = new DOMParser().parseFromString(ICON_SVG, 'image/svg+xml');
+    const parsed = new DOMParser().parseFromString(svgSource, 'image/svg+xml');
     const svg = parsed.documentElement;
     if (svg && svg.nodeName.toLowerCase() === 'svg' && !svg.querySelector('parsererror')) {
       return doc.importNode(svg, true);
@@ -38,7 +45,8 @@ function makeIcon(doc) {
 // be a reference rather than a paragraph.
 export function isAnchorCandidate(a) {
   if (!a || a.tagName !== 'A') return false;
-  if (a.classList.contains('sg_autolink') || a.classList.contains('sg_reflink')) return false;
+  if (a.classList.contains('sg_autolink') || a.classList.contains('sg_reflink') ||
+      a.classList.contains('sg_origlink')) return false;
   if (a.hasAttribute(MARK)) return false;
   const t = a.textContent;
   return !!t && t.length <= 60 && /\d/.test(t) && /[A-Za-z]/.test(t);
@@ -113,7 +121,52 @@ export function annotateAnchor(anchor, matches) {
   return link;
 }
 
+// A link whose whole text is one reference ("Acts 4:12", "(John 3:16).") can be taken over.
+// Anything else in the link text (prose, a second reference) leaves the link alone.
+const LEADING = /^[\s([{"'\u201c\u2018\u2014\u2013-]*$/;
+const TRAILING = /^[\s)\]}.,;:"'\u201d\u2019\u2014\u2013-]*$/;
+export function isWholeReference(text, match) {
+  if (!match || typeof text !== 'string') return false;
+  return LEADING.test(text.slice(0, match.start)) && TRAILING.test(text.slice(match.end));
+}
+
+// The site's link becomes one of our badges to scripture.guide, and a small chain-link icon
+// right after it keeps the site's original destination. The original element is kept so
+// removeAllReflinks can put it back.
+const originals = new WeakMap(); // our badge -> the site's anchor it replaced
+export function takeOverAnchor(anchor, match) {
+  const doc = anchor.ownerDocument;
+  const text = anchor.textContent;
+  const badge = doc.createElement('a');
+  badge.className = 'sg_autolink sg_takeover';
+  badge.textContent = text;
+  badge.setAttribute('href', 'https://scripture.guide/' + toSlug(match.ref || text.trim()));
+  badge.setAttribute('target', '_blank');
+  badge.setAttribute('rel', 'noopener noreferrer');
+
+  const label = 'Open the original link for ' + text.trim();
+  const original = doc.createElement('a');
+  original.className = 'sg_origlink';
+  original.setAttribute('href', anchor.getAttribute('href') || '');
+  if (anchor.hasAttribute('target')) original.setAttribute('target', anchor.getAttribute('target'));
+  if (anchor.hasAttribute('rel')) original.setAttribute('rel', anchor.getAttribute('rel'));
+  original.setAttribute('title', label);
+  original.setAttribute('aria-label', label);
+  original.appendChild(makeIcon(doc, ORIGINAL_LINK_SVG));
+
+  anchor.replaceWith(badge);
+  badge.after(original);
+  originals.set(badge, anchor);
+  return badge;
+}
+
 export function removeAllReflinks(root) {
+  for (const badge of [...root.querySelectorAll('a.sg_takeover')]) {
+    const anchor = originals.get(badge);
+    const next = badge.nextElementSibling;
+    if (next && next.classList.contains('sg_origlink')) next.remove();
+    if (anchor) badge.replaceWith(anchor);
+  }
   for (const el of [...root.querySelectorAll('a.sg_reflink')]) el.remove();
   for (const a of [...root.querySelectorAll('[' + MARK + ']')]) a.removeAttribute(MARK);
 }
