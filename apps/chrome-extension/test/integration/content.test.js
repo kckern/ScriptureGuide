@@ -13,7 +13,7 @@ const waitFor = async (check, ms = 4000) => {
   return false;
 };
 
-function installChrome(send, appearance = { footnoteLinks: false, useKreonFont: false }) {
+function installChrome(send, appearance = { footnoteLinks: false, useScriptureFont: false }) {
   const listeners = [];
   global.chrome = {
     storage: {
@@ -80,7 +80,7 @@ describe('content script', () => {
   test('a site link whose text is a reference becomes a badge, keeping the original link', async () => {
     document.body.innerHTML = '<p>saved.\u201d\u2014<a class="jsBibleLink" href="https://www.jw.org/acts/4/">Acts 4:12</a>. And <a href="/fn1">see note 3 on page 12</a>.</p>';
     installChrome(jest.fn(async (msg) => (msg.type === 'sg-parse' ? parseChunks(msg) : undefined)),
-      { footnoteLinks: true, useKreonFont: false });
+      { footnoteLinks: true, useScriptureFont: false });
     runContentScript();
     expect(await waitFor(() => document.querySelector('a.sg_takeover'))).toBe(true);
     const badge = document.querySelector('a.sg_takeover');
@@ -89,5 +89,27 @@ describe('content script', () => {
     expect(badge.nextElementSibling.getAttribute('href')).toBe('https://www.jw.org/acts/4/');
     expect(document.querySelector('a.jsBibleLink')).toBeNull();
     expect(document.querySelector('a[href="/fn1"]')).not.toBeNull();
+  });
+
+  test('injects the Goudy Scripture font when useScriptureFont is on', async () => {
+    document.head.innerHTML = '';
+    document.body.innerHTML = '<p>John 3:16</p>';
+    installChrome(jest.fn(async (msg) => (msg.type === 'sg-parse' ? parseChunks(msg) : undefined)),
+      { footnoteLinks: false, useScriptureFont: true });
+    runContentScript();
+    expect(await waitFor(() => document.getElementById('sg-scripture-font'))).toBe(true);
+    const css = document.getElementById('sg-scripture-font').textContent;
+    expect(css).toContain("font-family:'SG Goudy Scripture'");
+    expect(css).toContain("url('fonts/GoudyScripture.woff2') format('woff2')");
+  });
+
+  test('no font when the old Kreon option was turned off', async () => {
+    document.head.innerHTML = '';
+    document.body.innerHTML = '<p>John 3:16</p>';
+    installChrome(jest.fn(async (msg) => (msg.type === 'sg-parse' ? parseChunks(msg) : undefined)),
+      { footnoteLinks: false, useKreonFont: false });
+    runContentScript();
+    expect(await waitFor(() => links().length === 1)).toBe(true);
+    expect(document.getElementById('sg-scripture-font')).toBeNull();
   });
 });

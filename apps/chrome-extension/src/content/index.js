@@ -35,7 +35,7 @@ const CHANGED_TEXT_DELAY_MS = 3000; // text that keeps changing is re-parsed at 
 
   applyParserConfig(settings);
   document.documentElement.dataset.sgStyle = settings.appearance.linkStyle;
-  if (settings.appearance.useKreonFont) injectKreonFont();
+  if (settings.appearance.useScriptureFont) injectScriptureFont();
 
   const host = location.hostname;
   const startedIn = startState(await readHostState(host), Date.now());
@@ -290,16 +290,19 @@ function applyParserConfig(settings) {
   } catch (e) { /* parser defaults are fine if this throws */ }
 }
 
-function injectKreonFont() {
+// Goudy Scripture, the scripture.guide text font (fonts/OFL.txt), under a family name a page
+// is unlikely to use; content.css sets badges in it.
+function injectScriptureFont() {
   try {
-    const url = chrome.runtime.getURL('fonts/kreon-latin.woff2');
+    const url = chrome.runtime.getURL('fonts/GoudyScripture.woff2');
     const style = document.createElement('style');
-    style.id = 'sg-kreon-font';
+    style.id = 'sg-scripture-font';
     // Relative url() in content-script CSS resolves against the page, so the
     // @font-face must be injected with the extension-resolved absolute URL.
+    // The outlines are already bold; the full weight range stops browsers thickening them.
     style.textContent =
-      "@font-face{font-family:'Kreon';src:url('" + url + "') format('woff2');" +
-      'font-weight:300 700;font-display:swap;}';
+      "@font-face{font-family:'SG Goudy Scripture';src:url('" + url + "') format('woff2');" +
+      'font-weight:400 1000;font-style:normal;font-display:swap;}';
     (document.head || document.documentElement).appendChild(style);
   } catch (e) { /* font is cosmetic; ignore failures */ }
 }

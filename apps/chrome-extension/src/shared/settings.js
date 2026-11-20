@@ -28,7 +28,7 @@ export const DEFAULTS = {
   },
   appearance: {
     linkStyle: 'badge',
-    useKreonFont: true,
+    useScriptureFont: true,
     footnoteLinks: true
   },
   click: {
@@ -39,6 +39,18 @@ export const DEFAULTS = {
 };
 
 const isPlainObject = (v) => v && typeof v === 'object' && !Array.isArray(v);
+
+// Renamed settings: appearance.useKreonFont (the Kreon badge font, until 2.2.0) is now
+// appearance.useScriptureFont. Someone who turned the old option off keeps the new one off;
+// once useScriptureFont is stored, it wins. The old key is dropped from the result, so the
+// options page does not write it back.
+function migrate(stored) {
+  const a = stored?.appearance;
+  if (!isPlainObject(a) || !('useKreonFont' in a)) return stored;
+  const { useKreonFont, ...appearance } = a;
+  if (useKreonFont === false && appearance.useScriptureFont === undefined) appearance.useScriptureFont = false;
+  return { ...stored, appearance };
+}
 
 // Deep-merge stored settings over DEFAULTS: nested objects merge key-by-key,
 // arrays and scalars replace wholesale. DEFAULTS is never mutated.
@@ -54,7 +66,7 @@ export function mergeSettings(stored = {}) {
     }
     return out;
   };
-  return merge(DEFAULTS, stored);
+  return merge(DEFAULTS, migrate(stored));
 }
 
 // Match a hostname against a pattern. "*.example.com" matches example.com and

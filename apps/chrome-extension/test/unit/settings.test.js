@@ -23,6 +23,30 @@ describe('mergeSettings', () => {
   });
 });
 
+describe('appearance.useScriptureFont (was useKreonFont)', () => {
+  test('defaults to true', () => {
+    expect(DEFAULTS.appearance.useScriptureFont).toBe(true);
+    expect(mergeSettings({}).appearance.useScriptureFont).toBe(true);
+  });
+  test('the old option turned off keeps the new one off', () => {
+    const s = mergeSettings({ appearance: { useKreonFont: false, linkStyle: 'subtle' } });
+    expect(s.appearance.useScriptureFont).toBe(false);
+    expect(s.appearance.linkStyle).toBe('subtle');
+  });
+  test('the old option on leaves the default', () => {
+    expect(mergeSettings({ appearance: { useKreonFont: true } }).appearance.useScriptureFont).toBe(true);
+  });
+  test('a stored useScriptureFont wins over the old option', () => {
+    expect(mergeSettings({ appearance: { useKreonFont: false, useScriptureFont: true } }).appearance.useScriptureFont).toBe(true);
+    expect(mergeSettings({ appearance: { useKreonFont: true, useScriptureFont: false } }).appearance.useScriptureFont).toBe(false);
+  });
+  test('the old key is dropped, so saving the merged settings does not keep it', () => {
+    const stored = { appearance: { useKreonFont: false } };
+    expect(mergeSettings(stored).appearance).not.toHaveProperty('useKreonFont');
+    expect(stored.appearance).toEqual({ useKreonFont: false });
+  });
+});
+
 describe('hostMatches', () => {
   test('exact hostname', () => {
     expect(hostMatches('reddit.com', 'reddit.com')).toBe(true);

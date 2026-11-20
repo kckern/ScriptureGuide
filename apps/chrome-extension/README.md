@@ -28,7 +28,7 @@ the gear → **Settings** for the full options page:
 - **Detection** — toggle context-aware refs, implied books, abbreviations,
   chapter-only refs, and (experimental) whole-book mentions.
 - **Appearance** — link style (badge / subtle underline / plain) and the
-  bundled Kreon font.
+  bundled Goudy Scripture font (the scripture.guide typeface).
 - **Behavior** — click opens a popup window or a new tab, with configurable
   popup size.
 
