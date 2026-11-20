@@ -58,10 +58,10 @@ export class HtmlPresenter {
     const img = data.img || version.toLowerCase();
     const ch = result.chapterHeading;
 
-    // Build description: "{title}— {summary/heading}. {first verse text...}"
-    // Build description: "{title}— {summary/heading} {first verse text...}"
+    // Build description: "{title}— {summary/heading} {verse text...}". The chapter summary leads
+    // only for a whole chapter; a verse or verse range leads with its own text.
     let description = title;
-    const descriptor = ch?.summary || ch?.heading;
+    const descriptor = result.config?._subChapter ? null : (ch?.summary || ch?.heading);
     if (descriptor) description += '— ' + descriptor;
     // Append verse text until we reach ~1000 chars
     const prefix = descriptor ? ' ' : '— ';
@@ -78,9 +78,9 @@ export class HtmlPresenter {
     const path = req?.path || '/';
     return {
       title: `${title} | Scripture Guide`,
-      image: `http://cover.scripture.guide/${img}`,
+      image: `https://cover.scripture.guide/${img}`,
       description,
-      url: `http://${host}${path}`
+      url: `https://${host}${path}`
     };
   }
 

@@ -293,6 +293,8 @@ export class ScriptureLookupService {
 
         // Sub-chapter request: has explicit verse(s) in the reference (e.g. john.3.16, gen.1.1-5)
         const isSubChapterRequest = !!versePart;
+        // Link previews lead with the chapter summary only for a whole chapter (HtmlPresenter).
+        config._subChapter = isSubChapterRequest;
 
         // Cross-chapter range DST slug override (e.g. "Genesis 1:1-2:3" → "genesis.1-2.3")
         const crossChapterNorm = reference.normalized?.match(/:(\d+)-(\d+):(\d+)/);

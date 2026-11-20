@@ -104,3 +104,23 @@ describe('HtmlPresenter: audio without a chapter heading', () => {
     expect(new HtmlPresenter().serialize(result).h3ByVerse[82292].audio).toBe(1);
   });
 });
+
+describe('HtmlPresenter: link-preview description (og:description)', () => {
+  const summary = 'Sariah complains against Lehi—Both rejoice over the return of their sons.';
+  const page = subChapter => new ScriptureResult({
+    reference: new Reference({ query: '1 Nephi 5:3', normalized: '1 Nephi 5:3', verseIds: [3] }),
+    verses: [new Verse({ id: 3, chapter: 5, verseNum: 3, text: 'And after this manner of language had my mother complained against my father.', version: 'LDS' })],
+    chapterHeading: { summary },
+    config: { version: 'LDS', _subChapter: subChapter },
+  });
+
+  test('a verse or verse range leads with its own text, not the chapter summary', () => {
+    const { description } = new HtmlPresenter()._buildOgMeta(page(true), {}, '1 Nephi 5:3', null);
+    expect(description).toBe('1 Nephi 5:3— And after this manner of language had my mother complained against my father.');
+  });
+
+  test('a whole chapter leads with the chapter summary', () => {
+    const { description } = new HtmlPresenter()._buildOgMeta(page(false), {}, '1 Nephi 5', null);
+    expect(description.startsWith(`1 Nephi 5— ${summary} And after`)).toBe(true);
+  });
+});
