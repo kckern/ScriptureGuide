@@ -481,13 +481,13 @@ sup.vnum
       ul.tabs>li {
           float: left;
           margin:5px;
-         padding: 0 1em 0 1em;
+         padding: 0 1.6em 0 1em; /* right side leaves room for the result count */
           border: 1px solid #361f17;
           border-bottom: 0;
           border-radius: 5px 5px 0 0;
           cursor:pointer;
           color:#361f17;
-			max-width: 3.3em;
+			max-width: 4.6em; /* two lines of Roboto Condensed for "Doctrine & Covenants" */
 		    line-height: .8em;
 		    text-align: center;
 		    height: 1.8em;
