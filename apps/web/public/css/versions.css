@@ -50,8 +50,9 @@
      text-indent: -2em;
 }
  .ver_1920.passage .headnote_sub, .ver_1920.passage .headnote, .ver_1920.passage .summary, .ver_1920.passage p.prose, .ver_1879.passage p.prose, .ver_1830.passage p.prose, .ver_1841.passage p.prose, .ver_1837.passage p.prose, .ver_REBOM.passage p.prose, .ver_REBOM.passage p.indent, .ver_SEBOM.passage p.indent, .ver_MBOOK.passage p.prose, .ver_1840.passage p.prose {
-     text-indent: 2em;
-     margin-bottom: -1em;
+     /* Paragraphs are set apart by space, not by a first-line indent */
+     text-indent: 0;
+     margin: 0.6em 0;
 }
  .ver_1920.passage, .ver_1879.passage, .ver_1830.passage, .ver_1841.passage, .ver_1837.passage, .ver_1837.passage, .ver_REBOM.passage, .ver_MBOOK.passage {
     padding-bottom: 1.5em;

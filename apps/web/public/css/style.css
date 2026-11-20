@@ -445,7 +445,7 @@
 }
  .verse,p,.passage {
      cursor: text;
-     line-height: 1.45em;
+     line-height: 1.3em;
 }
  ins {
      background: url('/img/green.png');
