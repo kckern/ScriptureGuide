@@ -17,14 +17,20 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
+      # Node 24 ships npm 11, which supports npm trusted publishing (GitHub OIDC, no token).
       - uses: actions/setup-node@v7
-        with: { node-version: '20', cache: 'npm', registry-url: 'https://registry.npmjs.org' }
+        with: { node-version: '24', cache: 'npm', registry-url: 'https://registry.npmjs.org' }
       - run: npm ci
       - run: npm run build -w scripture-guide
+      # npm publishing stays off until npmjs.com trusts this workflow for scripture-guide
+      # (package Settings > Trusted Publisher > GitHub Actions, workflow release.yml) and
+      # the repo variable NPM_PUBLISH is 'true'. Until then this job only opens version PRs.
+      - if: vars.NPM_PUBLISH != 'true'
+        run: echo "::notice::NPM_PUBLISH is not 'true'; skipped publishing scripture-guide to npm"
       - uses: changesets/action@v1
         with:
           version: npm run version-packages
-          publish: npm run release
+          publish: ${{ vars.NPM_PUBLISH == 'true' && 'npm run release' || '' }}
           title: 'Version packages'
           commit: 'chore: version packages'
         env:
