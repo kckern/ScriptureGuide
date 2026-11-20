@@ -6,7 +6,7 @@
     "apps/*"
   ],
   "engines": {
-    "node": ">=20"
+    "node": ">=24"
   },
   "scripts": {
     "build": "npm run build --workspaces --if-present",

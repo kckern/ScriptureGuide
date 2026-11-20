@@ -1,5 +1,5 @@
 # Build context: repository root.  docker build -f apps/web/Dockerfile .
-FROM node:20-alpine AS base
+FROM node:24-alpine AS base
 WORKDIR /repo
 COPY package.json package-lock.json ./
 COPY packages/scripture-guide/package.json packages/scripture-guide/
@@ -14,7 +14,7 @@ RUN npm run build -w scripture-guide
 FROM base AS deps
 RUN npm ci --omit=dev -w @scripture-guide/web
 
-FROM node:20-alpine
+FROM node:24-alpine
 RUN apk add --no-cache ffmpeg
 ENV NODE_ENV=production
 COPY --from=deps /repo /repo
