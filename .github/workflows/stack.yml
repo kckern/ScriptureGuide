@@ -27,7 +27,7 @@ jobs:
       - name: Web serves seeded headings
         run: |
           curl -fsS http://localhost:3000/asv/ps.1.1 | grep -q "The righteous and the wicked contrasted"
-          curl -fsS http://localhost:3000/1920/1-ne.1.1 | grep -q "Beginning of the record of Nephi"
+          curl -fsS http://localhost:3000/1920/1-ne.1 | grep -q "Beginning of the record of Nephi"
       - name: Sphinx finds seeded verses
         run: |
           n=$(mysql -h127.0.0.1 -P9306 -N -e "SELECT COUNT(*) FROM sgindex WHERE MATCH('loved')")
