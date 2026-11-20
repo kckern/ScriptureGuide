@@ -21,6 +21,10 @@ COPY --from=deps /repo /repo
 COPY --from=pkg /repo/packages/scripture-guide/dist /repo/packages/scripture-guide/dist
 COPY apps/web /repo/apps/web
 WORKDIR /repo/apps/web
+# Set by CI (release.yml) so /healthz shows which commit is live. Declared after the COPY
+# lines, so a new commit value invalidates only the metadata layers below it.
+ARG SG_COMMIT=dev
+ENV SG_COMMIT=$SG_COMMIT
 USER node
 EXPOSE 3000
 HEALTHCHECK --interval=30s --timeout=5s CMD wget -qO- http://localhost:3000/health || exit 1

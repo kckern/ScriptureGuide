@@ -11,9 +11,14 @@ permissions:
   packages: write
 
 jobs:
+  # Every job that publishes waits for the full test suite; a red test stops the release.
+  test:
+    uses: ./.github/workflows/test.yml
+
   # Opens/updates the "Version packages" PR while changesets are pending;
   # once that PR is merged, publishes any package version not yet on npm.
   changesets:
+    needs: test
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -41,6 +46,7 @@ jobs:
   # Each architecture builds on its own runner and is pushed by digest. Emulating arm64 under
   # QEMU crashed `npm ci` and hung the job until the 6-hour limit.
   web-image-build:
+    needs: test
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 30
     strategy:
@@ -60,6 +66,7 @@ jobs:
           context: .
           file: apps/web/Dockerfile
           platforms: ${{ matrix.platform }}
+          build-args: SG_COMMIT=${{ github.sha }}
           labels: org.opencontainers.image.source=https://github.com/kckern/ScriptureGuide
           outputs: type=image,name=ghcr.io/kckern/scripture-guide,push-by-digest=true,name-canonical=true,push=true
           cache-from: type=gha,scope=web-${{ matrix.arch }}
@@ -76,7 +83,7 @@ jobs:
           if-no-files-found: error
           retention-days: 1
 
-  # Every push tags :edge and :sha-<short>; a commit that bumps apps/web's version (the merged
+  # Every push tags :edge, :sha-<short> and :sha-<full>; a commit that bumps apps/web's version (the merged
   # Version PR) also tags :<version> and :latest.
   web-image:
     needs: web-image-build
@@ -100,7 +107,7 @@ jobs:
         working-directory: ${{ runner.temp }}/digests
         run: |
           sha_tag="$IMAGE:sha-$(git -C "$GITHUB_WORKSPACE" rev-parse --short HEAD)"
-          tags=(-t "$IMAGE:edge" -t "$sha_tag")
+          tags=(-t "$IMAGE:edge" -t "$sha_tag" -t "$IMAGE:sha-$(git -C "$GITHUB_WORKSPACE" rev-parse HEAD)")
           if git -C "$GITHUB_WORKSPACE" diff HEAD^1 HEAD -- apps/web/package.json | grep -q '^[-+]  "version"'; then
             version=$(node -p "require('$GITHUB_WORKSPACE/apps/web/package.json').version")
             tags+=(-t "$IMAGE:$version" -t "$IMAGE:latest")
@@ -118,6 +125,7 @@ jobs:
   # as cws-publisher@book-of-mormon-online, which the Developer Dashboard lists as this
   # publisher's service account. Needs the repo variable CWS_PUBLISHER_ID.
   extension:
+    needs: test
     runs-on: ubuntu-latest
     timeout-minutes: 20
     env:

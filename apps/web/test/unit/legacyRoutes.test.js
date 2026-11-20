@@ -60,16 +60,26 @@ describe('/healthz', () => {
   it('reports ok when the database answers', async () => {
     const res = await request(app).get('/healthz');
     expect(res.status).toBe(200);
-    expect(res.body).toEqual({ status: 'ok', db: 'ok' });
+    expect(res.body).toMatchObject({ status: 'ok', db: 'ok' });
   });
   it('reports 503 when the database is down', async () => {
     const res = await request(appWith({ checkDb: async () => { throw new Error('x'); }, checkSphinx: async () => null })).get('/healthz');
     expect(res.status).toBe(503);
-    expect(res.body).toEqual({ status: 'error', db: 'down' });
+    expect(res.body).toMatchObject({ status: 'error', db: 'down' });
   });
   it('includes sphinx when configured', async () => {
     const res = await request(appWith({ checkDb: async () => {}, checkSphinx: async () => 'down' })).get('/healthz');
     expect(res.status).toBe(200);
-    expect(res.body).toEqual({ status: 'degraded', db: 'ok', sphinx: 'down' });
+    expect(res.body).toMatchObject({ status: 'degraded', db: 'ok', sphinx: 'down' });
+  });
+  it('reports the commit and version it runs', async () => {
+    process.env.SG_COMMIT = 'abc1234def';
+    try {
+      const res = await request(appWith({ checkDb: async () => {}, checkSphinx: async () => null })).get('/healthz');
+      expect(res.body.commit).toBe('abc1234def');
+      expect(res.body.version).toMatch(/^\d+\.\d+\.\d+$/);
+    } finally {
+      delete process.env.SG_COMMIT;
+    }
   });
 });
