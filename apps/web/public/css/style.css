@@ -287,13 +287,6 @@
      padding-bottom: 0px;
      letter-spacing: 1px;
 }
-/* Italic text is Sorts Mill Goudy Italic (the licensed face has no italic), far lighter than the
-   upright Goudy Scripture. Bold brings it to the same weight. */
- div.prompt, div.headnote, div.summary, div.background, .passage i, .passage em,
- .ver_ABWRKS blockquote, .ver_MBOOK blockquote, .ver_1981 div.headnote div.comment,
- .ver_2013 div.headnote div.comment, .ver_PEBOM.passage .section_footer {
-     font-weight: bold;
-}
  div.background {
      padding: 10px;
      padding-top: 20px;
