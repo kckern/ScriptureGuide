@@ -174,28 +174,9 @@ jobs:
         env:
           TOKEN: ${{ steps.google.outputs.access_token }}
         run: |
-          item="publishers/$PUBLISHER_ID/items/$EXTENSION_ID"
-          api=https://chromewebstore.googleapis.com
-          auth=(-H "Authorization: Bearer $TOKEN")
-          upload=$(curl -sS --fail-with-body "${auth[@]}" -H 'Content-Type: application/zip' \
-            --data-binary @apps/chrome-extension/extension.zip "$api/upload/v2/$item:upload")
-          echo "upload: $upload"
-          state=$(jq -r .uploadState <<<"$upload")
-          for _ in $(seq 1 30); do
-            [ "$state" = IN_PROGRESS ] || break
-            sleep 10
-            state=$(curl -sS --fail-with-body "${auth[@]}" "$api/v2/$item:fetchStatus" | jq -r .lastAsyncUploadState)
-            echo "upload state: $state"
-          done
-          [ "$state" = SUCCEEDED ] || { echo "::error::upload ended in state $state"; exit 1; }
-          # No --fail here: a rejected submission's reason is in the body, so print it first
-          publish=$(curl -sS "${auth[@]}" -H 'Content-Type: application/json' \
-            -d '{"publishType":"DEFAULT_PUBLISH"}' "$api/v2/$item:publish")
-          echo "publish: $publish"
-          case "$(jq -r .state <<<"$publish")" in
-            PENDING_REVIEW|PUBLISHED|STAGED|PUBLISHED_TO_TESTERS) ;;
-            *) echo "::error::publish was not accepted"; exit 1 ;;
-          esac
+          scripts/release/cws.sh cancel-pending
+          scripts/release/cws.sh upload apps/chrome-extension/extension.zip
+          scripts/release/cws.sh publish
       - if: steps.v.outputs.release == 'true' && env.PUBLISHER_ID == ''
         run: echo "::warning::CWS_PUBLISHER_ID is not set; built the extension but did not upload it"
 
