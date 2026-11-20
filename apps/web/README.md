@@ -27,14 +27,13 @@ version gets an empty answer without a cache entry or a query.
 Verse text, heading text and everything else is read on every request. A failed lookup is not
 cached; it is retried on the next request (a database error is reported, not read as "no data").
 
-### Text font (private)
+### Text font
 
-The licensed text font is not in the repository or the image. Set `FONT_DIR` to a directory
-holding `scripture.woff2` (served at `/private-fonts`), or `FONT_BASE` to where it is hosted;
-`FONT_GOUDY_FILE` renames the file (use a new name when replacing the font: it is cached 30
-days). Unset, or `FONT_DIR` without the file (a warning at start-up), pages use Sorts Mill
-Goudy. See
-[docs/fonts.md](docs/fonts.md#served-privately), which also has the bom mount.
+The text font, 'Goudy Scripture', is `public/css/webfont/GoudyScripture.woff2`, declared in
+`public/css/style.css`. It is a Modified Version of Sorts Mill Goudy under the SIL OFL 1.1,
+rebuilt by `scripts/fonts/build-scripture-font.py` at the repository root. The font of record is
+`fonts/goudy-scripture/`; this file is a copy, checked byte for byte by a unit test. See
+[docs/fonts.md](docs/fonts.md#goudy-scripture).
 
 ### Search
 
@@ -70,7 +69,6 @@ to `test/browser/.out/` (gitignored).
 |---|---|---|
 | `NODE_BASE` | `http://127.0.0.1:3101` | Node app under test |
 | `LIVE_BASE` | `https://scripture.guide` | reference site |
-| `FONT_CHECK_BASE` | unset | a second Node app started with `FONT_DIR`/`FONT_BASE`: fails unless the private font is declared, fetched and used there |
 | `FONT_MODE` | `normalize` | `normalize` sets the text of both pages in one font, so the diff measures layout; `native` compares the real fonts |
 | `PIXEL_THRESHOLD`, `REGION_MAX_PIXELS`, `REGION_GAP` | 0.001, 100, 2 | the comparison gates |
 | `LIVE_MAX_AGE_DAYS` | 7 | oldest live screenshot `--reuse-live` accepts |

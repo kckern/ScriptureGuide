@@ -13,8 +13,6 @@
 //   REGION_GAP         differing pixels at most this far apart form one region (default 2)
 //   LIVE_MAX_AGE_DAYS  oldest live screenshot --reuse-live accepts (default 7)
 //   FONT_MODE          normalize (default) or native; see "Fonts" below
-//   FONT_CHECK_BASE    a second Node app started with FONT_DIR/FONT_BASE, to assert the private
-//                      font loads there (optional; NODE_BASE is checked too when it serves the font)
 //
 // Per page: screenshots at 1280x900 after networkidle, document.fonts.ready and the end of
 // jQuery animations; pixelmatch (threshold 0.1) of live against Node, written to
@@ -25,15 +23,14 @@
 // requests and responses >= 400 fail the page, and the interactions listed in pages.mjs run.
 // .out/report.json records every page, also when the run stops on an error.
 //
-// Fonts: live sets body text in 'Sorts Mill Goudy', 'Goudy' (Goudy Old Style); Node in the
-// owner's licensed 'Goudy Scripture' when FONT_DIR/FONT_BASE is configured, then Sorts Mill
-// Goudy. A different text font moves every glyph, so a pixel diff then measures the font and
+// Fonts: live sets body text in 'Sorts Mill Goudy', 'Goudy' (Goudy Old Style); Node in
+// 'Goudy Scripture' (public/css/webfont/GoudyScripture.woff2), then Sorts Mill Goudy. A different text font moves every glyph, so a pixel diff then measures the font and
 // hides layout. In normalize mode both pages get one more face, NORMALIZE_FAMILY (the
 // repository's Sorts Mill Goudy under a name neither page uses), and body, plus any .verse set in
 // a text family, is restyled to NORMALIZE_STACK. The pages' own text faces then serve no glyph:
 // a character Sorts Mill Goudy lacks (the "…" in the D&C 76 header) falls back to Georgia on both
-// sides, rather than to Goudy Old Style on live and the licensed font on Node. Every other
-// family (Yanone Kaffeesatz headings, Korean web fonts) is left alone. Whether the private font
+// sides, rather than to Goudy Old Style on live and Goudy Scripture on Node. Every other
+// family (Yanone Kaffeesatz headings, Korean web fonts) is left alone. Whether Goudy Scripture
 // itself loads is a separate assertion (fontCheck). native mode skips all this, to see the real
 // difference.
 //
@@ -59,7 +56,6 @@ const PIXEL_THRESHOLD = Number(process.env.PIXEL_THRESHOLD ?? 0.001);
 const REGION_MAX_PIXELS = Number(process.env.REGION_MAX_PIXELS ?? 100);
 const REGION_GAP = Number(process.env.REGION_GAP ?? 2);
 const LIVE_MAX_AGE_DAYS = Number(process.env.LIVE_MAX_AGE_DAYS ?? 7);
-const FONT_CHECK_BASE = process.env.FONT_CHECK_BASE?.replace(/\/$/, '');
 const VIEWPORT = { width: 1280, height: 900 };
 
 const args = process.argv.slice(2);
@@ -120,7 +116,7 @@ async function open(context, url) {
   page.on('requestfailed', r => problems.push(`requestfailed: ${r.url()} ${r.failure()?.errorText ?? ''}`));
   page.on('response', r => { if (r.status() >= 400) problems.push(`HTTP ${r.status()}: ${r.url()}`); });
   if (FONT_MODE === 'normalize') {
-    // Appended once the DOM is parsed, after the page's own stylesheets and <style id="private-fonts">.
+    // Appended once the DOM is parsed, after the page's own stylesheets.
     await page.addInitScript(css => {
       document.addEventListener('DOMContentLoaded', () => {
         const s = document.createElement('style');
@@ -201,27 +197,24 @@ const INTERACTIONS = {
   },
 };
 
-// Asserts the licensed text font is declared, fetched and used, on a Node app that serves it.
+// Asserts the text font, Goudy Scripture, is declared, fetched and used on the Node app.
 async function fontCheck(context, base, path = '/1ne.3.7') {
   const page = await context.newPage();
   const fontResponses = [];
-  page.on('response', r => { if (/\/private-fonts\/|scripture\.woff2?$/.test(r.url())) fontResponses.push(`${r.status()} ${r.url()}`); });
+  page.on('response', r => { if (/\/GoudyScripture\.woff2$/.test(r.url())) fontResponses.push(`${r.status()} ${r.url()}`); });
   await page.goto(base + path, { waitUntil: 'networkidle', timeout: 45000 });
   await page.evaluate(() => document.fonts.ready);
   const r = await page.evaluate(() => {
-    const decl = !!document.getElementById('private-fonts');
     const faces = [...document.fonts].filter(f => f.family.replace(/["']/g, '') === 'Goudy Scripture')
       .map(f => `${f.style}:${f.status}`);
     const verse = document.querySelector('.verse');
     return {
-      decl,
       faces,
       family: verse && getComputedStyle(verse).fontFamily,
       check: document.fonts.check('16px "Goudy Scripture"'),
     };
   });
   await page.close();
-  if (!r.decl) return { ok: null, detail: 'no <style id="private-fonts"> (font not configured)' };
   const upright = r.faces.includes('normal:loaded');
   const fetched = fontResponses.some(l => l.startsWith('200 '));
   const used = /^\s*["']?Goudy Scripture/.test(r.family || '');
@@ -361,17 +354,14 @@ try {
     }
   }
 
-  // The private font: on NODE_BASE when it serves it, and on FONT_CHECK_BASE when given.
-  for (const base of [NODE_BASE, FONT_CHECK_BASE].filter(Boolean)) {
+  // The text font on the Node app.
+  {
     const ctx = await browser.newContext(contextOptions);
     try {
-      const r = await fontCheck(ctx, base);
-      const required = base === FONT_CHECK_BASE;
-      report.fonts.push({ base, required, ...r });
-      if (r.ok === null && !required) { console.log(`\nfont  ${base}: ${r.detail}`); continue; }
-      const ok = r.ok === true;
-      console.log(`\n${ok ? 'ok  ' : 'FAIL'} font ${base}: ${r.detail}`);
-      if (!ok) failures++;
+      const r = await fontCheck(ctx, NODE_BASE);
+      report.fonts.push({ base: NODE_BASE, ...r });
+      console.log(`\n${r.ok ? 'ok  ' : 'FAIL'} font ${NODE_BASE}: ${r.detail}`);
+      if (!r.ok) failures++;
     } finally { await ctx.close(); }
   }
   report.complete = true;

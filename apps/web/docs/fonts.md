@@ -14,6 +14,7 @@ Checked 2026-10-20.
 | File(s) | Family (name ID 4) | Copyright holder | License | Source | Decision |
 |---|---|---|---|---|---|
 | `SortsMillGoudy-Regular.woff`, `SortsMillGoudy-Italic.woff` | Sorts Mill Goudy Regular / Italic (v003.101) | Copyright (c) 2010, Barry Schwartz (chemoelectric@chemoelectric.org) | SIL OFL 1.1 | https://github.com/google/fonts/blob/main/ofl/sortsmillgoudy/OFL.txt | Keep |
+| `GoudyScripture.woff2` | Goudy Scripture (v2.000): Modified Version of Sorts Mill Goudy | Copyright (c) 2010, Barry Schwartz; modifications copyright (c) 2026, Scripture Guide | SIL OFL 1.1 (no Reserved Font Name) | `fonts/goudy-scripture/` at the repository root, built by `scripts/fonts/build-scripture-font.py` (see Goudy Scripture below) | Keep |
 | `YanoneKaffeesatz-Light.woff`, `YanoneKaffeesatz-Regular.woff`, `YanoneKaffeesatz-Bold.woff` | Yanone Kaffeesatz Light / Regular / Bold (v1.003) | Copyright 2010 The Yanone Kaffeesatz Project Authors (https://github.com/yanone/kaffeesatz) | SIL OFL 1.1 | https://github.com/google/fonts/blob/main/ofl/yanonekaffeesatz/OFL.txt | Keep |
 | `ShadowsIntoLight.woff2` | Shadows Into Light (v001.000) | Copyright (c) 2010, Kimberly Geswein (kimberlygeswein.com) | SIL OFL 1.1 | https://github.com/google/fonts/blob/main/ofl/shadowsintolight/OFL.txt | Keep |
 | `SGBatang-Regular.woff2`, `SGBatang-Bold.woff2` | SG Batang: subset of KoPub Batang Regular / Bold (v1.01), renamed | Copyright 2014 Ministry of Culture, Sports and Tourism and Korea Publishers Society, Reserved Font Name 'KoPub Batang' | SIL OFL 1.1 | https://github.com/google/fonts/tree/main/ofl/kopubbatang | Keep |
@@ -57,98 +58,63 @@ Pages with no version class (parallel view) get these fonts through the `body` s
 (`SG Hangul`, the same files as `SG Batang`, and `Noto Serif Devanagari`) have a `unicode-range`, so
 a page downloads them only if it has such characters.
 
-## Served privately
+## Goudy Scripture
 
-The site's text font is the owner's licensed "Goudy Scripture" (one file, `scripture.woff2`:
-upright, 563 glyphs including Latin Extended and Cyrillic). Its metadata is mixed (usWeightClass
-400, but the Bold subfamily and style bits) and its outlines are heavy, about as heavy as Goudy
-Old Style Bold, so nothing should thicken it further. The owner is licensing
-it (decision 2026-10-20). A licence lets the site serve the font to visitors; it does not allow
-publishing the file in this public repository or in the Docker image. So the file is never
-committed or built into the image, and the app only points at it.
+The site's text font, 'Goudy Scripture' (`GoudyScripture.woff2`, upright only), is a Modified
+Version of Sorts Mill Goudy (Barry Schwartz, SIL OFL 1.1, no Reserved Font Name): a faux bold of
+its outlines, Sorts Mill Goudy's lining figures bolded to match, composite Cyrillic, Greek and
+Vietnamese letters made from its parts, an en dash redrawn from the em dash, and a `calt` rule
+that shows a hyphen between two digits as an en dash ("3:16-18" displays as "3:16–18"; the text
+keeps its hyphen). Every glyph is OFL or Scripture Guide's own work, so the file is in the
+repository and the Docker image like the other fonts, and `OFL.txt` lists it under Sorts Mill
+Goudy's copyright line. The Chrome extension ships the same file for its badges
+(`apps/chrome-extension/fonts/`, with its own `OFL.txt`).
 
-| Env | Meaning |
-|---|---|
-| `FONT_BASE` | URL or path the font is fetched from, e.g. `https://media.scripture.guide/fonts` or `/private-fonts`. A trailing slash is dropped; a value that is empty without it (`/`) is ignored with a warning. |
-| `FONT_DIR` | A directory on the app's file system, served at `/private-fonts` (only when set; no directory listing, `Cache-Control: public, max-age=2592000`, 30 days). With `FONT_DIR` and no `FONT_BASE`, `FONT_BASE` defaults to `/private-fonts`. |
-| `FONT_GOUDY_FILE` | File name under `FONT_BASE`. Default `scripture.woff2`. The `format()` follows the extension (`woff2`, `woff`, `ttf`, `otf`). |
+The font of record is `fonts/goudy-scripture/` at the repository root (woff2, otf, `OFL.txt` and a
+README). The copy here and the extension's are plain files, because the Docker image and webpack
+need real files; `test/unit/scriptureFont.test.js` fails if either differs from the font of record.
+To rebuild, run `scripts/fonts/build-scripture-font.py` from the repository root (its docstring
+and `fonts/goudy-scripture/README.md` list the inputs and Python packages); it writes into
+`fonts/goudy-scripture/`. Then copy the new `GoudyScripture.woff2` here and into
+`apps/chrome-extension/fonts/`.
 
-With `FONT_BASE` or `FONT_DIR` set, the layout (`src/presentation/views/layouts/main.ejs`)
-emits, after the stylesheets, a `<style id="private-fonts">` with two faces:
+`style.css` declares two faces:
 
 ```css
 @font-face {
   font-family: 'Goudy Scripture';
-  src: url('<FONT_BASE>/scripture.woff2') format('woff2');
-  font-weight: 400 1000;
   font-style: normal;
+  font-weight: 400 1000;
   font-display: swap;
+  src: url('/css/webfont/GoudyScripture.woff2') format('woff2');
 }
 @font-face {
   font-family: 'Goudy Scripture';
-  src: url('/css/webfont/SortsMillGoudy-Italic.woff') format('woff');
-  font-weight: 400;
   font-style: italic;
+  font-weight: 400;
   font-display: swap;
+  src: url('/css/webfont/SortsMillGoudy-Italic.woff') format('woff');
 }
 ```
 
-The licensed file is upright only, so italic text (prompts, headnotes, summaries, backgrounds,
-`parallel.css`) uses Sorts Mill Goudy Italic, a real italic, instead of an oblique the browser
-would synthesize. The upright face covers weights 400 to 1000, so browsers do not synthesize bold
-from it: bold text and headings use the same outlines as body text. The italic face stays at 400,
-because Sorts Mill Goudy Italic is light and bold italic still needs synthesizing.
+The outlines are already bold, so the upright face covers weights 400 to 1000 and browsers do not
+synthesize bold from it: bold text and headings use the same outlines as body text. Italic text
+(prompts, headnotes, summaries, backgrounds, `parallel.css`) uses Sorts Mill Goudy Italic, a real
+italic, instead of an oblique the browser would synthesize. The italic face stays at 400, because
+Sorts Mill Goudy Italic is light and bold italic still needs synthesizing.
 
 Scripture text is `1.25rem` (20px by default, set on `.passage`, and sizes inside it scale in
 `em`). The earlier Chrome-only `font-weight: 800` rule was removed: it suited the lighter Sorts Mill
-Goudy but smeared this font. Without the private font, verses therefore render at regular weight
-in Sorts Mill Goudy in Chrome too.
+Goudy but smeared this font.
 
+The body stack in `style.css` is `'Goudy Scripture', 'Sorts Mill Goudy', 'SG Hangul', 'Noto Serif
+Devanagari', Georgia, serif` (live before the Node app: `'Sorts Mill Goudy', 'Goudy', Georgia,
+serif`). Characters the file lacks fall back per glyph to Sorts Mill Goudy, then Georgia. The home
+page search box keeps its own `'Sorts Mill Goudy', serif` (`home.ejs`), as live does.
 
-Neither set: no `@font-face` for `'Goudy Scripture'`, so the page requests no font that would
-404. At startup, when the font comes from `FONT_DIR` (`FONT_BASE` unset or `/private-fonts`)
-and `FONT_DIR/<FONT_GOUDY_FILE>` does not exist, the app logs a warning and emits no
-`@font-face` either. An external `FONT_BASE` is not checked.
-
-The body stack in `style.css` is `'Goudy Scripture', 'Sorts Mill Goudy', 'SG Hangul', 'Noto Serif Devanagari', Georgia, serif` (live:
-`'Sorts Mill Goudy', 'Goudy', Georgia, serif`). With the private font configured, it is the text
-font; without it, the browser has no `'Goudy Scripture'` face and uses Sorts Mill Goudy, as
-before. No standard system font has this family name, but a machine with Goudy Scripture installed locally uses that copy when nothing is configured, so test the Sorts Mill Goudy fallback on another machine. Notes:
-
-- Characters the file lacks (outside Latin, Latin Extended and Cyrillic) fall back per glyph to
-  Sorts Mill Goudy, then Georgia.
-- From another origin (`FONT_BASE=https://…`), that host must send
-  `Access-Control-Allow-Origin` for the site's origins, or browsers refuse the font.
-- Replacing the font: browsers and proxies may keep the old file for 30 days, so give the new
-  file a new name (e.g. `scripture-2.woff2`) and set `FONT_GOUDY_FILE` to it instead of
-  overwriting `scripture.woff2`.
-- Content Security Policy is off (`contentSecurityPolicy: false` in `src/app/middleware/headers.js`).
-  When it is turned on, it has to allow the font and the block that declares it: `font-src
-  'self'` plus the `FONT_BASE` origin when that is external, and `style-src` that permits this
-  inline `<style>` (`'unsafe-inline'`, which the layout's other inline styles already need, or a
-  nonce/hash).
-- The home page search box keeps its own `'Sorts Mill Goudy', serif` (`home.ejs`), as live does.
-
-Deploying on bom: put the file in a host directory outside the repository and the image, mount
-it read-only into the web container and point `FONT_DIR` at it:
-
-```yaml
-  web:
-    environment:
-      FONT_DIR: /fonts
-    volumes:
-      - /srv/scripture-guide/fonts:/fonts:ro   # holds scripture.woff2, readable by uid 1000 (node)
-```
-
-Then check `curl -sI https://scripture.guide/private-fonts/scripture.woff2` returns 200 with
-`Content-Type: font/woff2`, a page's `<head>` has `<style id="private-fonts">`, and the
-start-up log has no `FONT_DIR: … not found` warning.
-
-`.gitignore` and the root `.dockerignore` (the image's build context is the repository root)
-exclude, in any case and anywhere in the tree, `goudy*` and `scripture*` font files
-(`.woff`, `.woff2`, `.ttf`, `.otf`, `.eot`), so a copy dropped into the tree is neither committed
-nor built into the image. Source files named `scripture*` (e.g. `scripture.ejs`,
-`scriptures.mjs`) are not matched.
+Until 2026-11 an earlier build, whose digits came from another font, was kept out of the
+repository and the image and served from a directory mounted on the server. That setup is gone;
+the repository's `docs/plans/` has its history.
 
 ### History: Goudy Old Style (removed)
 

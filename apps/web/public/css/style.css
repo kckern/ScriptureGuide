@@ -1,10 +1,25 @@
 
 /*  FONT IMPORT */
-/*  'Goudy Scripture' (the licensed text font) is not here: the layout declares it only when FONT_BASE or
-    FONT_DIR is set (apps/web/docs/fonts.md). Without it, body text falls back to Sorts Mill Goudy. */
+/*  'Goudy Scripture' is the text font: a Modified Version of Sorts Mill Goudy under the OFL
+    (webfont/OFL.txt, apps/web/docs/fonts.md), copied from fonts/goudy-scripture/ (the font of record). */
 
-
-
+ @font-face {
+     font-family: 'Goudy Scripture';
+     font-style: normal;
+     /* The outlines are already bold. Covering the whole weight range stops browsers thickening
+        them further for bold text and headings. */
+     font-weight: 400 1000;
+     font-display: swap;
+     src: url('/css/webfont/GoudyScripture.woff2') format('woff2');
+}
+ @font-face {
+     font-family: 'Goudy Scripture';
+     font-style: italic;
+     /* Goudy Scripture is upright only; a real italic beats the browser's synthesized oblique. */
+     font-weight: 400;
+     font-display: swap;
+     src: url('/css/webfont/SortsMillGoudy-Italic.woff') format('woff');
+}
  @font-face {
      font-family: 'Sorts Mill Goudy';
      font-style: normal;

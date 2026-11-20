@@ -7,7 +7,7 @@ import { fileURLToPath } from 'url';
 import config from '../config/index.js';
 import routes from './routes/index.js';
 import subdomainMiddleware from './middleware/subdomain.js';
-import { publicStatic, privacyPolicy, installPrivateFonts } from './middleware/static.js';
+import { publicStatic, privacyPolicy } from './middleware/static.js';
 import { notFoundHandler, errorHandler } from './middleware/error.js';
 import { requestLog } from './middleware/requestLog.js';
 import { responseHeaders } from './middleware/headers.js';
@@ -43,7 +43,6 @@ export function createApp({ log = config.env !== 'test' } = {}) {
   // Static files
   app.use(publicStatic());
   app.use(privacyPolicy());
-  installPrivateFonts(app, config.fonts);
 
   // View engine
   app.set('view engine', 'ejs');
