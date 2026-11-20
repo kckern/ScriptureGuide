@@ -13,7 +13,14 @@
   border-radius: 4px !important;
   padding: 0 0.4em !important;
   background-color: #f2e5d9 !important;
-  display: inline !important;
+  /* One unbroken box: a badge moves to the next line whole, and a very long one wraps
+     inside its own box. Where inline-block cannot apply, clone keeps the padding and
+     border on every fragment. */
+  display: inline-block !important;
+  max-width: 100% !important;
+  vertical-align: baseline !important;
+  -webkit-box-decoration-break: clone !important;
+  box-decoration-break: clone !important;
   box-sizing: border-box !important;
 }
 :root[data-sg-style="badge"] a.sg_autolink:hover {
