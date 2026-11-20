@@ -20,6 +20,7 @@ It is a Modified Version of Sorts Mill Goudy by Barry Schwartz, under the SIL Op
   `apps/chrome-extension/fonts/`.
 - `GoudyScripture.otf`: the same font for desktop use (CFF outlines).
 - `GoudyScripture.ttf`: the same font with TrueType outlines, for Windows and tools that cannot read CFF (bookofmormon.online uses it for share-card images).
+- `GoudyScripture-Italic.woff2` / `.ttf`: the italic, Sorts Mill Goudy Italic thickened like a browser's synthetic semibold (`ITALIC_BOLD`, advances kept), with lining figures, the upright's slanted dashes sheared to the italic angle, and the same en-dash rule. Copy: `apps/web/public/css/webfont/`.
 - `OFL.txt`: the copyright notices and the full licence.
 
 ## Rebuilding
@@ -27,12 +28,14 @@ It is a Modified Version of Sorts Mill Goudy by Barry Schwartz, under the SIL Op
 ```sh
 python3 -m venv /tmp/fontvenv && /tmp/fontvenv/bin/pip install fonttools skia-pathops brotli
 /tmp/fontvenv/bin/python scripts/fonts/build-scripture-font.py \
-    --source goudy-scripture-1.51.woff2 --sorts-mill SortsMillGoudy-Regular.ttf
+    --source goudy-scripture-1.51.woff2 --sorts-mill SortsMillGoudy-Regular.ttf \
+    --sorts-mill-italic SortsMillGoudy-Italic.ttf
 ```
 
 `--source` is the earlier build (1.51), which is not in the repository. `SortsMillGoudy-Regular.ttf`
-comes from https://github.com/google/fonts/tree/main/ofl/sortsmillgoudy. The script writes both
-files here (`--out` picks another folder). Then copy `GoudyScripture.woff2` over the two copies.
+and `SortsMillGoudy-Italic.ttf` come from https://github.com/google/fonts/tree/main/ofl/sortsmillgoudy.
+The script writes the files here (`--out` picks another folder). Then copy the `.woff2` files over
+their copies; the web test `scriptureFont.test.js` fails until they match.
 
 ## Licence
 

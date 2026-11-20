@@ -6,7 +6,7 @@ import { describe, test, expect } from 'vitest';
 const here = path.dirname(fileURLToPath(import.meta.url));
 const pub = path.resolve(here, '../../public');
 const repo = path.resolve(here, '../../../..');
-const OF_RECORD = 'fonts/goudy-scripture/GoudyScripture.woff2';
+const RECORD = 'fonts/goudy-scripture';
 const style = readFileSync(path.join(pub, 'css/style.css'), 'utf8');
 const goudy = (style.match(/@font-face\s*{[^}]*}/g) || []).filter(f => /font-family:\s*'Goudy Scripture'/.test(f));
 const face = s => goudy.find(f => new RegExp(`font-style:\\s*${s}`).test(f));
@@ -19,10 +19,14 @@ describe('Goudy Scripture (the text font)', () => {
     expect(upright).toMatch(/font-display:\s*swap;/);
   });
 
-  test('italic text uses Sorts Mill Goudy Italic', () => {
+  test('italic text uses Goudy Scripture Italic, a built semibold, at every weight', () => {
     const italic = face('italic');
-    expect(italic).toContain("url('/css/webfont/SortsMillGoudy-Italic.woff')");
-    expect(italic).toMatch(/font-weight:\s*400;/);
+    expect(italic).toContain("url('/css/webfont/GoudyScripture-Italic.woff2') format('woff2')");
+    expect(italic).toMatch(/font-weight:\s*400 1000;/);
+  });
+
+  test('contextual alternates stay on under letter-spacing, so 600-592 shows an en dash', () => {
+    expect(style).toMatch(/body\s*{[^}]*font-feature-settings:\s*"calt" 1;/);
   });
 
   test('every file it names is in public/css/webfont, with the OFL notice', () => {
@@ -40,11 +44,13 @@ describe('Goudy Scripture (the text font)', () => {
   // fonts/goudy-scripture/ is the font of record; the site and the extension ship plain copies.
   test.each([
     'apps/web/public/css/webfont/GoudyScripture.woff2',
+    'apps/web/public/css/webfont/GoudyScripture-Italic.woff2',
     'apps/chrome-extension/fonts/GoudyScripture.woff2',
   ])('%s is byte-identical to the font of record', copy => {
-    const record = readFileSync(path.join(repo, OF_RECORD));
+    const source = `${RECORD}/${path.basename(copy)}`;
+    const record = readFileSync(path.join(repo, source));
     const same = readFileSync(path.join(repo, copy)).equals(record);
-    if (!same) throw new Error(`${copy} differs from ${OF_RECORD}; copy the font of record over it: cp ${OF_RECORD} ${copy}`);
+    if (!same) throw new Error(`${copy} differs from ${source}; copy the font of record over it: cp ${source} ${copy}`);
     expect(same).toBe(true);
   });
 });

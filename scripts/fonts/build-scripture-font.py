@@ -190,7 +190,7 @@ def add_range_dash(font):
             lang.FeatureIndex = sorted(remap[i] for i in lang.FeatureIndex)
 
 
-def set_metadata(font):
+def set_metadata(font, style='Regular'):
     name = font['name']
     for rec in list(name.names):
         if rec.nameID in DROP_NAMES or rec.nameID in NAMES:
@@ -201,10 +201,18 @@ def set_metadata(font):
     font['OS/2'].achVendID = 'SGDE'
     font['OS/2'].fsType = 0  # installable: the OFL places no embedding restriction
     font['head'].fontRevision = float(VERSION)
-    top = font['CFF '].cff.topDictIndex[0]
-    top.Notice = NAMES[0]
-    top.Copyright = NAMES[0]
-    top.version = VERSION
+    if style != 'Regular':
+        full = f'Goudy Scripture {style}'
+        for name_id, text in {1: 'Goudy Scripture', 2: style, 4: full, 6: 'GoudyScripture-' + style,
+                              3: f'{VERSION};SGDE;GoudyScripture-{style}'}.items():
+            name.removeNames(nameID=name_id)
+            name.setName(text, name_id, 3, 1, 0x409)
+            name.setName(text, name_id, 1, 0, 0)
+    if 'CFF ' in font:
+        top = font['CFF '].cff.topDictIndex[0]
+        top.Notice = NAMES[0]
+        top.Copyright = NAMES[0]
+        top.version = VERSION
 
 
 def write_truetype(otf_path, ttf_path):
@@ -243,10 +251,78 @@ def write_truetype(otf_path, ttf_path):
     font.save(ttf_path)
 
 
+# Outward offset of the italic's faux bold, in Sorts Mill Goudy Italic units (1000 per em). 15
+# matches Chrome's synthetic bold (about 1/32 em of extra stroke), which KC preferred, with the
+# advances kept so the spacing stays tight.
+ITALIC_BOLD = 15
+
+
+def build_italic(italic_path, upright):
+    """Goudy Scripture Italic: Sorts Mill Goudy Italic with a faux bold, lining digits, the
+    upright's slanted dashes sheared to the italic angle, and the digit-range en dash."""
+    import math
+    from fontTools.pens.cu2quPen import Cu2QuPen
+    from fontTools.pens.ttGlyphPen import TTGlyphPen
+    font = TTFont(italic_path)
+    for tag in ('hdmx', 'LTSH', 'VDMX', 'fpgm', 'prep', 'cvt ', 'gasp'):
+        if tag in font:
+            del font[tag]  # hinting and device metrics describe the old outlines
+    gs = font.getGlyphSet()
+    cmap = font.getBestCmap()
+    source = {g: g for g in font.getGlyphOrder()}
+    for digit, name in zip('0123456789', DIGITS):
+        source[cmap[ord(digit)]] = name + '.lining'
+    b = ITALIC_BOLD
+    new = {}
+    for g in font.getGlyphOrder():
+        path = pathops.Path()
+        gs[source[g]].draw(path.getPen(glyphSet=gs))
+        adv = font['hmtx'][source[g]][0]
+        if not len(list(path.segments)):
+            new[g] = (None, adv)
+            continue
+        ring = pathops.Path(path)
+        ring.stroke(2 * b, pathops.LineCap.ROUND_CAP, pathops.LineJoin.ROUND_JOIN, 4)
+        ring.convertConicsToQuads()
+        grown = pathops.op(path, ring, pathops.PathOp.UNION)
+        pen = TTGlyphPen(None)
+        # Grow in place and keep the advance, as a browser's synthetic bold does: the letters
+        # thicken into their side bearings and the spacing stays as tight as the regular italic.
+        grown.draw(Cu2QuPen(pen, 1.0, reverse_direction=True))
+        new[g] = (pen.glyph(), adv)
+    # The upright's slanted dashes, scaled to 1000 units and sheared to the italic angle.
+    ucmap, ugs = upright.getBestCmap(), upright.getGlyphSet()
+    k = 1000 / upright['head'].unitsPerEm
+    shear = math.tan(math.radians(-font['post'].italicAngle))
+    for cp in (0x2D, 0x2013, 0x2014):
+        # Keep the italic's own dash lengths: stretch or squeeze the straight middle of the
+        # upright's dash to the italic's advance, leaving the slanted ends as drawn.
+        u_adv = upright['hmtx'][ucmap[cp]][0] * k
+        target = font['hmtx'][cmap[cp]][0]
+        xmin, _, xmax, _ = bounds(ugs, ucmap[cp])
+        lo, hi = (xmin + 0.15 * (xmax - xmin)) * k, (xmax - 0.15 * (xmax - xmin)) * k
+        pen = TTGlyphPen(None)
+        sheared = TransformPen(Cu2QuPen(pen, 1.0, reverse_direction=True), Transform(1, 0, shear, 1, 0, 0))
+        ugs[ucmap[cp]].draw(TransformPen(_SqueezeMiddle(sheared, lo, hi, u_adv - target), Transform(k, 0, 0, k, 0, 0)))
+        new[cmap[cp]] = (pen.glyph(), target)
+    glyf = font['glyf']
+    for g, (glyph, adv) in new.items():
+        if glyph is not None:
+            glyf[g] = glyph
+        else:
+            glyf[g].numberOfContours = 0
+        glyf[g].recalcBounds(glyf)
+        font['hmtx'][g] = (round(adv), getattr(glyf[g], 'xMin', 0))
+    add_range_dash(font)
+    set_metadata(font, 'Italic')
+    return font
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument('--source', required=True, help='current Goudy Scripture (woff2/otf)')
     ap.add_argument('--sorts-mill', required=True, help="Google Fonts' SortsMillGoudy-Regular.ttf")
+    ap.add_argument('--sorts-mill-italic', help="Google Fonts' SortsMillGoudy-Italic.ttf; builds the italic too")
     ap.add_argument('--out', default=str(FONT_OF_RECORD), help='output directory (default: fonts/goudy-scripture)')
     a = ap.parse_args()
     font, smg = TTFont(a.source), TTFont(a.sorts_mill)
@@ -261,6 +337,12 @@ def main():
     font.flavor = None
     font.save(out / 'GoudyScripture.otf')
     write_truetype(out / 'GoudyScripture.otf', out / 'GoudyScripture.ttf')
+    if a.sorts_mill_italic:
+        italic = build_italic(a.sorts_mill_italic, TTFont(out / 'GoudyScripture.otf'))
+        italic.save(out / 'GoudyScripture-Italic.ttf')
+        italic.flavor = 'woff2'
+        italic.save(out / 'GoudyScripture-Italic.woff2')
+        print(f'italic bold {ITALIC_BOLD} units; wrote {out}/GoudyScripture-Italic.woff2 and .ttf')
     print(f'digits scaled {scale:.4f}, bold {BOLD} units; wrote {out}/GoudyScripture.woff2, .otf and .ttf')
 
 

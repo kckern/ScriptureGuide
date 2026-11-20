@@ -15,10 +15,11 @@
  @font-face {
      font-family: 'Goudy Scripture';
      font-style: italic;
-     /* Goudy Scripture is upright only; a real italic beats the browser's synthesized oblique. */
-     font-weight: 400;
+     /* Sorts Mill Goudy Italic thickened to a semibold (spacing unchanged), with lining figures and the slanted
+        dashes. Covering the weight range keeps browsers from thickening it further. */
+     font-weight: 400 1000;
      font-display: swap;
-     src: url('/css/webfont/SortsMillGoudy-Italic.woff') format('woff');
+     src: url('/css/webfont/GoudyScripture-Italic.woff2') format('woff2');
 }
  @font-face {
      font-family: 'Sorts Mill Goudy';
@@ -62,6 +63,9 @@
  body {
      font-family: 'Goudy Scripture', 'Sorts Mill Goudy', 'SG Hangul', 'Noto Serif Devanagari', Georgia, serif;
      word-break: keep-all; /* only affects Korean, Chinese and Japanese: break lines between words */
+     /* Browsers drop contextual alternates under letter-spacing (the headnotes use 1px). Goudy
+        Scripture's calt shows a hyphen between digits as an en dash, so keep it on. */
+     font-feature-settings: "calt" 1;
      /* macOS thickens every stroke by default; Goudy Scripture is cut from a bold face, so that
         reads as heavy. Grayscale antialiasing draws the outlines as designed (as bookofmormon.online). */
      -webkit-font-smoothing: antialiased;
