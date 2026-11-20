@@ -36,12 +36,19 @@ export function foldCompounds(lines, bookShort) {
   return out;
 }
 
+// The link-preview card of a page (routes/og.js draws it): /og/<page path>.png, or the site card
+// for a page without a path of its own ("/?q=john.3.16").
+export function ogImageUrl(host, pagePath) {
+  const p = String(pagePath || '/').replace(/^\/+/, '');
+  return `https://${host}/og/${p || 'site'}.png`;
+}
+
 export class HtmlPresenter {
   present(result, req, res) {
     const data = this.serialize(result);
     // No verses: the title is the reference as requested (index.php); a page built from the PHP
     // blocks carries its own (ScriptureController.notFoundPage)
-    const title = result.title ?? (data.title || req?.config?.reference || result.reference.query || '');
+    const title = this.titleFor(result, data, req);
     const ogMeta = this._buildOgMeta(result, data, title, req);
     const sections = result.sections ? result.sections.map(r => this.serialize(r)) : null;
     res.render('scripture', {
@@ -53,9 +60,11 @@ export class HtmlPresenter {
     });
   }
 
+  titleFor(result, data, req) {
+    return result.title ?? (data.title || req?.config?.reference || result.reference.query || '');
+  }
+
   _buildOgMeta(result, data, title, req) {
-    const version = result.config.version || 'LDS';
-    const img = data.img || version.toLowerCase();
     const ch = result.chapterHeading;
 
     // Build description: "{title}— {summary/heading} {verse text...}". The chapter summary leads
@@ -78,7 +87,7 @@ export class HtmlPresenter {
     const path = req?.path || '/';
     return {
       title: `${title} | Scripture Guide`,
-      image: `https://cover.scripture.guide/${img}`,
+      image: ogImageUrl(host, path),
       description,
       url: `https://${host}${path}`
     };

@@ -46,6 +46,8 @@ describe('Goudy Scripture (the text font)', () => {
     'apps/web/public/css/webfont/GoudyScripture.woff2',
     'apps/web/public/css/webfont/GoudyScripture-Italic.woff2',
     'apps/chrome-extension/fonts/GoudyScripture.woff2',
+    // satori (link-preview cards) reads TTF, not woff2
+    'apps/web/assets/og/GoudyScripture.ttf',
   ])('%s is byte-identical to the font of record', copy => {
     const source = `${RECORD}/${path.basename(copy)}`;
     const record = readFileSync(path.join(repo, source));

@@ -5,6 +5,7 @@ import outputMiddleware from '../middleware/output.js';
 import { ajaxRouter } from './ajax.js';
 import { legacyRouter } from './legacy.js';
 import { buildInfo } from '../buildInfo.js';
+import { ogRoute } from './og.js';
 
 const router = Router();
 
@@ -28,6 +29,9 @@ router.get('/health', (req, res) => {
 router.get('/build-info', (req, res) => {
   res.set('Cache-Control', 'no-store').json(buildInfo());
 });
+
+// Link-preview cards: /og/<page path>.png (og:image of each passage page), /og/site.png
+router.get('/og/*', ogRoute);
 
 // Path-based format prefixes: /api/John3:16, /xml/John3:16, etc.
 const FORMAT_PREFIXES = ['api', 'json', 'meta', 'raw', 'plain', 'markdown', 'xml', 'latex', 'notes', 'audio', 'cover'];

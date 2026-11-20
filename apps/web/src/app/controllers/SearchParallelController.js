@@ -3,6 +3,7 @@ import searchService from '../../services/SearchService.js';
 import { slugifyRef } from '../../domain/rules/legacyReference.js';
 import { OutputFormat } from '../../domain/enums/OutputFormat.js';
 import { searchVersion, isEmptyReference } from '../../domain/rules/requestParsing.js';
+import { ogImageUrl } from '../../presentation/presenters/HtmlPresenter.js';
 
 // The html body of the PHP front controller (index.php), in its order, from the parsed request
 // (req.config), never from the Express route params:
@@ -22,11 +23,13 @@ export class SearchParallelController {
     const config = req.config || {};
     if ((config.outputFormat || OutputFormat.HTML) !== OutputFormat.HTML) return false;
     const ogUrl = `http://${req.headers.host || ''}${req.originalUrl || ''}`;
+    // Search and parallel pages share the site card
+    const ogImage = ogImageUrl((req.headers.host || 'scripture.guide').replace(/:\d+$/, ''), '/site');
 
     if (config.parallel) {
       const page = await this.parallel.build(config.reference);
       if (!page) return false;
-      res.render('parallel', { ...page, config, ogUrl });
+      res.render('parallel', { ...page, config, ogUrl, ogImage });
       return true;
     }
 
@@ -39,7 +42,7 @@ export class SearchParallelController {
     if (!config.search) return false;
     const query = String(config.legacy?.ref ?? config.reference).replace(/\./g, ' ');
     const result = await this.searchService.search(query, { forcedVersion: searchVersion(config.versionSpec) });
-    res.render('search', { ...result, config, slugref: slugifyRef(result.query), ogUrl });
+    res.render('search', { ...result, config, slugref: slugifyRef(result.query), ogUrl, ogImage });
     return true;
   }
 }

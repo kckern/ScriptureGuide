@@ -27,7 +27,7 @@ const trs = rows.map(r => `			<tr vol="${r.vol}" >
   slugref: slugref || '',
   ogMeta: {
     title: (count ? count + ' Search Results' : 'Home') + ' | Scripture Guide',
-    image: 'https://cover.scripture.guide/search',
+    image: typeof ogImage !== 'undefined' ? ogImage : 'https://scripture.guide/og/site.png',
     description: count + ' passages matching: ' + query,
     url: ogUrl || ''
   },

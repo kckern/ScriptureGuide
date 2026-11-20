@@ -36,10 +36,15 @@ export function rawQuery(req) {
 export function configMiddleware(req, res, next) {
   const path = (req.originalUrl || req.url || '/').split('?')[0];
   // Host header first (req.hostname would honour X-Forwarded-Host under trust proxy)
-  const parsed = parseRequest({ host: req.headers.host || req.hostname || '', path, query: rawQuery(req) });
-  const { options } = parsed;
+  req.config = buildConfig({ host: req.headers.host || req.hostname || '', path, query: rawQuery(req) });
+  next();
+}
 
-  req.config = {
+// req.config for a host, path and query (the /og/ cards build the config of the page they show).
+export function buildConfig({ host = '', path = '/', query = {} }) {
+  const parsed = parseRequest({ host, path, query });
+  const { options } = parsed;
+  return {
     ...parsed,
     version: parsed.versions[0]?.version,
     includeHeadings: options.headings === undefined ? true : !(options.headings === '0' || options.headings === ''),
@@ -47,8 +52,6 @@ export function configMiddleware(req, res, next) {
     includeAnnotations: options.annotations === '1',
     includeMeta: options.meta === '1',
   };
-
-  next();
 }
 
 export default configMiddleware;

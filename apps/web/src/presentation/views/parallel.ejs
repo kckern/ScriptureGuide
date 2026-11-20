@@ -41,7 +41,7 @@ const trs = rows.map(r => `
   slugref: '',
   ogMeta: {
     title: title + ' | Scripture Guide',
-    image: 'https://cover.scripture.guide/logo.png',
+    image: typeof ogImage !== 'undefined' ? ogImage : 'https://scripture.guide/og/site.png',
     description: '',
     url: ogUrl || ''
   },

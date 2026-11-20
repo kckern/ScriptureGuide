@@ -11,12 +11,17 @@
 <% if (typeof ogMeta !== 'undefined' && ogMeta) { %>
 <meta property="og:title" content="<%= ogMeta.title %>" />
 <meta property="og:image" content="<%= ogMeta.image %>" />
-<meta property="og:image:width" content="200" />
-<meta property="og:image:height" content="200" />
+<meta property="og:image:width" content="1200" />
+<meta property="og:image:height" content="630" />
+<meta property="og:image:type" content="image/png" />
 <meta property="og:type" content="website" />
 <meta property="fb:app_id" content="966242223397117" />
 <meta property="og:description" content="<%= ogMeta.description %>" />
 <meta property="og:url" content="<%= ogMeta.url %>" />
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content="<%= ogMeta.title %>" />
+<meta name="twitter:description" content="<%= ogMeta.description %>" />
+<meta name="twitter:image" content="<%= ogMeta.image %>" />
 <% } %>
 <link rel="stylesheet" href="//code.jquery.com/ui/1.11.4/themes/smoothness/jquery-ui.css">
 <link rel="stylesheet" href="/css/style.css">
