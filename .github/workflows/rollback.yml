@@ -1,0 +1,56 @@
+name: rollback
+# Puts an earlier build back on scripture.guide: points :edge at that commit's signed image.
+# bom's autodeploy picks it up within a minute. The next push to master replaces it.
+on:
+  workflow_dispatch:
+    inputs:
+      sha:
+        description: Commit to put back (full or short sha)
+        required: true
+permissions:
+  contents: read
+  packages: write
+jobs:
+  rollback:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      IMAGE: ghcr.io/kckern/scripture-guide
+    steps:
+      - uses: actions/checkout@v7
+        with: { fetch-depth: 0 }
+      - uses: docker/setup-buildx-action@v4
+      - uses: docker/login-action@v4
+        with: { registry: ghcr.io, username: '${{ github.actor }}', password: '${{ secrets.GITHUB_TOKEN }}' }
+      - uses: sigstore/cosign-installer@v3
+      - id: find
+        name: Find and verify the signed image for that commit
+        env: { SHA: '${{ inputs.sha }}' }
+        run: |
+          full=$(git rev-parse --verify "${SHA}^{commit}")
+          src=""
+          # Images from before 2026-11-20 only carry a short tag; try the lengths git uses.
+          for tag in "sha-$full" "sha-${full:0:7}" "sha-${full:0:8}" "sha-${full:0:9}"; do
+            if docker buildx imagetools inspect "$IMAGE:$tag" >/dev/null 2>&1; then src="$IMAGE:$tag"; break; fi
+          done
+          [ -n "$src" ] || { echo "::error::no image for $full"; exit 1; }
+          digest=$(docker buildx imagetools inspect "$src" --format '{{json .Manifest}}' | jq -r .digest)
+          # bom only deploys images signed by release.yml on master; refuse anything else here.
+          cosign verify "$IMAGE@$digest" \
+            --certificate-oidc-issuer https://token.actions.githubusercontent.com \
+            --certificate-identity-regexp '^https://github\.com/kckern/ScriptureGuide/\.github/workflows/release\.yml@refs/heads/master$' >/dev/null
+          echo "full=$full" >> "$GITHUB_OUTPUT"
+          echo "digest=$digest" >> "$GITHUB_OUTPUT"
+      - name: Point :edge at it
+        env: { DIGEST: '${{ steps.find.outputs.digest }}' }
+        run: docker buildx imagetools create -t "$IMAGE:edge" "$IMAGE@$DIGEST"
+      # A single-index source is copied unchanged, so the digest and its signature carry over.
+      - name: Check :edge has the same digest
+        env:
+          DIGEST: ${{ steps.find.outputs.digest }}
+          FULL: ${{ steps.find.outputs.full }}
+        run: |
+          edge=$(docker buildx imagetools inspect "$IMAGE:edge" --format '{{json .Manifest}}' | jq -r .digest)
+          echo ":edge is $edge"
+          [ "$edge" = "$DIGEST" ] || { echo "::error::edge is $edge, expected $DIGEST"; exit 1; }
+          echo "### :edge now points at ${FULL:0:7} ($DIGEST). Live within about a minute; check https://scripture.guide/build-info." >> "$GITHUB_STEP_SUMMARY"
