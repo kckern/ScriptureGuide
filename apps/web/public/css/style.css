@@ -47,6 +47,10 @@
  body {
      font-family: 'Goudy Scripture', 'Sorts Mill Goudy', 'SG Hangul', 'Noto Serif Devanagari', Georgia, serif;
      word-break: keep-all; /* only affects Korean, Chinese and Japanese: break lines between words */
+     /* macOS thickens every stroke by default; Goudy Scripture is cut from a bold face, so that
+        reads as heavy. Grayscale antialiasing draws the outlines as designed (as bookofmormon.online). */
+     -webkit-font-smoothing: antialiased;
+     -moz-osx-font-smoothing: grayscale;
      font-size: 1.5em;
      line-height: 1.5em;
      background-color: #333;
