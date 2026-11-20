@@ -143,7 +143,9 @@ function frame(f, children) {
     backgroundImage: `url(${f.wood})`, backgroundRepeat: 'repeat', backgroundSize: '500px 592px',
   }, [
     h('div', {
-      display: 'flex', flexDirection: 'column', flexGrow: 1,
+      // An exact size inside the frame, so the paper cannot grow over the right and bottom wood.
+      display: 'flex', flexDirection: 'column', boxSizing: 'border-box', overflow: 'hidden',
+      width: WIDTH - 2 * FRAME, height: HEIGHT - 2 * FRAME,
       padding: `${PAD_TOP}px ${PAD_X}px ${PAD_BOTTOM}px`,
       backgroundImage: `url(${f.paper})`, backgroundRepeat: 'repeat', backgroundSize: '402px 420px',
       boxShadow: 'inset 0 0 0 1px rgba(40, 20, 10, 0.55)',

@@ -263,3 +263,15 @@ describe('link-preview tags', () => {
     expect(res.text).toContain('<meta property="og:image" content="https://scripture.guide/og/site.jpg" />');
   });
 });
+
+describe('card frame', () => {
+  test('the wood border shows on all four sides', async () => {
+    const jpeg = (await import('jpeg-js')).default;
+    const { data, width } = jpeg.decode(await renderCard({ title: 'John 3:16', body: 'For God so loved the world. '.repeat(40), badge: null }));
+    const lum = (x, y) => { const i = (y * width + x) * 4; return 0.3 * data[i] + 0.59 * data[i + 1] + 0.11 * data[i + 2]; };
+    // 8 px in from each edge, inside the 18 px frame: wood is dark, paper is light.
+    for (const [side, x, y] of [['top', 600, 8], ['bottom', 600, 621], ['left', 8, 315], ['right', 1191, 315]]) {
+      expect(lum(x, y), `${side} edge should be wood`).toBeLessThan(120);
+    }
+  });
+});
