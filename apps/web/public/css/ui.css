@@ -62,7 +62,10 @@ h5 a
 .nav li#status_msg
 {
 	 border-left:0;
-	 width:20em;
+	 /* Takes the space the buttons leave and ends in "…", so narrow screens keep the buttons visible */
+	 width:100%;
+	 max-width:0;
+	 text-overflow:ellipsis;
 }
 
 
