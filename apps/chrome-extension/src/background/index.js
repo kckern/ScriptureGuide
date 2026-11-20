@@ -1,12 +1,9 @@
 // Background service worker: omnibox lookups, a selection context menu, and the
 // toolbar action (which opens the popup, configured in the manifest).
 
-import { lookupReference, toSlug } from 'scripture-guide';
-
-const SG_BASE = 'https://scripture.guide/';
-
-const escapeXml = (s) =>
-  s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+import { toSlug } from 'scripture-guide';
+import { omniboxTarget, openTarget, SG_BASE } from '../shared/omnibox.js';
+import { parseChunks } from './parse.js';
 
 // Context menu must be (re)created on install/update, not at top level — the
 // service worker re-runs on every wake and would otherwise throw duplicate-id.
@@ -32,18 +29,33 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
   }
 });
 
-// Omnibox ("sg " keyword): show the normalized reference as a suggestion.
+// Omnibox ("sg " keyword): a reference opens the passage, anything else searches.
+// The default suggestion is what Enter does, so it always describes the action.
+const HINT = 'Type a reference, or words to search scripture.guide';
+chrome.omnibox.onInputStarted.addListener(() => chrome.omnibox.setDefaultSuggestion({ description: HINT }));
 chrome.omnibox.onInputChanged.addListener((text, suggest) => {
-  try {
-    const { ref, verse_ids } = lookupReference(text);
-    if (verse_ids && verse_ids.length) {
-      suggest([{ content: text, description: 'Open <match>' + escapeXml(ref) + '</match> on scripture.guide' }]);
-    }
-  } catch (e) {
-    /* partial/unrecognized input — no suggestion */
-  }
+  const target = omniboxTarget(text);
+  chrome.omnibox.setDefaultSuggestion({ description: target ? target.description : HINT });
+  suggest([]);
+});
+chrome.omnibox.onInputEntered.addListener((text, disposition) => {
+  const target = omniboxTarget(text);
+  if (!target) return;
+  openTarget(target.url, disposition, {
+    update: (props) => chrome.tabs.update(props),
+    create: (props) => chrome.tabs.create(props)
+  });
 });
 
-chrome.omnibox.onInputEntered.addListener((text) => {
-  chrome.tabs.create({ url: SG_BASE + toSlug(text) });
+// Content scripts send text here to be parsed off the page's main thread, and report their
+// scanning state so a paused page shows a badge on the toolbar icon.
+chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
+  if (!msg) return;
+  if (msg.type === 'sg-parse') {
+    sendResponse(parseChunks(msg));
+  } else if (msg.type === 'sg-state' && sender.tab && sender.tab.id != null) {
+    const tabId = sender.tab.id;
+    chrome.action.setBadgeText({ tabId, text: msg.state === 'paused' ? '‖' : '' });
+    if (msg.state === 'paused') chrome.action.setBadgeBackgroundColor({ tabId, color: '#8a6d3b' });
+  }
 });

@@ -44,6 +44,8 @@ export function createQueue(processFn, { chunkBudgetMs = 8, maxNodes = 50000 } =
     push(items) { if (!stopped && items && items.length) { queue.push(...items); schedule(); } },
     pushFront(items) { if (!stopped && items && items.length) { queue.unshift(...items); schedule(); } },
     stop() { stopped = true; queue.length = 0; },
+    // After the reader resumes a paused page: accept work again, with a fresh node budget.
+    restart() { stopped = false; processedCount = 0; },
     get size() { return queue.length; },
     get isStopped() { return stopped; }
   };

@@ -2,13 +2,44 @@
 import { mergeSettings, siteEnabled } from '../shared/settings.js';
 import { setSiteEnabled } from '../shared/site-toggle.js';
 
-async function currentHost() {
+async function currentTab() {
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+  return tab || null;
+}
+
+async function currentHost() {
+  const tab = await currentTab();
   try {
     return tab && tab.url ? new URL(tab.url).hostname : null;
   } catch (e) {
     return null;
   }
+}
+
+// What the page's scanner is doing, when it is not the normal full scan.
+export const STATUS_TEXT = {
+  lite: 'Simplified detection on this page.',
+  paused: 'Paused on this page to keep it responsive.'
+};
+
+function showStatus(state) {
+  const box = document.getElementById('page-status');
+  const text = STATUS_TEXT[state];
+  box.hidden = !text;
+  document.getElementById('page-status-text').textContent = text || '';
+  document.getElementById('resume').hidden = state !== 'paused';
+}
+
+async function initStatus() {
+  const tab = await currentTab();
+  if (!tab || tab.id == null) return;
+  const ask = (type) => chrome.tabs.sendMessage(tab.id, { type }).catch(() => null);
+  const reply = await ask('sg-get-state');
+  if (reply && reply.state) showStatus(reply.state);
+  document.getElementById('resume').addEventListener('click', async () => {
+    const after = await ask('sg-resume');
+    showStatus(after && after.state ? after.state : 'lite');
+  });
 }
 
 async function init() {
@@ -43,6 +74,7 @@ async function init() {
   });
 
   document.getElementById('gear').addEventListener('click', () => chrome.runtime.openOptionsPage());
+  initStatus();
 }
 
 if (typeof chrome !== 'undefined' && chrome.storage) {

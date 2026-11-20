@@ -36,3 +36,18 @@ describe('createQueue (setTimeout fallback path)', () => {
     expect(seen).toEqual([]);
   });
 });
+
+describe('createQueue restart', () => {
+  test('a stopped queue processes new items again after restart', async () => {
+    const seen = [];
+    const q = createQueue((x) => seen.push(x));
+    q.stop();
+    q.push([1]);
+    await new Promise((r) => setTimeout(r, 20));
+    expect(seen).toEqual([]);
+    q.restart();
+    q.push([2]);
+    await new Promise((r) => setTimeout(r, 1100));
+    expect(seen).toEqual([2]);
+  });
+});

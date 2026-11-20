@@ -6,6 +6,7 @@
 export function createObserver(target, onTextNodes, { debounceMs = 250 } = {}) {
   const doc = target.ownerDocument || document;
   let pending = new Set();
+  let changed = new Set(); // nodes whose text changed, as opposed to newly added ones
   let timer = null;
 
   const collectTextNodes = (el) => {
@@ -23,8 +24,10 @@ export function createObserver(target, onTextNodes, { debounceMs = 250 } = {}) {
     clearTimeout(timer);
     timer = setTimeout(() => {
       const batch = [...pending];
+      const changedNow = changed;
       pending = new Set();
-      onTextNodes(batch);
+      changed = new Set();
+      onTextNodes(batch, changedNow);
     }, debounceMs);
   };
 
@@ -32,6 +35,7 @@ export function createObserver(target, onTextNodes, { debounceMs = 250 } = {}) {
     for (const m of mutations) {
       if (m.type === 'characterData') {
         pending.add(m.target);
+        changed.add(m.target);
         continue;
       }
       for (const node of m.addedNodes) {

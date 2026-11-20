@@ -1,14 +1,27 @@
-// Content script orchestration: read settings, scan the page (viewport first),
-// annotate detected references, watch for dynamic content, and react to live
-// settings changes. All heavy lifting lives in the tested modules below.
+// Content script orchestration: read settings, scan the page (what is on or near the screen
+// first, the rest as it scrolls into view), parse text in the background service worker,
+// annotate detected references, and watch for dynamic content.
+//
+// The page must never freeze. Text is parsed in chunks of at most ~2 KB, off the page thread
+// by default. A governor (governor.js) falls back to page-thread parsing, then to simpler
+// detection, then pauses scanning when a page is too heavy. Sites that had to pause start the
+// next visit lighter (hostMemory.js).
 
 import { findReferences, setLanguage, setCanon } from 'scripture-guide';
 import { mergeSettings, siteEnabled } from '../shared/settings.js';
+import { startState, rememberVisit, STORAGE_KEY } from '../shared/hostMemory.js';
 import { collectCandidates, isCandidate } from './detect.js';
-import { annotateTextNode, removeAllAnnotations } from './annotate.js';
+import { removeAllAnnotations } from './annotate.js';
 import { collectAnchorGroups, annotateAnchor, removeAllReflinks, MARK } from './footnotes.js';
 import { createQueue } from './scheduler.js';
 import { createObserver } from './observer.js';
+import { chunkText } from './chunker.js';
+import { applyResult } from './apply.js';
+import { createGovernor } from './governor.js';
+import { createDispatcher } from './dispatcher.js';
+
+const MAX_NODE_CHARS = 200000;   // a text node this long is a data dump, not prose: skip it
+const CHANGED_TEXT_DELAY_MS = 3000; // text that keeps changing is re-parsed at most this often
 
 (async function main() {
   if (window.__sgActive) return; // guard against double-injection
@@ -24,10 +37,34 @@ import { createObserver } from './observer.js';
   document.documentElement.dataset.sgStyle = settings.appearance.linkStyle;
   if (settings.appearance.useKreonFont) injectKreonFont();
 
+  const host = location.hostname;
+  const startedIn = startState(await readHostState(host), Date.now());
+  const reportState = () => {
+    try {
+      chrome.runtime.sendMessage({ type: 'sg-state', state: governor.state }).catch(() => {});
+    } catch (e) { /* extension reloaded */ }
+  };
+  const governor = createGovernor({
+    initial: startedIn,
+    onChange: (state, reason) => {
+      console.info('[Scripture Guide] ' + state + ': ' + reason);
+      reportState();
+      if (state === 'paused') {
+        queue.stop();
+        writeHostState(host, rememberVisit(startedIn, 'paused', Date.now()));
+      }
+    }
+  });
+  if (startedIn !== 'normal') {
+    console.info('[Scripture Guide] ' + startedIn + ': remembered for ' + host);
+    reportState();
+  }
+
   const processed = new WeakSet();
 
   const detectOptions = () => ({
     language: settings.language,
+    canon: settings.canon,
     contextAware: settings.detection.contextAware,
     enableImpliedBooks: settings.detection.impliedBooks,
     abbreviations: settings.detection.abbreviations,
@@ -35,30 +72,52 @@ import { createObserver } from './observer.js';
     wholeBooks: settings.detection.wholeBooks
   });
 
+  const dispatcher = createDispatcher({
+    send: (msg) => chrome.runtime.sendMessage(msg),
+    parseLocal: (text, options) => findReferences(text, options),
+    governor,
+    idle: (cb) => (typeof requestIdleCallback === 'function'
+      ? requestIdleCallback(() => cb(), { timeout: 1000 })
+      : setTimeout(cb, 0)),
+    options: detectOptions
+  });
+
+  // A text node: chunk it and hand it to the dispatcher. When the result comes back, the
+  // node is annotated unless the page changed it meanwhile, in which case it is parsed again.
   const processNode = (node) => {
-    if (!node.isConnected || processed.has(node)) return;
+    if (!governor.canParse || !node.isConnected || processed.has(node)) return;
     processed.add(node);
-    let matches;
-    try {
-      matches = findReferences(node.nodeValue, detectOptions());
-    } catch (e) {
-      return;
-    }
-    if (matches && matches.length) annotateTextNode(node, matches, processed);
+    const text = node.nodeValue;
+    if (!text || text.length > MAX_NODE_CHARS) return;
+    const chunks = chunkText(text);
+    dispatcher.submit({
+      chunks: chunks.map((c) => c.text),
+      onResult: (results) => {
+        if (!applyResult(node, text, chunks, results, processed)) {
+          processed.delete(node);
+          if (isCandidate(node, processed)) queue.push([node]);
+        }
+      }
+    });
   };
 
   // A run of back-to-back reference anchors ("D&C 28:7; D&C 64:5") gets one 🔗
-  // after the last anchor, linking to all of them together.
+  // after the last anchor, linking to all of them together. Anchor text is at most 60
+  // characters, so it is parsed on the page thread, and the time counts toward the budget.
   const processGroup = (group) => {
+    if (!governor.canParse) return;
     const anchors = group.filter((a) => a.isConnected && !a.hasAttribute(MARK));
     if (!anchors.length) return;
     const combined = [];
+    const options = { ...detectOptions(), contextAware: governor.contextAware && settings.detection.contextAware };
+    const start = performance.now();
     for (const anchor of anchors) {
       let matches = null;
-      try { matches = findReferences(anchor.textContent, detectOptions()); } catch (e) { /* skip */ }
+      try { matches = findReferences(anchor.textContent, options); } catch (e) { /* skip */ }
       anchor.setAttribute(MARK, 'true');
       if (matches && matches.length) combined.push(...matches);
     }
+    governor.recordLocal(performance.now() - start);
     if (combined.length) annotateAnchor(anchors[anchors.length - 1], combined);
   };
 
@@ -67,40 +126,89 @@ import { createObserver } from './observer.js';
     else processNode(item);                      // text node
   });
 
-  // Scan the whole page progressively via the idle scheduler (visible content
-  // first for perceived speed; no waiting on scroll). The idle queue yields
-  // between slices so it never janks the page. Reusable so the context-menu
-  // "Scan page" and dynamic content can re-run it; the `processed` WeakSet and
-  // MARK attribute make it skip anything already handled.
+  // Text far from the screen waits until it is about to scroll into view.
+  const offscreen = new Map(); // element -> its waiting text nodes
+  const lazy = typeof IntersectionObserver === 'function'
+    ? new IntersectionObserver((entries) => {
+      const ready = [];
+      for (const entry of entries) {
+        if (!entry.isIntersecting) continue;
+        lazy.unobserve(entry.target);
+        ready.push(...(offscreen.get(entry.target) || []));
+        offscreen.delete(entry.target);
+      }
+      if (ready.length) queue.pushFront(ready);
+    }, { rootMargin: '100% 0px' })
+    : null;
+
   const scan = () => {
+    if (!governor.canParse) return;
     const candidates = collectCandidates(document.body, processed);
-    const inView = [];
-    const rest = [];
+    const near = [];
+    const top = -window.innerHeight;
+    const bottom = window.innerHeight * 2;
     for (const n of candidates) {
       const el = n.parentElement;
       const r = el && el.getBoundingClientRect();
-      (r && r.bottom > 0 && r.top < window.innerHeight ? inView : rest).push(n);
+      if (!lazy || (r && r.bottom > top && r.top < bottom)) {
+        near.push(n);
+      } else {
+        if (!offscreen.has(el)) { offscreen.set(el, []); lazy.observe(el); }
+        offscreen.get(el).push(n);
+      }
     }
-    queue.push(rest);
-    queue.pushFront(inView);
+    queue.pushFront(near);
     if (settings.appearance.footnoteLinks) queue.push(collectAnchorGroups(document.body));
   };
-  scan();
+  if (governor.canParse) scan();
 
-  // Manual re-scan trigger (context menu) for lazy / infinite-scroll content.
+  const resume = () => {
+    governor.resume();
+    queue.restart();
+    scan();
+  };
+
   if (chrome.runtime && chrome.runtime.onMessage) {
-    chrome.runtime.onMessage.addListener((msg) => {
-      if (msg && msg.type === 'sg-rescan') scan();
+    chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
+      if (!msg) return;
+      if (msg.type === 'sg-rescan') {
+        if (governor.canParse) scan(); else resume();
+      } else if (msg.type === 'sg-resume') {
+        resume();
+        sendResponse({ state: governor.state });
+      } else if (msg.type === 'sg-get-state') {
+        sendResponse({ state: governor.state });
+      }
     });
   }
 
-  // Dynamic content: re-scan changed/added text nodes.
-  const observer = createObserver(document.body, (nodes) => {
+  // Dynamic content. New text is parsed right away; text that changed (tickers, streaming
+  // chat) waits CHANGED_TEXT_DELAY_MS and is parsed once however often it changed meanwhile.
+  // Nodes we created while annotating are already in `processed` and stay skipped.
+  const changedNodes = new Set();
+  let changedTimer = null;
+  const flushChanged = () => {
+    changedTimer = null;
     const fresh = [];
-    for (const n of nodes) {
-      processed.delete(n); // changed/new text deserves a fresh look
+    for (const n of changedNodes) {
+      processed.delete(n);
       if (isCandidate(n, processed)) fresh.push(n);
     }
+    changedNodes.clear();
+    queue.push(fresh);
+  };
+
+  const observer = createObserver(document.body, (nodes, changed) => {
+    if (!governor.canParse) return;
+    const fresh = [];
+    for (const n of nodes) {
+      if (changed && changed.has(n)) {
+        changedNodes.add(n);
+        continue;
+      }
+      if (isCandidate(n, processed)) fresh.push(n);
+    }
+    if (changedNodes.size && !changedTimer) changedTimer = setTimeout(flushChanged, CHANGED_TEXT_DELAY_MS);
     queue.push(fresh);
     if (settings.appearance.footnoteLinks) {
       // Newly added subtrees may contain reference anchors too. Dedupe hosts
@@ -108,11 +216,11 @@ import { createObserver } from './observer.js';
       // the enclosing <a> when the added node IS inside an anchor.
       const hosts = new Set();
       for (const n of nodes) {
-        const host = (n.parentElement && n.parentElement.closest('a')) || n.parentElement;
-        if (host) hosts.add(host);
+        const hostEl = (n.parentElement && n.parentElement.closest('a')) || n.parentElement;
+        if (hostEl) hosts.add(hostEl);
       }
       const groups = [];
-      for (const host of hosts) for (const g of collectAnchorGroups(host)) groups.push(g);
+      for (const hostEl of hosts) for (const g of collectAnchorGroups(hostEl)) groups.push(g);
       if (groups.length) queue.push(groups);
     }
   });
@@ -135,6 +243,8 @@ import { createObserver } from './observer.js';
       if (!siteEnabled(location.hostname, settings)) {
         queue.stop();
         observer.disconnect();
+        if (lazy) lazy.disconnect();
+        clearTimeout(changedTimer);
         removeAllAnnotations(document);
         removeAllReflinks(document);
         window.__sgActive = false;
@@ -142,6 +252,27 @@ import { createObserver } from './observer.js';
     });
   });
 })();
+
+async function readHostState(host) {
+  try {
+    const stored = await chrome.storage.local.get(STORAGE_KEY);
+    return (stored[STORAGE_KEY] || {})[host];
+  } catch (e) {
+    return undefined;
+  }
+}
+
+async function writeHostState(host, record) {
+  if (!record) return;
+  try {
+    const stored = await chrome.storage.local.get(STORAGE_KEY);
+    const all = stored[STORAGE_KEY] || {};
+    const now = Date.now();
+    for (const [h, r] of Object.entries(all)) if (!r || r.until <= now) delete all[h]; // drop expired
+    all[host] = record;
+    await chrome.storage.local.set({ [STORAGE_KEY]: all });
+  } catch (e) { /* memory is best-effort */ }
+}
 
 function applyParserConfig(settings) {
   try {

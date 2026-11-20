@@ -62,3 +62,7 @@ header h1 { font-size: 15px; font-weight: 500; margin: 0; flex: 1; }
 }
 .switch:checked::after { left: 18px; }
 .switch:disabled { opacity: 0.4; cursor: default; }
+
+.status { gap: 8px; color: var(--muted); font-size: 12px; }
+.status[hidden] { display: none; }
+.status button { margin-left: auto; padding: 2px 10px; cursor: pointer; }

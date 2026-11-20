@@ -41,3 +41,22 @@ describe('createObserver', () => {
     obs.disconnect();
   });
 });
+
+describe('createObserver: changed versus added text', () => {
+  test('reports which nodes had their text changed', async () => {
+    document.body.innerHTML = '<p>old text 1</p>';
+    const calls = [];
+    const obs = createObserver(document.body, (nodes, changed) => calls.push([nodes, changed]), { debounceMs: 20 });
+    const existing = document.querySelector('p').firstChild;
+    existing.nodeValue = 'new text 2';
+    const added = document.createElement('p'); added.textContent = 'John 3:16';
+    document.body.appendChild(added);
+    await flush(50);
+    expect(calls).toHaveLength(1);
+    const [nodes, changed] = calls[0];
+    expect(nodes).toHaveLength(2);
+    expect(changed.has(existing)).toBe(true);
+    expect(changed.has(added.firstChild)).toBe(false);
+    obs.disconnect();
+  });
+});
