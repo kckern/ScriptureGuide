@@ -117,7 +117,7 @@ jobs:
         name: Record the build time
         run: echo "at=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "$GITHUB_OUTPUT"
       - id: build
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: .
           file: apps/web/Dockerfile
@@ -213,7 +213,7 @@ jobs:
           path: apps/chrome-extension/extension.zip
       - if: (needs.version.outputs.extension == 'true' || inputs.extension) && env.PUBLISHER_ID != ''
         id: google
-        uses: google-github-actions/auth@v2
+        uses: google-github-actions/auth@v3
         with:
           workload_identity_provider: projects/1065695413052/locations/global/workloadIdentityPools/github/providers/scriptureguide
           service_account: cws-publisher@book-of-mormon-online.iam.gserviceaccount.com
@@ -253,7 +253,7 @@ jobs:
         uses: docker/login-action@v4
         with: { registry: ghcr.io, username: '${{ github.actor }}', password: '${{ secrets.GITHUB_TOKEN }}' }
       - if: steps.c.outputs.changed == 'true'
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: .
           file: infra/seed/Dockerfile
