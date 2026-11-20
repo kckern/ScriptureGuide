@@ -1,5 +1,11 @@
 # scripture-guide-chrome-extension
 
+## 2.2.1
+
+### Patch Changes
+
+- f5013a0: A badge that reaches the end of a line moves to the next line whole instead of breaking into two open-ended pieces.
+
 ## 2.2.0
 
 ### Minor Changes
