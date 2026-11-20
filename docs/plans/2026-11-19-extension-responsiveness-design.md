@@ -87,5 +87,5 @@ The manifest already registers `sg`, and typing a reference opens the passage. C
 ## Release
 
 - Phase 1 ships to scripture.guide through the normal master push, since the site uses the same package. It also bumps the npm package.
-- The extension ships through the "Version packages" PR (#15). Publishing to the Chrome Web Store needs `CWS_CLIENT_ID`, `CWS_CLIENT_SECRET` and `CWS_REFRESH_TOKEN` as repo secrets.
+- The extension ships through the "Version packages" PR (#15). The release job publishes to the Chrome Web Store as the service account `cws-publisher@book-of-mormon-online.iam.gserviceaccount.com`, signing in with GitHub's OIDC token (no stored key). It needs that account added in the Developer Dashboard and the repo variable `CWS_PUBLISHER_ID`.
 - The store currently has 2.0.0 (July 2025), which predates all of this.

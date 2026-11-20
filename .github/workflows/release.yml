@@ -108,10 +108,15 @@ jobs:
         run: cosign sign --yes "$IMAGE@$DIGEST"
 
   # Uploads to the Chrome Web Store only on the commit that bumps the extension's version.
+  # Signs in to Google with GitHub's OIDC token (workload identity federation, no stored key)
+  # as cws-publisher@book-of-mormon-online, which the Developer Dashboard lists as this
+  # publisher's service account. Needs the repo variable CWS_PUBLISHER_ID.
   extension:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     env:
-      HAS_CWS: ${{ secrets.CWS_CLIENT_ID != '' }}
+      EXTENSION_ID: lkagejkikblabiegfnehlknmlgckhgan
+      PUBLISHER_ID: ${{ vars.CWS_PUBLISHER_ID }}
     steps:
       - uses: actions/checkout@v7
         with: { fetch-depth: 2 }
@@ -130,18 +135,47 @@ jobs:
           npm test -w scripture-guide-chrome-extension -- --ci
           npm run build -w scripture-guide-chrome-extension
           cd apps/chrome-extension/dist && zip -r -q ../extension.zip .
-      - if: steps.v.outputs.release == 'true' && env.HAS_CWS == 'true'
-        run: npx chrome-webstore-upload-cli@3 upload --source apps/chrome-extension/extension.zip --auto-publish
-        env:
-          EXTENSION_ID: lkagejkikblabiegfnehlknmlgckhgan
-          CLIENT_ID: ${{ secrets.CWS_CLIENT_ID }}
-          CLIENT_SECRET: ${{ secrets.CWS_CLIENT_SECRET }}
-          REFRESH_TOKEN: ${{ secrets.CWS_REFRESH_TOKEN }}
       - if: steps.v.outputs.release == 'true'
         uses: actions/upload-artifact@v7
         with:
           name: chrome-extension-zip
           path: apps/chrome-extension/extension.zip
+      - if: steps.v.outputs.release == 'true' && env.PUBLISHER_ID != ''
+        id: google
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: projects/1065695413052/locations/global/workloadIdentityPools/github/providers/scriptureguide
+          service_account: cws-publisher@book-of-mormon-online.iam.gserviceaccount.com
+          token_format: access_token
+          access_token_scopes: https://www.googleapis.com/auth/chromewebstore
+      - if: steps.v.outputs.release == 'true' && env.PUBLISHER_ID != ''
+        name: Upload and publish to the Chrome Web Store
+        env:
+          TOKEN: ${{ steps.google.outputs.access_token }}
+        run: |
+          item="publishers/$PUBLISHER_ID/items/$EXTENSION_ID"
+          api=https://chromewebstore.googleapis.com
+          auth=(-H "Authorization: Bearer $TOKEN")
+          upload=$(curl -sS --fail-with-body "${auth[@]}" -H 'Content-Type: application/zip' \
+            --data-binary @apps/chrome-extension/extension.zip "$api/upload/v2/$item:upload")
+          echo "upload: $upload"
+          state=$(jq -r .uploadState <<<"$upload")
+          for _ in $(seq 1 30); do
+            [ "$state" = IN_PROGRESS ] || break
+            sleep 10
+            state=$(curl -sS --fail-with-body "${auth[@]}" "$api/v2/$item:fetchStatus" | jq -r .lastAsyncUploadState)
+            echo "upload state: $state"
+          done
+          [ "$state" = SUCCEEDED ] || { echo "::error::upload ended in state $state"; exit 1; }
+          publish=$(curl -sS --fail-with-body "${auth[@]}" -H 'Content-Type: application/json' \
+            -d '{"publishType":"DEFAULT_PUBLISH"}' "$api/v2/$item:publish")
+          echo "publish: $publish"
+          case "$(jq -r .state <<<"$publish")" in
+            PENDING_REVIEW|PUBLISHED|STAGED|PUBLISHED_TO_TESTERS) ;;
+            *) echo "::error::publish was not accepted"; exit 1 ;;
+          esac
+      - if: steps.v.outputs.release == 'true' && env.PUBLISHER_ID == ''
+        run: echo "::warning::CWS_PUBLISHER_ID is not set; built the extension but did not upload it"
 
   # Rebuilds the public seed image when data/seeds changes.
   seed-image:
