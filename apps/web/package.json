@@ -36,6 +36,7 @@
     "express": "^4.18.2",
     "fluent-ffmpeg": "^2.1.2",
     "helmet": "^7.1.0",
+    "jpeg-js": "^0.4.4",
     "mysql2": "^3.24.6",
     "opentype.js": "^2.0.0",
     "satori": "^0.63.2",

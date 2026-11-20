@@ -4,60 +4,75 @@ import { Lru } from '../../og/lru.js';
 import { renderCard, renderSiteCard, cardContent } from '../../og/ogCard.js';
 import { logError } from '../../../app/log.js';
 
-// /og/<path>.png: the link-preview card (og:image) of the page at /<path>. A CDN caches the
-// PNGs; this process keeps the last 200 it drew (as promises, so concurrent requests for one card
-// draw it once).
+// /og/<path>.jpg: the link-preview card (og:image) of the page at /<path>. A CDN caches the
+// JPEGs; this process keeps the last 200 it drew, as promises of { jpg, maxAge } so concurrent
+// requests for one card draw it once.
 export const ogCache = new Lru(200);
-const badges = new Lru(100);
+export const badgeCache = new Lru(100);
 const html = new HtmlPresenter();
 
-export const CACHE_CONTROL = 'public, max-age=86400';
+export const DAY = 86400;
+// A card drawn without its badge because media.scripture.guide failed (network error, 5xx):
+// kept five minutes here and at the CDN, then drawn again.
+export const RETRY = 300;
 const SITE_KEY = '\0site';
 
-export function sendPng(res, png) {
-  res.set('Content-Type', 'image/png');
-  res.set('Cache-Control', CACHE_CONTROL);
-  res.send(png);
+export function sendJpeg(res, { jpg, maxAge = DAY }) {
+  res.set('Content-Type', 'image/jpeg');
+  res.set('Cache-Control', `public, max-age=${maxAge}`);
+  res.send(jpg);
 }
 
-// The edition badge (media.scripture.guide/covers/<name>.jpg) as a data URI, or null when it is
-// missing. Network failures are not remembered, so a later card can try again.
+// The edition badge (media.scripture.guide/covers/<name>.jpg) as { uri, failed }: uri is a data
+// URI, or null when the badge is missing (remembered) or could not be fetched (failed: a network
+// error or 5xx, not remembered, so a later card can try again).
 export async function badgeData(name) {
-  if (!name) return null;
-  const known = badges.get(name);
-  if (known !== undefined) return known;
+  if (!name) return { uri: null, failed: false };
+  const known = badgeCache.get(name);
+  if (known !== undefined) return { uri: known, failed: false };
   try {
     const res = await fetch(coverUrl(name), { signal: AbortSignal.timeout(3000) });
+    if (res.status >= 500) return { uri: null, failed: true };
     const type = res.headers?.get?.('content-type') || '';
     const uri = res.ok && type.startsWith('image/')
       ? `data:${type};base64,${Buffer.from(await res.arrayBuffer()).toString('base64')}`
       : null;
-    badges.set(name, uri);
-    return uri;
+    badgeCache.set(name, uri);
+    return { uri, failed: false };
   } catch {
-    return null;
+    return { uri: null, failed: true };
   }
 }
 
-// Draw once per key; a failed draw is forgotten.
-function cached(key, draw) {
-  let png = ogCache.get(key);
-  if (!png) {
-    png = draw();
-    ogCache.set(key, png);
-    png.catch(() => ogCache.delete(key));
-  }
-  return png;
+// The card for key from the cache, else drawn by draw() (a promise of { jpg, maxAge }). An entry
+// lives until the LRU drops it or, for a short maxAge, until it expires. A failed draw is forgotten.
+export function cached(key, draw) {
+  const entry = ogCache.get(key);
+  if (entry && !(entry.expires <= Date.now())) return entry.card;
+  const card = draw();
+  const fresh = { card, expires: undefined };
+  ogCache.set(key, fresh);
+  card.then(
+    c => { if (c.maxAge < DAY) fresh.expires = Date.now() + c.maxAge * 1000; },
+    () => { if (ogCache.get(key) === fresh) ogCache.delete(key); },
+  );
+  return card;
+}
+
+// The card cached for key, or null.
+export function cachedCard(key) {
+  const entry = ogCache.get(key);
+  return entry && !(entry.expires <= Date.now()) ? entry.card : null;
 }
 
 export function siteCard() {
-  return cached(SITE_KEY, () => renderSiteCard());
+  return cached(SITE_KEY, async () => ({ jpg: await renderSiteCard(), maxAge: DAY }));
 }
 
 // Sends the site card; a preview never shows an error.
 export async function sendSiteCard(res) {
   try {
-    sendPng(res, await siteCard());
+    sendJpeg(res, await siteCard());
   } catch (err) {
     logError(err, { where: 'og site card' });
     if (!res.headersSent) res.status(500).send('Internal error');
@@ -69,13 +84,14 @@ export class OgPresenter {
   async present(result, req, res) {
     try {
       if (!result?.verses?.length) return await sendSiteCard(res);
-      const png = await cached(req.ogKey ?? req.path, async () => {
+      const card = await cached(req.ogKey ?? req.path, async () => {
         const data = html.serialize(result);
-        const card = cardContent(result, data, html.titleFor(result, data, req));
-        if (!card.title || !card.body) return siteCard();
-        return renderCard({ ...card, badge: await badgeData(card.badge) });
+        const content = cardContent(result, data, html.titleFor(result, data, req));
+        if (!content.title || !content.body) return siteCard();
+        const badge = await badgeData(content.badge);
+        return { jpg: await renderCard({ ...content, badge: badge.uri }), maxAge: badge.failed ? RETRY : DAY };
       });
-      sendPng(res, png);
+      sendJpeg(res, card);
     } catch (err) {
       logError(err, { where: 'og card', path: req.originalUrl });
       return sendSiteCard(res);

@@ -36,11 +36,11 @@ export function foldCompounds(lines, bookShort) {
   return out;
 }
 
-// The link-preview card of a page (routes/og.js draws it): /og/<page path>.png, or the site card
+// The link-preview card of a page (routes/og.js draws it): /og/<page path>.jpg, or the site card
 // for a page without a path of its own ("/?q=john.3.16").
 export function ogImageUrl(host, pagePath) {
   const p = String(pagePath || '/').replace(/^\/+/, '');
-  return `https://${host}/og/${p || 'site'}.png`;
+  return `https://${host}/og/${p || 'site'}.jpg`;
 }
 
 export class HtmlPresenter {

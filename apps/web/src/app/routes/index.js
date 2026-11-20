@@ -30,7 +30,7 @@ router.get('/build-info', (req, res) => {
   res.set('Cache-Control', 'no-store').json(buildInfo());
 });
 
-// Link-preview cards: /og/<page path>.png (og:image of each passage page), /og/site.png
+// Link-preview cards: /og/<page path>.jpg (og:image of each passage page), /og/site.jpg
 router.get('/og/*', ogRoute);
 
 // Path-based format prefixes: /api/John3:16, /xml/John3:16, etc.

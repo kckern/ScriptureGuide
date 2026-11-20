@@ -1,5 +1,5 @@
-// Link-preview cards (og:image): a 1200×630 PNG of a passage, drawn with satori (layout to SVG)
-// and resvg (SVG to PNG). satori reads TTF/OTF only, so the fonts are TTF copies in assets/og/
+// Link-preview cards (og:image): a 1200×630 JPEG of a passage, drawn with satori (layout to SVG)
+// and resvg (SVG to pixels), encoded with jpeg-js (pure JS; a PNG of the paper texture is ~500 KB). satori reads TTF/OTF only, so the fonts are TTF copies in assets/og/
 // (GoudyScripture.ttf is a byte copy of fonts/goudy-scripture/, checked by scriptureFont.test.js).
 //
 // satori cannot shrink text to fit or cut it at a word boundary, so the title and body are
@@ -10,6 +10,7 @@ import { fileURLToPath } from 'node:url';
 import satori from 'satori';
 import { Resvg } from '@resvg/resvg-js';
 import opentype from 'opentype.js';
+import jpeg from 'jpeg-js';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const ASSETS = path.resolve(here, '../../../assets/og');
@@ -31,7 +32,9 @@ const BADGE_W = 240;
 const BADGE_H = 80;
 const BADGE_GAP = 32;
 const TITLE_SIZES = [70, 64, 58, 52, 46];
-const BODY_SIZES = [40, 37, 34];
+// Largest first: a one-line verse is set large, a long passage small and cut.
+const BODY_SIZES = [52, 48, 44, 40, 37, 34];
+const JPEG_QUALITY = 85;
 const LINE_HEIGHT = 1.3;
 const FOOTER_SIZE = 26;
 const FOOTER_H = 34;
@@ -120,7 +123,7 @@ function fitTitle(font, title, maxWidth) {
 }
 
 // The largest body size that fits the text whole, else the smallest, cut.
-function fitBody(font, body, maxWidth, maxHeight) {
+export function fitBody(body, font, maxWidth, maxHeight) {
   let fit;
   for (const size of BODY_SIZES) {
     const maxLines = Math.max(1, Math.floor(maxHeight / (size * LINE_HEIGHT)));
@@ -153,7 +156,7 @@ const footer = (justify = 'flex-start') => h('div', {
   fontFamily: 'Roboto Condensed', fontSize: FOOTER_SIZE, color: MUTED, letterSpacing: 1,
 }, 'scripture.guide');
 
-async function toPng(element) {
+async function toJpeg(element) {
   const f = ogFonts();
   const svg = await satori(element, {
     width: WIDTH,
@@ -163,14 +166,15 @@ async function toPng(element) {
       { name: 'Roboto Condensed', data: f.robotoData, weight: 400, style: 'normal' },
     ],
   });
-  return new Resvg(svg, { fitTo: { mode: 'width', value: WIDTH } }).render().asPng();
+  const image = new Resvg(svg, { fitTo: { mode: 'width', value: WIDTH } }).render();
+  return jpeg.encode({ data: image.pixels, width: image.width, height: image.height }, JPEG_QUALITY).data;
 }
 
 // The card for anything that is not a passage (search, parallel, unknown references, text in a
 // script Goudy Scripture lacks). badge: an edition badge data URI, or null.
 export function renderSiteCard({ badge = null } = {}) {
   const f = ogFonts();
-  return toPng(frame(f, [
+  return toJpeg(frame(f, [
     h('div', { display: 'flex', flexGrow: 1, flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }, [
       img(f.logo, 160, 160),
       h('div', { display: 'flex', marginTop: 28, fontFamily: 'Goudy Scripture', fontSize: 88, color: INK }, 'Scripture Guide'),
@@ -190,10 +194,10 @@ export function renderCard({ title, body, badge = null }) {
   const titleLine = Math.round(t.size * 1.12);
   const headerH = Math.max(badge ? BADGE_H : 0, t.lines.length * titleLine);
   const bodyH = INNER_H - headerH - HEADER_GAP - BODY_GAP - FOOTER_H - 8;
-  const b = fitBody(f.goudy, body, INNER_W, bodyH);
+  const b = fitBody(body, f.goudy, INNER_W, bodyH);
   const bodyLine = Math.round(b.size * LINE_HEIGHT);
 
-  return toPng(frame(f, [
+  return toJpeg(frame(f, [
     h('div', { display: 'flex', alignItems: 'center', justifyContent: 'space-between', height: headerH }, [
       h('div', { display: 'flex', flexDirection: 'column', fontFamily: 'Goudy Scripture', fontSize: t.size, color: INK, lineHeight: `${titleLine}px` },
         t.lines.map(l => h('div', { display: 'flex', whiteSpace: 'pre' }, l))),
