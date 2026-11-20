@@ -1,0 +1,31 @@
+name: store-status
+# Reports the Chrome Web Store's verdict on the extension. Fails (and GitHub emails KC) when the
+# latest submission is rejected or the item is taken down. Run by hand any time: gh workflow run store-status.yml
+on:
+  schedule:
+    - cron: '17 * * * *'
+  workflow_dispatch:
+permissions:
+  contents: read
+  id-token: write
+jobs:
+  status:
+    if: vars.CWS_PUBLISHER_ID != ''
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      PUBLISHER_ID: ${{ vars.CWS_PUBLISHER_ID }}
+    steps:
+      - uses: actions/checkout@v7
+      - id: google
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: projects/1065695413052/locations/global/workloadIdentityPools/github/providers/scriptureguide
+          service_account: cws-publisher@book-of-mormon-online.iam.gserviceaccount.com
+          token_format: access_token
+          access_token_scopes: https://www.googleapis.com/auth/chromewebstore
+      # Prints the raw fetchStatus response while the field names are confirmed.
+      - env: { TOKEN: '${{ steps.google.outputs.access_token }}' }
+        run: |
+          curl -sS --fail-with-body -H "Authorization: Bearer $TOKEN" \
+            "https://chromewebstore.googleapis.com/v2/publishers/$PUBLISHER_ID/items/lkagejkikblabiegfnehlknmlgckhgan:fetchStatus" | jq .
