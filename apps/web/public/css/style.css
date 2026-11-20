@@ -140,10 +140,9 @@
      margin: 0;
      margin-left: 10px;
      margin-right: -122px;
-     font-family: 'Yanone Kaffeesatz', 'Arial Narrow', Arial;
+     font-family: 'Goudy Scripture', 'Sorts Mill Goudy', Georgia, serif;
      font-size: .4em;
      line-height: 1em;
-     letter-spacing: .5px;
      color: #777;
      text-align: center;
      float: right;
@@ -152,10 +151,9 @@
 }
 .refblock
 {
-     font-family: 'Yanone Kaffeesatz', 'Arial Narrow', Arial;
+     font-family: 'Goudy Scripture', 'Sorts Mill Goudy', Georgia, serif;
      font-size: 1em;
      line-height: 1em;
-     letter-spacing: .5px;
      font-weight:800;
 	width:112px;
      text-align: center;
