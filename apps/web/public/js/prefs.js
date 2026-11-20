@@ -10,7 +10,7 @@
 // (private mode, disabled site data) gets the defaults and changes last for the page only.
 //
 // Loaded in the page head, before the body is parsed: it sets classes on <html> that the CSS
-// reads (sg-no-parallel, sg-no-facsimile, sg-no-audio, sg-one-column), so the page is drawn
+// reads (sg-no-parallel, sg-no-facsimile, sg-no-audio, sg-one-column, sg-vnums), so the page is drawn
 // with the visitor's choices from the first paint.
 (function (root) {
   var KEY = 'sg_prefs';
@@ -26,6 +26,8 @@
   var CHOICES = { verpanel: ['ver', 'ref'] };
   // <html> class for each preference that is off, read by the CSS
   var OFF_CLASS = { parallel: 'sg-no-parallel', facsimile: 'sg-no-facsimile', audio: 'sg-no-audio', twoColumn: 'sg-one-column' };
+  // and for each that is on
+  var ON_CLASS = { verseNumbers: 'sg-vnums' };
 
   function copy(o) {
     var out = {};
@@ -126,6 +128,7 @@
       applyClasses: function (el) {
         if (!el || !el.classList) return;
         for (var k in OFF_CLASS) el.classList.toggle(OFF_CLASS[k], current[k] === false);
+        for (var j in ON_CLASS) el.classList.toggle(ON_CLASS[j], current[j] === true);
       },
     };
     return api;

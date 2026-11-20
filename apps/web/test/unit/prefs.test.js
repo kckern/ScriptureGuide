@@ -186,6 +186,13 @@ describe('change events and <html> classes', () => {
     w.SGPrefs.reset();
     expect(cl.length).toBe(0);
   });
+  test('sg-vnums follows the verse-number preference', () => {
+    const w = load({ sg_prefs: JSON.stringify({ v: 1, verseNumbers: true }) });
+    const cl = w.document.documentElement.classList;
+    expect(cl.contains('sg-vnums')).toBe(true);
+    w.SGPrefs.set('verseNumbers', false);
+    expect(cl.contains('sg-vnums')).toBe(false);
+  });
   test('a change in another tab (storage event) is picked up', () => {
     const w = load();
     const fn = vi.fn();

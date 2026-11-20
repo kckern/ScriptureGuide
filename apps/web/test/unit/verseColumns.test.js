@@ -33,6 +33,14 @@ describe('verse-per-paragraph passages', () => {
     expect($('.passage > h3.heading').length).toBe(1);
     expect($('.passage > .vcols').length).toBe(1);
   });
+  test('each wrapper starts with an empty running head, so its height is there from the first paint', async () => {
+    const $ = await render(result(['§¶In the beginning.', '¶And the earth.']));
+    const head = $('.vcols > .vhead');
+    expect(head.length).toBe(1);
+    expect($('.vcols').children().first().is('.vhead')).toBe(true);
+    expect(head.attr('aria-hidden')).toBe('true');
+    expect(head.text()).toBe('');
+  });
   test('the /passage form (version switch) carries the wrapper too', async () => {
     const $ = await render(result(['§¶In the beginning.', '¶And the earth.']), PASSAGE);
     expect($('.vcols > p.prose').length).toBe(2);
@@ -97,4 +105,20 @@ describe('columns.js partition', async () => {
   test('a verse taller than the limit gets a block of its own', () => {
     expect(partition([100, 2000, 100], [700], 52)).toEqual([[0], [1], [2]]);
   });
+});
+
+describe('columns.js running-head labels', async () => {
+  const { readFileSync } = await import('node:fs');
+  const { JSDOM } = await import('jsdom');
+  const dom = new JSDOM('<!doctype html><html><body></body></html>', { runScripts: 'outside-only' });
+  dom.window.eval(readFileSync(new URL('../../public/js/columns.js', import.meta.url), 'utf8'));
+  const { rangeLabel } = dom.window.SGColumns;
+  test.each([
+    ['John 14:1', 'John 14:1', 'John 14:1'],
+    ['John 14:1', 'John 14:10', 'John 14:1–10'],
+    ['John 14:30', 'John 15:2', 'John 14:30–15:2'],
+    ['1 Nephi 1:1', '1 Nephi 1:8', '1 Nephi 1:1–8'],
+    ['Doctrine and Covenants 25:1', 'Doctrine and Covenants 25:16', 'Doctrine and Covenants 25:1–16'],
+  ])('%s .. %s → %s', (a, b, label) => expect(rangeLabel(a, b)).toBe(label));
+  test('an empty column has no label', () => expect(rangeLabel(undefined, undefined)).toBe(''));
 });

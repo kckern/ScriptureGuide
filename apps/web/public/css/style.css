@@ -551,10 +551,38 @@
     user-select: none;
 }
 
+.vhead {
+    display: none;
+    column-span: all;
+    align-items: center;
+    height: 14px;
+    margin: 0 0 .4em;
+    font-family: 'Roboto Condensed', 'Arial Narrow', sans-serif;
+    font-size: 12px;
+    line-height: 14px;
+    letter-spacing: .3px;
+    text-indent: 0;
+    text-align: left;
+    color: #5a4636;
+    -webkit-user-select: none;
+    user-select: none;
+}
+.vhead::before, .vhead::after, .vhead i {
+    content: '';
+    border-top: 1px solid #5a4636;
+}
+.vhead::before, .vhead::after { flex: 0 0 10px; }
+.vhead i { flex: 1; }
+.vhead span {
+    padding: 0 .5em;
+    white-space: nowrap;
+}
+.vhead span:empty { padding: 0; }
+
 /* One verse per paragraph (KJV, LDS): section.ejs wraps the paragraphs in .vcols. With the
    "Two columns" preference on (the default; prefs.js sets sg-one-column when off) the verses sit
    closer, and screens 700px and up set them like the printed scriptures: two columns with a rule
-   between, each verse on a new line with a small indent and no space between verses, in blocks
+   between, each verse flush on a new line with no space between verses, in blocks
    that fit the screen (columns.js). */
 html:not(.sg-one-column) .vcols:not(.vcols-split) {
     clear: both; /* below the heading's floated cover */
@@ -574,17 +602,31 @@ html:not(.sg-one-column) .vcols p.prose {
     html:not(.sg-one-column) .vcols.vcols-lead {
         column-count: 1;
     }
-    html:not(.sg-one-column) .vcols + .vcols {
-        border-top: 1px solid #5a4636;
-        padding-top: .6em;
+    /* Running head on each block (columns.js): a rule with the left column's references set
+       into its left end and the right column's into its right end, and a plain rule under the
+       last block */
+    html:not(.sg-one-column) .vcols > .vhead {
+        display: flex;
+    }
+    html:not(.sg-one-column) .vcols.vcols-lead > .vhead {
+        display: none;
+    }
+    html:not(.sg-one-column) .vcols.vcols-end {
+        border-bottom: 1px solid #5a4636;
+        padding-bottom: .4em;
     }
     html:not(.sg-one-column) .vcols p.prose,
     html:not(.sg-one-column) .vcols .verse {
         margin: 0;
         line-height: 1.15em;
     }
+    /* Verses start flush; with verse numbers on (prefs.js sets sg-vnums before the first paint)
+       a slight indent sets the number off */
     html:not(.sg-one-column) .vcols p.prose {
-        text-indent: 1em;
+        text-indent: 0;
+    }
+    html.sg-vnums:not(.sg-one-column) .vcols p.prose {
+        text-indent: .3em;
     }
     /* Verse numbers on the line, as in print ("6 And it came to pass") */
     html:not(.sg-one-column) .vcols sup.vnum {

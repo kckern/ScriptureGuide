@@ -192,8 +192,10 @@ for (const [i, p] of passages.entries()) {
   // One verse per paragraph (each verse starts with ¶, as in the KJV and LDS editions): the
   // paragraphs go in <div class="vcols">, which the CSS sets in two columns on wide screens
   // (unless the visitor turned that off) and public/js/columns.js splits into screen-high blocks.
+  // Its running head (.vhead: a rule labelled with each column's references) is empty here and
+  // filled in by columns.js; rendering it keeps its height from the first paint.
   const versePerPara = p.paras.length > 1 && !p.mixed && p.paras.every(Boolean);
-  if (versePerPara) p.body = `${p.body.slice(0, p.parasAt)}\n\t\t<div class="vcols">${p.body.slice(p.parasAt)}\n\t\t</div>`;
+  if (versePerPara) p.body = `${p.body.slice(0, p.parasAt)}\n\t\t<div class="vcols"><div class="vhead" aria-hidden="true"><span class="vhead-l"></span><i></i><span class="vhead-r"></span></div>${p.body.slice(p.parasAt)}\n\t\t</div>`;
   passagesHtml += bare
     ? `${header}${p.body}`
     : `\n      <div class="passage ver_${passageVersion}">${header}${p.body}\n      </div>`;

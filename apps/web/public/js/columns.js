@@ -17,8 +17,12 @@
 // - layout() first runs from the inline script at the end of <body>, before the first paint (the
 //   body is still transparent then), so the page appears already split.
 // - Later calls (web font loaded, resize, verse numbers, a version swapped in) keep the blocks
-//   while they still fit and are not under 45% full. Only when that fails are they rebuilt, and
-//   the first verse on screen is then kept at the same height in the window by scrolling.
+//   on or above the screen while they still fit, and rebuild only the blocks after them (also
+//   when one of those is under 45% full). Only when a block on screen no longer fits is the
+//   section rebuilt; the first verse on screen then keeps its height in the window by scrolling.
+// - Each block starts with a running head (.vhead): a rule with the references of the left
+//   column at its left end and of the right column at its right end. The server renders it
+//   empty, so its height is there from the first paint; labels() fills in the text.
 // - Below 700px wide, or with the preference off, the CSS shows the blocks as one plain column.
 (function () {
   var MIN_WIDTH = 700; // matches the @media rule in style.css
@@ -40,13 +44,23 @@
     return top - GAP;
   }
 
-  // Room for a block's text, given where its top edge sits in the window. The block, its
-  // bottom margin and the next block's rule (1px) must all end above the toolbar.
+  // Room for a block (its running-head rule included), given where its top edge sits in the
+  // window. The block, its bottom margin and the line of the next block's running head must
+  // all end above the toolbar.
   function room(block, top) {
-    return usable() - top - px(block, 'borderTopWidth') - px(block, 'paddingTop') - px(block, 'marginBottom') - 1;
+    var head = headOf(block);
+    var below = head ? head.offsetHeight / 2 + 1 : 1;
+    return usable() - top - px(block, 'borderTopWidth') - px(block, 'paddingTop') - px(block, 'marginBottom') - below;
+  }
+  function headOf(block) { return block.querySelector(':scope > .vhead'); }
+  function parasOf(block) { return Array.prototype.slice.call(block.querySelectorAll(':scope > p')); }
+  // Height the running head takes from a block's room
+  function headHeight(block) {
+    var head = headOf(block);
+    return head ? head.offsetHeight + px(head, 'marginTop') + px(head, 'marginBottom') : 0;
   }
   function textHeight(block) {
-    return block.getBoundingClientRect().height - px(block, 'borderTopWidth') - px(block, 'paddingTop') - px(block, 'paddingBottom');
+    return block.getBoundingClientRect().height - px(block, 'borderTopWidth') - px(block, 'paddingTop');
   }
   function lineHeight(block) { return px(block.querySelector('p') || block, 'lineHeight') || 22; }
   // Where the block's top is when the page is at the top
@@ -122,19 +136,24 @@
     return { room: r };
   }
 
-  function fits(blocks) {
+  // How many leading blocks can stay as they are: on or above the screen and still fitting.
+  // A rebuild then starts after them, so text on screen does not move. Returns -1 when every
+  // block is fine.
+  function keepable(blocks) {
     var first = blocks[0];
     var plan = firstPlan(first);
     var isLead = first.classList.contains('vcols-lead');
-    if (!!plan.lead !== isLead) return false;
-    if (isLead && blocks.length > 1 && first.getBoundingClientRect().bottom + window.scrollY < usable()) return false;
-    for (var i = isLead ? 1 : 0; i < blocks.length; i++) {
+    if (!!plan.lead !== isLead) return 0;
+    if (isLead && blocks.length > 1 && first.getBoundingClientRect().bottom + window.scrollY < usable()) return 0;
+    var keep = isLead ? 1 : 0;
+    for (var i = keep; i < blocks.length; i++) {
       var h = textHeight(blocks[i]);
       var r = i === 0 && plan.room != null ? plan.room : room(blocks[i], 0);
-      if (h > r) return false;
-      if (i < blocks.length - 1 && h < r * MIN_FILL) return false;
+      var onScreen = blocks[i].getBoundingClientRect().top < window.innerHeight;
+      if (h > r) return onScreen ? 0 : i;
+      if (i < blocks.length - 1 && h < r * MIN_FILL && !onScreen) return i;
     }
-    return true;
+    return -1;
   }
 
   // The first paragraph showing in the window, and where it is
@@ -147,11 +166,93 @@
     return null;
   }
 
+  // A running head: a rule with the left column's references at its left end and the right
+  // column's at its right end. section.ejs renders an empty one in each .vcols, so its height
+  // is there from the first paint; labels() fills in the text.
+  function newHead() {
+    var head = document.createElement('div');
+    head.className = 'vhead';
+    head.setAttribute('aria-hidden', 'true');
+    head.innerHTML = '<span class="vhead-l"></span><i></i><span class="vhead-r"></span>';
+    return head;
+  }
+
   function newBlock(after) {
     var block = document.createElement('div');
     block.className = 'vcols vcols-split';
+    block.appendChild(newHead());
     after.parentNode.insertBefore(block, after.nextSibling);
     return block;
+  }
+
+  // "John 14:1", "John 14:1–10", "John 14:30–15:2" from the verses' ref attributes
+  function rangeLabel(first, last) {
+    if (!first) return '';
+    if (first === last) return first;
+    var a = /^(.*) (\d+):(\d+)$/.exec(first);
+    var b = /^(.*) (\d+):(\d+)$/.exec(last);
+    if (!a || !b) return first + '\u2013' + last;
+    if (a[1] !== b[1]) return first + '\u2013' + last;
+    if (a[2] !== b[2]) return first + '\u2013' + b[2] + ':' + b[3];
+    return first + '\u2013' + b[3];
+  }
+
+  // Which verses each column of a block holds, from where their lines are drawn; a verse that
+  // runs from the left column into the right is in both
+  function labels(blocks) {
+    blocks.forEach(function (block, i) {
+      block.classList.toggle('vcols-end', i === blocks.length - 1);
+      var head = headOf(block);
+      if (!head) return;
+      var box = block.getBoundingClientRect();
+      var mid = box.left + box.width / 2;
+      var left = [];
+      var right = [];
+      parasOf(block).forEach(function (p) {
+        var verse = p.querySelector('.verse[ref]');
+        var ref = verse && verse.getAttribute('ref');
+        if (!ref) return;
+        var rects = p.getClientRects();
+        var inLeft = false;
+        var inRight = false;
+        for (var k = 0; k < rects.length; k++) {
+          if (!rects[k].height) continue;
+          if (rects[k].left < mid) inLeft = true; else inRight = true;
+        }
+        if (inLeft) left.push(ref);
+        if (inRight) right.push(ref);
+      });
+      var lead = block.classList.contains('vcols-lead');
+      head.firstChild.textContent = lead ? '' : rangeLabel(left[0], left[left.length - 1]);
+      head.lastChild.textContent = lead ? '' : rangeLabel(right[0], right[right.length - 1]);
+    });
+  }
+
+  // Rebuild the blocks from block `from` on (the ones before stay as they are)
+  function rebuildFrom(blocks, from) {
+    var target = blocks[from];
+    for (var b = from + 1; b < blocks.length; b++) {
+      parasOf(blocks[b]).forEach(function (p) { target.appendChild(p); });
+      blocks[b].parentNode.removeChild(blocks[b]);
+    }
+    var paras = parasOf(target);
+    var heights = paras.map(heightOf);
+    var r = room(target, 0);
+    var groups = partition(heights, [r - headHeight(target)], lineHeight(target));
+    var chain = [target];
+    var block = target;
+    for (var g = 1; g < groups.length; g++) {
+      block = newBlock(block);
+      for (var j = 0; j < groups[g].length; j++) block.appendChild(paras[groups[g][j]]);
+      chain.push(block);
+    }
+    for (var k = 0; k < chain.length; k++) {
+      var own = parasOf(chain[k]);
+      while (own.length > 1 && textHeight(chain[k]) > r) {
+        if (!chain[k + 1]) chain.push(newBlock(chain[k]));
+        chain[k + 1].insertBefore(own.pop(), chain[k + 1].querySelector(':scope > p'));
+      }
+    }
   }
 
   function rebuild(blocks) {
@@ -159,10 +260,11 @@
     // Back to one two-column block, to measure every verse at column width
     first.classList.remove('vcols-lead');
     for (var b = 1; b < blocks.length; b++) {
-      while (blocks[b].firstChild) first.appendChild(blocks[b].firstChild);
+      parasOf(blocks[b]).forEach(function (p) { first.appendChild(p); });
       blocks[b].parentNode.removeChild(blocks[b]);
     }
-    var paras = Array.prototype.slice.call(first.children);
+    if (!headOf(first)) first.insertBefore(newHead(), first.firstChild);
+    var paras = parasOf(first);
     if (!paras.length) return;
     var heights = paras.map(heightOf);
     var plan = firstPlan(first);
@@ -187,7 +289,8 @@
     }
 
     // Greedy split, whole verses. Later groups move out first, so each block keeps verse order.
-    var groups = partition(heights.slice(start), [firstRoom, laterRoom], lineHeight(first));
+    var hh = headHeight(head);
+    var groups = partition(heights.slice(start), [firstRoom - hh, laterRoom - hh], lineHeight(first));
     var chain = [head];
     var block = head;
     for (var g = 1; g < groups.length; g++) {
@@ -198,9 +301,10 @@
     // Exact check: while a block is taller than its room, its last verse moves to the next block
     for (var k = 0; k < chain.length; k++) {
       var r = k === 0 ? firstRoom : laterRoom;
-      while (chain[k].children.length > 1 && textHeight(chain[k]) > r) {
+      var own = parasOf(chain[k]);
+      while (own.length > 1 && textHeight(chain[k]) > r) {
         if (!chain[k + 1]) chain.push(newBlock(chain[k]));
-        chain[k + 1].insertBefore(chain[k].lastElementChild, chain[k + 1].firstChild);
+        chain[k + 1].insertBefore(own.pop(), chain[k + 1].querySelector(':scope > p'));
       }
     }
   }
@@ -209,14 +313,20 @@
     if (!active()) return;
     var secs = sections();
     if (!secs.length) return;
-    var todo = secs.filter(function (blocks) { return !fits(blocks); });
-    if (!todo.length) return;
-    var a = window.scrollY > 0 ? anchor() : null;
-    todo.forEach(rebuild);
+    var a = null;
+    secs.forEach(function (blocks) {
+      var keep = keepable(blocks);
+      if (keep < 0) return;
+      if (keep > 0) { rebuildFrom(blocks, keep); return; }
+      if (!a && window.scrollY > 0) a = anchor();
+      rebuild(blocks);
+    });
     if (a) {
       var moved = a.el.getBoundingClientRect().top - a.top;
       if (moved) window.scrollBy(0, moved);
     }
+    // The running heads follow the columns (a new font or verse numbers move verses between them)
+    sections().forEach(labels);
   }
 
   var timer = null;
@@ -225,7 +335,7 @@
     timer = setTimeout(layout, 120);
   }
 
-  window.SGColumns = { layout: layout, partition: partition };
+  window.SGColumns = { layout: layout, partition: partition, rangeLabel: rangeLabel };
   window.addEventListener('resize', later);
   if (document.fonts) {
     if (document.fonts.addEventListener) document.fonts.addEventListener('loadingdone', layout);
