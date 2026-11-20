@@ -3,10 +3,18 @@ on:
   push:
     branches: [master]
   workflow_dispatch:
+    inputs:
+      extension:
+        description: Upload the current extension version to the Chrome Web Store again
+        type: boolean
+        default: false
+      npm:
+        description: Publish the current scripture-guide version to npm (needs NPM_PUBLISH=true)
+        type: boolean
+        default: false
 concurrency: release-${{ github.ref }}
 permissions:
   contents: write
-  pull-requests: write
   id-token: write
   packages: write
 
@@ -15,38 +23,73 @@ jobs:
   test:
     uses: ./.github/workflows/test.yml
 
-  # Opens/updates the "Version packages" PR while changesets are pending;
-  # once that PR is merged, publishes any package version not yet on npm.
-  changesets:
+  # Applies pending changesets (.changeset/*.md) and commits the version bump to master. The
+  # jobs below build and publish that commit. A push without changesets passes through
+  # unchanged: the website still deploys, and nothing is published to npm or the store.
+  # The bump is pushed with GITHUB_TOKEN, so it does not start another run of this workflow.
+  version:
     needs: test
     runs-on: ubuntu-latest
+    timeout-minutes: 10
+    outputs:
+      sha: ${{ steps.v.outputs.sha }}
+      package: ${{ steps.v.outputs.package }}
+      web: ${{ steps.v.outputs.web }}
+      extension: ${{ steps.v.outputs.extension }}
     steps:
       - uses: actions/checkout@v7
-      # Node 24 ships npm 11, which supports npm trusted publishing (GitHub OIDC, no token).
+      - uses: actions/setup-node@v7
+        with: { node-version: '24', cache: 'npm' }
+      - id: v
+        run: |
+          ver() { node -p "require('./$1/package.json').version"; }
+          before_pkg=$(ver packages/scripture-guide); before_web=$(ver apps/web); before_ext=$(ver apps/chrome-extension)
+          if find .changeset -name '*.md' ! -name README.md | grep -q .; then
+            npm ci --ignore-scripts
+            npm run version-packages
+            pkg=$(ver packages/scripture-guide); web=$(ver apps/web); ext=$(ver apps/chrome-extension)
+            msg="chore: release"
+            [ "$pkg" != "$before_pkg" ] && msg="$msg scripture-guide@$pkg"
+            [ "$web" != "$before_web" ] && msg="$msg web@$web"
+            [ "$ext" != "$before_ext" ] && msg="$msg extension@$ext"
+            git config user.name 'github-actions[bot]'
+            git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+            git add -A
+            git commit -m "$msg"
+            git pull --rebase origin master
+            git push origin HEAD:master
+          fi
+          echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+          [ "$(ver packages/scripture-guide)" != "$before_pkg" ] && echo "package=true" >> "$GITHUB_OUTPUT"
+          [ "$(ver apps/web)" != "$before_web" ] && echo "web=true" >> "$GITHUB_OUTPUT"
+          [ "$(ver apps/chrome-extension)" != "$before_ext" ] && echo "extension=true" >> "$GITHUB_OUTPUT"
+          true
+
+  # Publishes scripture-guide with npm trusted publishing (GitHub OIDC, no token). Needs the
+  # repo variable NPM_PUBLISH=true and a Trusted Publisher entry on npmjs.com for release.yml.
+  # Dispatch with npm: true to publish a version that is already bumped.
+  npm:
+    needs: version
+    if: vars.NPM_PUBLISH == 'true' && (needs.version.outputs.package == 'true' || inputs.npm)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v7
+        with: { ref: '${{ needs.version.outputs.sha }}' }
+      # Node 24 ships npm 11, which supports npm trusted publishing.
       - uses: actions/setup-node@v7
         with: { node-version: '24', cache: 'npm', registry-url: 'https://registry.npmjs.org' }
       - run: npm ci
       - run: npm run build -w scripture-guide
-      # npm publishing stays off until npmjs.com trusts this workflow for scripture-guide
-      # (package Settings > Trusted Publisher > GitHub Actions, workflow release.yml) and
-      # the repo variable NPM_PUBLISH is 'true'. Until then this job only opens version PRs.
-      - if: vars.NPM_PUBLISH != 'true'
-        run: echo "::notice::NPM_PUBLISH is not 'true'; skipped publishing scripture-guide to npm"
-      - uses: changesets/action@v1
-        with:
-          version: npm run version-packages
-          publish: ${{ vars.NPM_PUBLISH == 'true' && 'npm run release' || '' }}
-          title: 'Version packages'
-          commit: 'chore: version packages'
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
-          NPM_CONFIG_PROVENANCE: 'true'
+      - run: npm publish -w scripture-guide --provenance --access public
 
   # Each architecture builds on its own runner and is pushed by digest. Emulating arm64 under
   # QEMU crashed `npm ci` and hung the job until the 6-hour limit.
   web-image-build:
-    needs: test
+    needs: version
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 30
     strategy:
@@ -57,6 +100,7 @@ jobs:
           - { platform: linux/arm64, arch: arm64, runner: ubuntu-24.04-arm }
     steps:
       - uses: actions/checkout@v7
+        with: { ref: '${{ needs.version.outputs.sha }}' }
       - uses: docker/setup-buildx-action@v4
       - uses: docker/login-action@v4
         with: { registry: ghcr.io, username: '${{ github.actor }}', password: '${{ secrets.GITHUB_TOKEN }}' }
@@ -70,7 +114,7 @@ jobs:
           file: apps/web/Dockerfile
           platforms: ${{ matrix.platform }}
           build-args: |
-            SG_COMMIT=${{ github.sha }}
+            SG_COMMIT=${{ needs.version.outputs.sha }}
             SG_BUILD_NUMBER=${{ github.run_number }}
             SG_RUN_ID=${{ github.run_id }}
             SG_BUILT_AT=${{ steps.built.outputs.at }}
@@ -90,17 +134,17 @@ jobs:
           if-no-files-found: error
           retention-days: 1
 
-  # Every push tags :edge, :sha-<short> and :sha-<full>; a commit that bumps apps/web's version (the merged
-  # Version PR) also tags :<version> and :latest.
+  # Every push tags :edge, :sha-<short> and :sha-<full>; a release that bumps apps/web's version
+  # also tags :<version> and :latest.
   web-image:
-    needs: web-image-build
+    needs: [version, web-image-build]
     runs-on: ubuntu-latest
     timeout-minutes: 10
     env:
       IMAGE: ghcr.io/kckern/scripture-guide
     steps:
       - uses: actions/checkout@v7
-        with: { fetch-depth: 2 }
+        with: { ref: '${{ needs.version.outputs.sha }}' }
       - uses: actions/download-artifact@v8
         with:
           path: ${{ runner.temp }}/digests
@@ -112,10 +156,11 @@ jobs:
       - name: Publish the multi-architecture tags
         id: publish
         working-directory: ${{ runner.temp }}/digests
+        env: { WEB_RELEASE: '${{ needs.version.outputs.web }}' }
         run: |
           sha_tag="$IMAGE:sha-$(git -C "$GITHUB_WORKSPACE" rev-parse --short HEAD)"
           tags=(-t "$IMAGE:edge" -t "$sha_tag" -t "$IMAGE:sha-$(git -C "$GITHUB_WORKSPACE" rev-parse HEAD)")
-          if git -C "$GITHUB_WORKSPACE" diff HEAD^1 HEAD -- apps/web/package.json | grep -q '^[-+]  "version"'; then
+          if [ "$WEB_RELEASE" = true ]; then
             version=$(node -p "require('$GITHUB_WORKSPACE/apps/web/package.json').version")
             tags+=(-t "$IMAGE:$version" -t "$IMAGE:latest")
           fi
@@ -127,12 +172,13 @@ jobs:
       - env: { DIGEST: '${{ steps.publish.outputs.digest }}' }
         run: cosign sign --yes "$IMAGE@$DIGEST"
 
-  # Uploads to the Chrome Web Store only on the commit that bumps the extension's version.
+  # Uploads to the Chrome Web Store only when the version job bumped the extension, or when
+  # dispatched with extension: true.
   # Signs in to Google with GitHub's OIDC token (workload identity federation, no stored key)
   # as cws-publisher@book-of-mormon-online, which the Developer Dashboard lists as this
   # publisher's service account. Needs the repo variable CWS_PUBLISHER_ID.
   extension:
-    needs: test
+    needs: version
     runs-on: ubuntu-latest
     timeout-minutes: 20
     env:
@@ -140,28 +186,22 @@ jobs:
       PUBLISHER_ID: ${{ vars.CWS_PUBLISHER_ID }}
     steps:
       - uses: actions/checkout@v7
-        with: { fetch-depth: 2 }
-      - id: v
-        run: |
-          if git diff HEAD^1 HEAD -- apps/chrome-extension/package.json | grep -q '^[-+]  "version"'; then
-            echo "release=true" >> "$GITHUB_OUTPUT"
-          fi
-      - if: steps.v.outputs.release == 'true'
+        with: { ref: '${{ needs.version.outputs.sha }}' }
+      - if: (needs.version.outputs.extension == 'true' || inputs.extension)
         uses: actions/setup-node@v7
         with: { node-version: '24', cache: 'npm' }
-      - if: steps.v.outputs.release == 'true'
+      - if: (needs.version.outputs.extension == 'true' || inputs.extension)
         run: |
           npm ci
           npm run build -w scripture-guide
-          npm test -w scripture-guide-chrome-extension -- --ci
           npm run build -w scripture-guide-chrome-extension
           cd apps/chrome-extension/dist && zip -r -q ../extension.zip .
-      - if: steps.v.outputs.release == 'true'
+      - if: (needs.version.outputs.extension == 'true' || inputs.extension)
         uses: actions/upload-artifact@v7
         with:
           name: chrome-extension-zip
           path: apps/chrome-extension/extension.zip
-      - if: steps.v.outputs.release == 'true' && env.PUBLISHER_ID != ''
+      - if: (needs.version.outputs.extension == 'true' || inputs.extension) && env.PUBLISHER_ID != ''
         id: google
         uses: google-github-actions/auth@v2
         with:
@@ -169,7 +209,7 @@ jobs:
           service_account: cws-publisher@book-of-mormon-online.iam.gserviceaccount.com
           token_format: access_token
           access_token_scopes: https://www.googleapis.com/auth/chromewebstore
-      - if: steps.v.outputs.release == 'true' && env.PUBLISHER_ID != ''
+      - if: (needs.version.outputs.extension == 'true' || inputs.extension) && env.PUBLISHER_ID != ''
         name: Upload and publish to the Chrome Web Store
         env:
           TOKEN: ${{ steps.google.outputs.access_token }}
@@ -177,7 +217,7 @@ jobs:
           scripts/release/cws.sh cancel-pending
           scripts/release/cws.sh upload apps/chrome-extension/extension.zip
           scripts/release/cws.sh publish
-      - if: steps.v.outputs.release == 'true' && env.PUBLISHER_ID == ''
+      - if: (needs.version.outputs.extension == 'true' || inputs.extension) && env.PUBLISHER_ID == ''
         run: echo "::warning::CWS_PUBLISHER_ID is not set; built the extension but did not upload it"
 
   # Rebuilds the public seed image when data/seeds changes.
