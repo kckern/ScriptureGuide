@@ -71,8 +71,9 @@
  .ver_REBOM.passage .section_footer:last-child, .ver_REBOM.passage .indent:last-child,  .ver_SEBOM.passage .indent:last-child, .ver_MBOOK.passage blockquote:last-child, .ver_REBOM.passage blockquote:last-child {
     margin-bottom: -1em;
 }
+ /* 1em: it collapses with the 0.6em paragraph margin above, the same 20px gap as before paragraphs had space between them */
  .ver_REBOM.passage p.prose + blockquote, .ver_REBOM.passage p.prose + .indent, .ver_MBOOK.passage p.prose + blockquote {
-    margin-top: 2em;
+    margin-top: 1em;
 }
 
 .ver_REBOM.passage p.prose + .indent {
