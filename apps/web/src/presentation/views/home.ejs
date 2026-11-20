@@ -9,7 +9,7 @@
     height: 50px;
     width: 100%;
     padding: 15px;
-    font-family: 'Sorts Mill Goudy', serif;
+    font-family: 'Roboto Condensed', 'Arial Narrow', sans-serif;
     border-radius: 5px;
     border: 1px solid black;
     font-size: 1em;
@@ -76,7 +76,7 @@
 
   function cycleExample() {
     if ($("#searchbox").attr("demo") != "true") return false;
-    $("#searchbox").val("   e.g. '" + examples[pointer] + "'");
+    $("#searchbox").val("   e.g. \u2018" + examples[pointer] + "\u2019");
     $("#searchbox").prop({ selectionStart: 0, selectionEnd: 0 });
     $("#searchbox").animate({ "color": "#AAA" }, 500);
     pointer++; if (pointer > max) pointer = 0;

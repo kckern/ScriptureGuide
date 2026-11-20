@@ -286,10 +286,12 @@ def build_italic(italic_path, upright):
         ring.convertConicsToQuads()
         grown = pathops.op(path, ring, pathops.PathOp.UNION)
         pen = TTGlyphPen(None)
-        # Grow in place and keep the advance, as a browser's synthetic bold does: the letters
-        # thicken into their side bearings and the spacing stays as tight as the regular italic.
-        grown.draw(Cu2QuPen(pen, 1.0, reverse_direction=True))
-        new[g] = (pen.glyph(), adv)
+        # Letters grow in place and keep their advance, as a browser's synthetic bold does, so
+        # words stay as tight as the regular italic. Digits are narrow ovals that would touch
+        # ("600"), so they get the bold added to their advance and keep their side bearings.
+        widen = b if source[g] != g else 0
+        grown.draw(TransformPen(Cu2QuPen(pen, 1.0, reverse_direction=True), Transform(1, 0, 0, 1, widen, 0)))
+        new[g] = (pen.glyph(), adv + 2 * widen)
     # The upright's slanted dashes, scaled to 1000 units and sheared to the italic angle.
     ucmap, ugs = upright.getBestCmap(), upright.getGlyphSet()
     k = 1000 / upright['head'].unitsPerEm

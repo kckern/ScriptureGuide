@@ -21,6 +21,21 @@
      font-display: swap;
      src: url('/css/webfont/GoudyScripture-Italic.woff2') format('woff2');
 }
+ /* Roboto Condensed (OFL): interface text and reference labels, never scripture text. */
+ @font-face {
+     font-family: 'Roboto Condensed';
+     font-style: normal;
+     font-weight: 400;
+     font-display: swap;
+     src: url('/css/webfont/RobotoCondensed-Regular.woff2') format('woff2');
+}
+ @font-face {
+     font-family: 'Roboto Condensed';
+     font-style: normal;
+     font-weight: 700;
+     font-display: swap;
+     src: url('/css/webfont/RobotoCondensed-Bold.woff2') format('woff2');
+}
  @font-face {
      font-family: 'Sorts Mill Goudy';
      font-style: normal;
@@ -159,7 +174,7 @@
      margin: 0;
      margin-left: 10px;
      margin-right: -122px;
-     font-family: 'Goudy Scripture', 'Sorts Mill Goudy', Georgia, serif;
+     font-family: 'Roboto Condensed', 'Arial Narrow', sans-serif;
      font-size: .4em;
      line-height: 1em;
      color: #777;
@@ -170,7 +185,7 @@
 }
 .refblock
 {
-     font-family: 'Goudy Scripture', 'Sorts Mill Goudy', Georgia, serif;
+     font-family: 'Roboto Condensed', 'Arial Narrow', sans-serif;
      font-size: 1em;
      line-height: 1em;
      font-weight:800;
