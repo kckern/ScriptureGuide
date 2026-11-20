@@ -167,7 +167,8 @@ jobs:
             echo "upload state: $state"
           done
           [ "$state" = SUCCEEDED ] || { echo "::error::upload ended in state $state"; exit 1; }
-          publish=$(curl -sS --fail-with-body "${auth[@]}" -H 'Content-Type: application/json' \
+          # No --fail here: a rejected submission's reason is in the body, so print it first
+          publish=$(curl -sS "${auth[@]}" -H 'Content-Type: application/json' \
             -d '{"publishType":"DEFAULT_PUBLISH"}' "$api/v2/$item:publish")
           echo "publish: $publish"
           case "$(jq -r .state <<<"$publish")" in
