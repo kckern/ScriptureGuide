@@ -1,10 +1,7 @@
 import { Router } from 'express';
 import net from 'node:net';
-import { readFileSync } from 'node:fs';
 import db from '../../data/db/connection.js';
-
-// apps/web/package.json, read once: /healthz reports it with the commit (SG_COMMIT, set by CI).
-const WEB_VERSION = JSON.parse(readFileSync(new URL('../../../package.json', import.meta.url), 'utf8')).version;
+import { WEB_VERSION, commit } from '../buildInfo.js';
 
 // Top-level .php files the PHP site served, and where each lives in the Node app.
 // Query strings are kept. index.php?q=<ref> becomes /<ref>; the fragments that only made
@@ -68,7 +65,7 @@ export function legacyRouter({ checkDb = defaultCheckDb, checkSphinx = defaultCh
 
   // Liveness and readiness: 200 when the database answers, 503 when it does not.
   router.get('/healthz', async (req, res) => {
-    const body = { status: 'ok', db: 'ok', version: WEB_VERSION, commit: process.env.SG_COMMIT || 'dev' };
+    const body = { status: 'ok', db: 'ok', version: WEB_VERSION, commit: commit() };
     try { await checkDb(); } catch { body.db = 'down'; body.status = 'error'; }
     const sphinx = await checkSphinx();
     if (sphinx) {

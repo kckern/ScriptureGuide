@@ -4,6 +4,7 @@ import configMiddleware from '../middleware/config.js';
 import outputMiddleware from '../middleware/output.js';
 import { ajaxRouter } from './ajax.js';
 import { legacyRouter } from './legacy.js';
+import { buildInfo } from '../buildInfo.js';
 
 const router = Router();
 
@@ -21,6 +22,11 @@ router.get('/', (req, res, next) => {
 // Health check
 router.get('/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
+});
+
+// What build is live: commit, CI run, image digest, package versions. Never cached.
+router.get('/build-info', (req, res) => {
+  res.set('Cache-Control', 'no-store').json(buildInfo());
 });
 
 // Path-based format prefixes: /api/John3:16, /xml/John3:16, etc.
