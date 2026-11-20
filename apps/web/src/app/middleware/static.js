@@ -18,6 +18,14 @@ export function publicStatic(dir = PUBLIC_DIR) {
   return express.static(dir, { setHeaders, maxAge: '1h' });
 }
 
+// The Chrome extension's privacy policy (public/privacy.html) at the URL its store listing uses.
+// Registered ahead of the reference routes, which would otherwise search for "privacy-policy".
+export function privacyPolicy(dir = PUBLIC_DIR) {
+  const router = express.Router();
+  router.get('/privacy-policy', (req, res) => res.sendFile(path.join(dir, 'privacy.html'), { maxAge: '1h' }));
+  return router;
+}
+
 // FONT_DIR (licensed fonts that must not be published) at /private-fonts; no route when unset.
 export function privateFonts(dir) {
   const router = express.Router();
