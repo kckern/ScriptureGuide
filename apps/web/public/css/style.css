@@ -289,7 +289,7 @@
      line-height: 1em;
      font-size: .8em;
      padding-bottom: 0px;
-     letter-spacing: 1px;
+     letter-spacing: 0.5px;
 }
  div.headnote div.comment {
      font-size: .8em;
@@ -302,7 +302,7 @@
      line-height: 1em;
      font-size: .8em;
      padding-bottom: 0px;
-     letter-spacing: 1px;
+     letter-spacing: 0.5px;
 }
  div.background {
      padding: 10px;
@@ -311,7 +311,7 @@
      line-height: 1em;
      font-size: .9em;
      padding-bottom: 0px;
-     letter-spacing: 1px;
+     letter-spacing: 0.5px;
 }
  .passage {
     overflow: hidden;
