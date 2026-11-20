@@ -47,7 +47,7 @@ Node 20 reached end of life in April 2026. Node 24 ships npm 11, which trusted p
 docker run --rm -v "$PWD":/repo -w /repo node:24-alpine sh -c '
   npm ci --no-audit --no-fund &&
   npm run build -w scripture-guide &&
-  npm test -w scripture-guide -- --ci --testPathIgnorePatterns known-issues &&
+  npm run test:jest -w scripture-guide -- --ci --testPathIgnorePatterns known-issues &&
   npm test -w @scripture-guide/web &&
   npm test -w scripture-guide-chrome-extension -- --ci &&
   npm run build -w scripture-guide-chrome-extension'
@@ -98,7 +98,7 @@ Replace `web.yml`, `extension.yml` and `package.yml` with one `test.yml`. It run
 **Step 1: Check which package tests the full run includes**
 
 ```bash
-npm test -w scripture-guide -- --ci --testPathIgnorePatterns known-issues 2>&1 | tail -5
+npm run test:jest -w scripture-guide -- --ci --testPathIgnorePatterns known-issues 2>&1 | tail -5
 ```
 
 Expected: all pass. The known-issues suite is report-only by design, so it is excluded from the gate.
@@ -130,7 +130,7 @@ jobs:
       - run: npm ci
       - run: npm run build -w scripture-guide
       - name: scripture-guide package
-        run: npm test -w scripture-guide -- --ci --testPathIgnorePatterns known-issues
+        run: npm run test:jest -w scripture-guide -- --ci --testPathIgnorePatterns known-issues
       - name: website
         run: npm test -w @scripture-guide/web
       - name: Chrome extension
