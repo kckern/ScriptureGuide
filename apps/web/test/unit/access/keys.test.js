@@ -1,5 +1,5 @@
 import { describe, test, expect } from 'vitest';
-import { generateKey, parseBearer, hashKey, keyPrefix, KEY_PATTERN } from '../../../src/app/access/keys.js';
+import { generateKey, parseBearer, hashKey, keyPrefix, KEY_PATTERN, PREFIX_LEN, PREFIX_PATTERN } from '../../../src/app/access/keys.js';
 
 describe('API key format', () => {
   test('generated keys match the pattern and differ', () => {
@@ -17,10 +17,18 @@ describe('API key format', () => {
     expect(parseBearer('Bearer not-a-key')).toBeNull();
     expect(parseBearer(`Bearer ${k} extra`)).toBeNull();
   });
-  test('hash is SHA-256 hex; prefix is the first 12 characters', () => {
+  test('hash is SHA-256 hex; prefix is the first 16 characters (8 random)', () => {
     const k = 'sg_live_' + 'a'.repeat(32);
     expect(hashKey(k)).toMatch(/^[0-9a-f]{64}$/);
     expect(hashKey(k)).toBe(hashKey(k));
-    expect(keyPrefix(k)).toBe('sg_live_aaaa');
+    expect(PREFIX_LEN).toBe(16);
+    expect(keyPrefix(k)).toBe('sg_live_aaaaaaaa');
+    expect(keyPrefix(generateKey())).toMatch(PREFIX_PATTERN);
+  });
+  test('PREFIX_PATTERN accepts a full prefix only', () => {
+    expect(PREFIX_PATTERN.test('sg_live_abcd1234')).toBe(true);
+    expect(PREFIX_PATTERN.test('sg_live_abcd')).toBe(false);
+    expect(PREFIX_PATTERN.test('sg_live_abcd12345')).toBe(false);
+    expect(PREFIX_PATTERN.test('sg_live_abcd-234')).toBe(false);
   });
 });
