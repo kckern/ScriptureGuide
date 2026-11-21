@@ -72,7 +72,7 @@ Options come right after the API version, before the versions.
 | `html` | Adds `html` to each passage: an HTML fragment per version (see below) |
 | `ids` | Leaves out verse text and headings: references and verse ids only |
 
-`/v1/html/ids/...` is allowed. With `ids` the response has no text, so it has no `html` either. Options apply to passages and random verses. Parallel, search and the version list ignore them, and so do the simple hosts.
+`/v1/html/ids/...` is allowed. With `ids` the response has no text, so it has no `html` either. Options apply to passages and random verses, and `ids` also applies to search. Parallel and the version list ignore them, and so do the simple hosts.
 
 ## Passages
 
@@ -244,6 +244,7 @@ Any other scope segment is `unknown_version`. Without a version, the search runs
 - `highlights` holds `[start, end]` offsets of matched words in `text`, so you can mark them however you like (`text.slice(start, end)` in JavaScript). Offsets count UTF-16 code units: a character outside the Basic Multilingual Plane counts as two.
 - Matches are highlighted only in text with ASCII letters. Text in Korean, Hindi or other scripts gets `highlights: []` even when the verse matched.
 - `truncated` is `true` when the search stopped early or a result limit left verses out. `total` is then a lower bound.
+- With the `ids` option (`/v1/ids/search/nrsv/love`), results have no `text` or `highlights`, and `links.next` keeps the option.
 - No matches is a 200 with `results: []`. Empty terms (`/v1/search/+`) are `empty_query`.
 - Search is on `api.` only. The simple hosts return `search_not_supported`.
 

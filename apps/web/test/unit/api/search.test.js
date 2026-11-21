@@ -52,6 +52,18 @@ describe('buildSearch', () => {
     expect(data.links.next).toBe('https://api.scripture.guide/v1/search/nt/page-2/loved+the');
     expect(data.truncated).toBe(true);
   });
+  test('ids: results without text and highlights; the next page keeps the option', async () => {
+    const search = fake(Array.from({ length: PER_PAGE + 1 }, (_, i) => row(i + 1)));
+    const data = await buildSearch({ terms: 'loved', version: 'NRSV', volume: null, page: 1, options: ['ids'] }, { search });
+    expect(data.results[0]).toEqual({ id: 1, reference: 'Ref 1', slug: 'ref.1', version: 'NRSV' });
+    expect(data.links.next).toBe('https://api.scripture.guide/v1/ids/search/nrsv/page-2/loved');
+  });
+  test('html does not change search', async () => {
+    const search = fake([row(1)]);
+    const data = await buildSearch({ terms: 'loved', version: null, volume: null, page: 1, options: ['html'] }, { search });
+    expect(data.results[0]).toHaveProperty('highlights');
+    expect(data.results[0]).not.toHaveProperty('html');
+  });
   test('a capped search is truncated', async () => {
     const search = fake([row(1)], { truncated: false, capped: true });
     expect((await buildSearch({ terms: 'the', version: null, volume: null, page: 1 }, { search })).truncated).toBe(true);

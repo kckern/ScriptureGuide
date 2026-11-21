@@ -7,7 +7,7 @@ import { slugifyRef } from '../../domain/rules/legacyReference.js';
 import { highlightOffsets } from './text.js';
 
 export const PER_PAGE = 50;
-const API = 'https://api.scripture.guide/v1/search';
+const API = 'https://api.scripture.guide/v1';
 const SITE = 'https://scripture.guide';
 
 // The site's search page: /search/{terms}, /{version}/{terms} or /{volume}/{terms}, words
@@ -19,7 +19,9 @@ function webLink(terms, version, volume) {
   return `${SITE}/${scope}/${terms.split(' ').map(encodeURIComponent).join('.')}`;
 }
 
-export async function buildSearch({ terms, version, volume, page }, { search = searchService } = {}) {
+// options: the ids option leaves text and highlights out of each result; html does nothing here
+export async function buildSearch({ terms, version, volume, page, options = [] }, { search = searchService } = {}) {
+  const idsOnly = options.includes('ids');
   // forcedVersion is a version or a volume word, not both: with both, the version is forced and
   // the volume becomes the range searched. requeryForced keeps a broad search in the version
   // asked for (the site falls back to LDS/KJV).
@@ -40,13 +42,12 @@ export async function buildSearch({ terms, version, volume, page }, { search = s
     reference: r.ref,
     slug: slugifyRef(r.refShort),
     version: r.version,
-    text: r.text,
-    highlights: highlightOffsets(r.highlighted),
+    ...(idsOnly ? {} : { text: r.text, highlights: highlightOffsets(r.highlighted) }),
   }));
 
   const scopePath = [version?.toLowerCase(), volume].filter(Boolean).join('/');
   const termsPath = terms.split(' ').map(encodeURIComponent).join('+');
-  const next = start + PER_PAGE < total ? `${API}/${scopePath ? `${scopePath}/` : ''}page-${page + 1}/${termsPath}` : null;
+  const next = start + PER_PAGE < total ? `${API}/${idsOnly ? 'ids/' : ''}search/${scopePath ? `${scopePath}/` : ''}page-${page + 1}/${termsPath}` : null;
 
   return {
     api: 'v1',
