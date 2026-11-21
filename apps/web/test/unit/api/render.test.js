@@ -12,6 +12,8 @@ const data = {
   ] }],
 };
 const one = { ...data, versions: [data.versions[0]] };
+// A third version with none of the verses
+const withEmpty = { ...data, versions: [...data.versions, { id: 'LDS', name: 'LDS', language: 'en', copyright: null }] };
 
 describe('simpleData', () => {
   test('one object per version, verses always carry chapter', () => {
@@ -40,7 +42,22 @@ describe('renderSimple', () => {
   test('markdown, a quote per version', () => expect(renderSimple('markdown', data)).toBe(
     '> For God so loved. Indeed.\n>\n> — John 3:16-17 (NRSV)\n\n> For God so loved,\n>\n> — John 3:16-17 (KJV)\n'
   ));
-  test('text, one line per version', () => expect(renderSimple('text', data)).toBe('For God so loved. Indeed.\nFor God so loved,\n'));
+  test('text, one line per version, each named when there are several', () => {
+    expect(renderSimple('text', data)).toBe('NRSV: For God so loved. Indeed.\nKJV: For God so loved,\n');
+    expect(renderSimple('text', one)).toBe('For God so loved. Indeed.\n');
+  });
+  test('markdown and text leave out a version with no verses', () => {
+    expect(renderSimple('markdown', withEmpty)).toBe(renderSimple('markdown', data));
+    expect(renderSimple('text', withEmpty)).toBe(renderSimple('text', data));
+  });
+  test('json and yaml keep a version with no verses', () => {
+    expect(simpleData(withEmpty)[2]).toMatchObject({ version: 'LDS', text: '', verses: [] });
+  });
+  test('yaml repeats shared values instead of using anchors', () => {
+    const copyright = { holder: 'X' };
+    const shared = { ...data, versions: data.versions.map(v => ({ ...v, copyright })) };
+    expect(renderSimple('yaml', shared)).not.toMatch(/[&*]ref/);
+  });
 });
 
 describe('renderError', () => {
