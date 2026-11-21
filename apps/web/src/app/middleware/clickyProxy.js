@@ -26,10 +26,20 @@ const TIMEOUT_MS = 10 * 1000;
 const SCRIPT_UA = 'scripture.guide clicky-proxy';
 
 // nginx's $proxy_add_x_forwarded_for, with the visitor (clientIp.js) as the appended address
+// The visitor's address alone, as nginx at the edge would send it ($proxy_add_x_forwarded_for with
+// no incoming header). Behind Cloudflare and the tunnel the incoming chain repeats it.
 function forwardedFor(req) {
-  const visitor = (clientIp(req) ?? '').replace(/^::ffff:/, '');
-  const incoming = req.headers['x-forwarded-for'];
-  return [incoming, visitor].filter(Boolean).join(', ');
+  return (clientIp(req) ?? '').replace(/^::ffff:/, '');
+}
+
+// The page the hit is for: the Referer if the browser sent one, else the host plus Clicky's href
+// parameter. The site sends Referrer-Policy: no-referrer, so browsers send none to the beacon.
+function pageReferer(req, proto) {
+  if (req.headers.referer) return req.headers.referer;
+  const q = req.originalUrl.indexOf('?');
+  const href = new URLSearchParams(q >= 0 ? req.originalUrl.slice(q + 1) : '').get('href');
+  if (!href || !req.headers.host) return null;
+  return /^https?:\/\//i.test(href) ? href : `${proto}://${req.headers.host}${href.startsWith('/') ? '' : '/'}${href}`;
 }
 
 // Clicky's nginx map: "_cky_ignore=…; _cky_osa=…" when the visitor has _cky_ignore, else nothing
@@ -90,11 +100,13 @@ export function clickyProxy({ fetchImpl = fetch, now = Date.now, production = co
       ? 'https' : 'http';
     const headers = {
       'X-Forwarded-Proto': proto,
-      'X-Forwarded-For': forwardedFor(req),
     };
+    const xff = forwardedFor(req);
+    if (xff) headers['X-Forwarded-For'] = xff;
     if (req.headers.host) headers['X-Forwarded-Host'] = req.headers.host;
     if (req.headers['user-agent']) headers['User-Agent'] = req.headers['user-agent'];
-    if (req.headers.referer) headers.Referer = req.headers.referer;
+    const referer = pageReferer(req, proto);
+    if (referer) headers.Referer = referer;
     const cookie = clickyCookie(req.headers.cookie);
     if (cookie) headers.Cookie = cookie;
     const init = { method: req.method, headers, redirect: 'manual', signal: AbortSignal.timeout(TIMEOUT_MS) };

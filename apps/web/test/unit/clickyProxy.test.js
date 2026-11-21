@@ -172,7 +172,7 @@ describe('/e9b1e2e71a (the beacon)', () => {
     const fetchImpl = fakeFetch(beacon());
     await request(appWith({ fetchImpl })).get('/e9b1e2e71a?site_id=100988820&res=1920x1080&href=%2Fjohn.3.16')
       .set('Host', 'scripture.guide').set('X-Forwarded-Proto', 'https').set('X-Forwarded-For', '198.51.100.2')
-      .set('User-Agent', 'Visitor/1.0').set('Referer', 'https://scripture.guide/john.3.16');
+      .set('CF-Connecting-IP', '198.51.100.9').set('User-Agent', 'Visitor/1.0').set('Referer', 'https://scripture.guide/john.3.16');
     const { url, init, headers } = fetchImpl.calls[0];
     expect(url).toBe(`${IN_URL}?site_id=100988820&res=1920x1080&href=%2Fjohn.3.16`);
     expect(init.method).toBe('GET');
@@ -180,10 +180,17 @@ describe('/e9b1e2e71a (the beacon)', () => {
     expect(init.signal).toBeInstanceOf(AbortSignal);
     expect(headers.get('x-forwarded-proto')).toBe('https');
     expect(headers.get('x-forwarded-host')).toBe('scripture.guide');
-    expect(headers.get('x-forwarded-for')).toBe('198.51.100.2, 127.0.0.1');
+    expect(headers.get('x-forwarded-for')).toBe('198.51.100.9'); // the visitor alone, as nginx at the edge sends it
     expect(headers.get('user-agent')).toBe('Visitor/1.0');
     expect(headers.get('referer')).toBe('https://scripture.guide/john.3.16');
     expect(headers.get('cookie')).toBeNull();
+  });
+
+  test('without a Referer (the site sends no-referrer), the page URL from href is sent as the Referer', async () => {
+    const fetchImpl = fakeFetch(beacon());
+    await request(appWith({ fetchImpl })).get('/e9b1e2e71a?site_id=1&href=%2Fnrsv%2Fjohn.3.16%3Fx%3D1')
+      .set('Host', 'scripture.guide').set('X-Forwarded-Proto', 'https');
+    expect(fetchImpl.calls[0].headers.get('referer')).toBe('https://scripture.guide/nrsv/john.3.16?x=1');
   });
 
   test('no query string forwards the bare in.php URL', async () => {
