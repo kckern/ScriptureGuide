@@ -66,6 +66,10 @@ const findMatches = (content,books,lang_extra) => {
         // abbreviations are affected -- full book names are not, so a lowercase
         // "leviticus 19" keeps matching.
         const token = substring.trim();
+        // A lone Latin letter ("L3", "L. 3") is a label, a grid cell or a level, not a book:
+        // a reference in running text spells at least two letters ("Lk 3", "Lu 3"). Lookup
+        // still reads "l3" as Luke 3; one-character names in other scripts (창, 創) are kept.
+        if(/^[A-Za-z]\.?$/.test(token)) return false;
         if(!capitalizedOnlyAbbreviations.has(token.toLowerCase())) return true;
         return token !== token.toLowerCase();
     }).map(substring=>{

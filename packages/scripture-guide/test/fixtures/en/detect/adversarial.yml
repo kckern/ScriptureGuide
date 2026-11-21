@@ -225,3 +225,23 @@ tests:
         expected_output: 'Compare [2 Ne. 21:10-12; 2 Ne. 27:26] closely.'
       contextAware_false:
         expected_output: 'Compare [2 Ne. 21:10-12 & 2 Ne. 27:26] closely.'
+
+  - id: en-detect-adv-044
+    input: Extracted facts (L3) will appear here; see level L 3 and grid cell L. 3.
+    description: a lone letter is a label, not Luke
+    tags: [negative, abbreviation]
+    context_variations:
+      contextAware_true:
+        expected_output: 'Extracted facts (L3) will appear here; see level L 3 and grid cell L. 3.'
+      contextAware_false:
+        expected_output: 'Extracted facts (L3) will appear here; see level L 3 and grid cell L. 3.'
+
+  - id: en-detect-adv-045
+    input: Read Lk 3:5 and Lu 3:16.
+    description: two-letter abbreviations of Luke still resolve
+    tags: [abbreviation]
+    context_variations:
+      contextAware_true:
+        expected_output: 'Read [Lk 3:5; Lu 3:16].'
+      contextAware_false:
+        expected_output: 'Read [Lk 3:5 and Lu 3:16].'
