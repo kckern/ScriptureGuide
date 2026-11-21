@@ -1,5 +1,5 @@
 import { describe, test, expect } from 'vitest';
-import { parseApiPath, RESERVED } from '../../../src/api/v1/path.js';
+import { parseApiPath, RESERVED, reservedVersionIds } from '../../../src/api/v1/path.js';
 import { ApiError } from '../../../src/api/v1/errors.js';
 
 // The shape ApiRepository.versions() returns: lower-case id → { id, name, lang }
@@ -133,5 +133,12 @@ describe('parseApiPath: random', () => {
       expect(e).toBeInstanceOf(ApiError);
       expect(e).toMatchObject({ code: 'unknown_volume', status: 404 });
     }
+  });
+});
+
+describe('reservedVersionIds', () => {
+  test('the stored version ids a path would read as something else', () => {
+    expect(reservedVersionIds(['NRSV', 'Verses', 'html', 'BOM', 'random', 'V2', 'page-3', '1830', 'printer'])).toEqual(['Verses', 'html', 'BOM', 'random', 'V2', 'page-3']);
+    expect(reservedVersionIds(['NRSV', 'KJV'])).toEqual([]);
   });
 });

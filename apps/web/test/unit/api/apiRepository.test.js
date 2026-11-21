@@ -13,6 +13,23 @@ describe('ApiRepository.versions', () => {
   });
 });
 
+describe('ApiRepository.versions: reserved ids', () => {
+  test('logs once when a stored version id is a reserved path word, and still lists it', async () => {
+    const db = { query: vi.fn(async () => [{ id: 'NRSV', title: 'NRSV', lang: 'en' }, { id: 'VERSES', title: 'Verses', lang: 'en' }, { id: 'ids', title: 'Ids', lang: 'en' }]) };
+    const log = vi.fn();
+    const repo = new ApiRepository(db, { log });
+    expect((await repo.versions()).has('verses')).toBe(true);
+    await repo.versions();
+    expect(log).toHaveBeenCalledTimes(1);
+    expect(log).toHaveBeenCalledWith('reserved_version_ids', { ids: ['VERSES', 'ids'] });
+  });
+  test('no log when no id collides', async () => {
+    const log = vi.fn();
+    await new ApiRepository({ query: async () => [{ id: 'NRSV', title: 'NRSV', lang: 'en' }] }, { log }).versions();
+    expect(log).not.toHaveBeenCalled();
+  });
+});
+
 describe('ApiRepository.randomVerseId', () => {
   test('counts the verses in range, then reads the one at a random offset', async () => {
     const db = { query: vi.fn().mockResolvedValueOnce([{ n: 10 }]).mockResolvedValueOnce([{ verse_id: 31110 }]) };

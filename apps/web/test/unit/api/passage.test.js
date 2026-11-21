@@ -126,7 +126,7 @@ describe('buildPassage', () => {
     expect(data.passages[0]).toEqual({ verses: [{ id: 26137, book: 'John', chapter: 3, verse: 16 }, { id: 26138, book: 'John', chapter: 3, verse: 17 }] });
   });
 
-  test('stored keeps each version\'s stored row per verse; text stays cleaned', async () => {
+  test('stored keeps each version\'s stored row per verse, and builds no blocks or plain text (raw. reads only the rows)', async () => {
     const stored = { 26137: { verse_id: 26137, text: '§¶“For God so loved the world.', format: 'prose', p: '¶', s: '§' } };
     const asked = [];
     const r = fakeRepo({ storedVerses: async (ids, version) => { asked.push(version); return version === 'NRSV' ? ids.map(id => stored[id]).filter(Boolean) : []; } });
@@ -134,10 +134,13 @@ describe('buildPassage', () => {
     expect(asked).toEqual(['NRSV', 'KJV']);
     expect(data.passages[0].verses[0]).toEqual({
       id: 26137, book: 'John', chapter: 3, verse: 16,
-      texts: { NRSV: '“For God so loved the world.', KJV: null },
       stored: { NRSV: { text: '§¶“For God so loved the world.', format: 'prose', p: '¶', s: '§' }, KJV: null },
     });
     expect(data.passages[0].verses[1].stored).toEqual({ NRSV: null, KJV: null });
+    expect(data.passages[0]).not.toHaveProperty('blocks');
+    // A version with no rows is still an error
+    const none = fakeRepo({ storedVerses: async () => [] });
+    await expect(build({ reference: 'john3.16-17', versions: ['NRSV'], stored: true }, { repo: none })).rejects.toMatchObject({ code: 'not_in_version' });
   });
   test('without stored, no stored rows', async () => {
     const data = await build({ reference: 'john3.16-17', versions: ['NRSV'], options: ['verses'] });

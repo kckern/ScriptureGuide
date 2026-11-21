@@ -139,7 +139,7 @@ async function chooseVersions(requested, ids, repo) {
 
 // options: html, ids, verses (path.js OPTIONS). Each passage has blocks per version
 // (blocks.js); the flat verse list is added with the verses option.
-// stored: also keep each version's stored row per verse (verse.stored, for raw.), which adds the
+// stored: keep each version's stored row per verse (verse.stored, for raw.), which adds the
 // verse list; never set from a request path.
 export async function buildPassage({ reference, versions: requested, options = [], stored = false }, { repo = apiRepository, refs = referenceService } = {}) {
   const names = await repo.versions();
@@ -154,11 +154,12 @@ export async function buildPassage({ reference, versions: requested, options = [
   if (!idsOnly) {
     for (const t of versions) {
       const found = await repo.storedVerses(allIds, t);
-      texts[t] = new Map(found.map(r => [Number(r.verse_id), plainText(r.text)]));
+      // raw. (stored) reads only the rows: no plain text, no blocks
+      if (!stored) texts[t] = new Map(found.map(r => [Number(r.verse_id), plainText(r.text)]));
       storedRows[t] = new Map(found.map(r => [Number(r.verse_id), { text: r.text, format: r.format, p: r.p, s: r.s }]));
     }
   }
-  if (!idsOnly && versions.every(t => texts[t].size === 0)) {
+  if (!idsOnly && versions.every(t => storedRows[t].size === 0)) {
     const ref = parts.map(p => p.label).join('; ');
     throw new ApiError('not_in_version', fallback
       ? `No text found for ${ref} in the default version (${versions[0]}).`
@@ -189,7 +190,7 @@ export async function buildPassage({ reference, versions: requested, options = [
         const r = rows.get(id);
         // book is the verse's own: a range can cross books
         const verse = { id, book: r?.book_title ?? null, chapter: r?.chapter ?? null, verse: r?.verse ?? null };
-        if (!idsOnly) verse.texts = Object.fromEntries(versions.map(t => [t, texts[t].get(id) ?? null]));
+        if (!idsOnly && !stored) verse.texts = Object.fromEntries(versions.map(t => [t, texts[t].get(id) ?? null]));
         if (!idsOnly && stored) verse.stored = Object.fromEntries(versions.map(t => [t, storedRows[t].get(id) ?? null]));
         return verse;
       });
@@ -202,14 +203,14 @@ export async function buildPassage({ reference, versions: requested, options = [
             : await repo.headingAt(run[0], rows.get(run[0])?.book_id, t);
         }
         // The version's stored rows for this run, with the verse number for each piece
-        passage.blocks = Object.fromEntries(versions.map(t => [t, buildBlocks(run
+        if (!stored) passage.blocks = Object.fromEntries(versions.map(t => [t, buildBlocks(run
           .filter(id => storedRows[t].has(id))
           .map(id => ({ verse_id: id, verse: rows.get(id)?.verse ?? null, ...storedRows[t].get(id) })))]));
       }
       // The flat verse list: ids only with the ids option, with text only with the verses option
       // (raw. reads it with stored)
       if (idsOnly || options.includes('verses') || stored) passage.verses = verses;
-      if (options.includes('html') && !idsOnly) {
+      if (options.includes('html') && !idsOnly && !stored) {
         passage.html = Object.fromEntries(versions.map(t => [t, passageHtml(passage, t)]));
       }
       passages.push(passage);

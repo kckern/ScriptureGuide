@@ -12,6 +12,16 @@ export const RESERVED = Object.freeze([...OPTIONS, ...VOLUMES, 'search', 'random
 const API_VERSION = /^v([1-9]\d*)$/i; // v1, v2, …; "v01" and "v0" are not API versions
 const PAGE = /^page-(\d+)$/i;
 
+// The stored version ids a path would read as something else (an option, a volume, search,
+// random, versions, an API version or a search page), so they can't be asked for by name.
+// ApiRepository.versions() logs them when the list loads.
+export function reservedVersionIds(ids) {
+  return ids.filter(id => {
+    const word = String(id).toLowerCase();
+    return RESERVED.includes(word) || /^v\d+$/.test(word) || PAGE.test(word);
+  });
+}
+
 function decode(segment) {
   try { return decodeURIComponent(segment); } catch { return segment; }
 }

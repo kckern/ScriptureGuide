@@ -1,4 +1,6 @@
 import db from '../db/connection.js';
+import { logEvent } from '../../app/log.js';
+import { reservedVersionIds } from '../../api/v1/path.js';
 
 // Database reads for the v1 API (src/api/v1). Kept apart from the legacy repositories, which
 // reproduce PHP queries.
@@ -9,8 +11,10 @@ import db from '../db/connection.js';
 const NOT_GAP = "AND text NOT REGEXP '^[*/[:space:]]*$'";
 
 export class ApiRepository {
-  constructor(database = db) {
+  // log(msg, fields): where a version id that collides with a path word is reported
+  constructor(database = db, { log = logEvent } = {}) {
     this.db = database;
+    this.log = log;
     this.versionCache = null;
     // `${version}|${min}|${max}` → count of verses (a promise); the data doesn't change while
     // the process runs, and the keys are few (a version and a volume)
@@ -22,10 +26,16 @@ export class ApiRepository {
   async versions() {
     this.versionCache ??= this.db
       .query('SELECT id, title, title_long, lang FROM scripture_versions ORDER BY priority, title')
-      .then(rows => new Map(rows.map(r => [
-        String(r.id).toLowerCase(),
-        { id: String(r.id), name: r.title_long || r.title, lang: r.lang ?? null },
-      ])))
+      .then(rows => {
+        // An id that is also a path word (verses, html, bom, random, …) can't be asked for
+        // by name; the list still has it. Logged once, as the list is read once.
+        const reserved = reservedVersionIds(rows.map(r => String(r.id)));
+        if (reserved.length) this.log('reserved_version_ids', { ids: reserved });
+        return new Map(rows.map(r => [
+          String(r.id).toLowerCase(),
+          { id: String(r.id), name: r.title_long || r.title, lang: r.lang ?? null },
+        ]));
+      })
       .catch(err => { this.versionCache = null; throw err; });
     return this.versionCache;
   }
