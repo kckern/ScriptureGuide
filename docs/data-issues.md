@@ -18,9 +18,15 @@ Problems in the scripture database (production MySQL on `bom`; local copy `sg-fu
 - **What:** every 2HRBOM row in 2 Nephi 12–24 is a `*` filler row (2 Ne 12: 21 of 22; 13–24: all). The Two-Hour Book of Mormon abridges the Isaiah chapters.
 - **To decide:** confirm this matches the printed edition. If so, it's correct data (the site now says the version doesn't include the passage).
 
-### CTBOM verse merges in 1 Nephi 14 (check)
-- **Seen at:** `scripture.guide/ctbom~2hrbom/1.ne.14`.
-- **What:** CTBOM merges 1 Ne 14:2–4 with 7–8 into one cell, and 12–13 with 15–18 and 20. Non-contiguous merges suggest the `*` filler rows may be on the wrong verses. To check once the parallel alignment code fix is in.
+### Version titles (SQL given to KC 2026-11-20)
+- CTBOM `title_long` was "Easy-To-Read: Book of MormonConcisely Translated Book of Mormon" (ERBOM's title glued on). Fix: `UPDATE scripture_versions SET title_long = 'Concisely Translated Book of Mormon' WHERE id = 'CTBOM';`
+- 1837 titles say "1387". Fix: `UPDATE scripture_versions SET title = '1837 Kirtland Edition', title_long = '1837 Kirtland Edition of the Book of Mormon' WHERE id = '1837';`
+- Eight versions are all titled "Tao Te Ching" (CHEN, CLEARY, ENGLISH, LUDD, MITCHELL, WU, MEARS, GORNOLD), so `/v1/versions` can't tell them apart. Needs each translator's name from KC.
+
+## Closed
+
+### CTBOM verse merges in 1 Nephi 14
+- Checked 2026-11-20: CTBOM's filler rows are correct (each follows the verse whose text covers it). The odd merges on `ctbom~2hrbom/1.ne.14` were a parallel-alignment code bug, fixed in 6487bbc.
 
 ### Rows with only filler text
 - 10,413 `scripture_verses` rows hold only `*` or `/` (2HRBOM 3541, TLB 3029, CEV 2111, CTBOM 1620, others), and 63 rows are empty. Filler rows are expected for merged verses; the empty ones are worth a look.
