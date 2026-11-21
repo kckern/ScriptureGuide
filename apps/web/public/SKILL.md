@@ -25,6 +25,8 @@ curl https://api.scripture.guide/v1/versions               # every version id, n
 
 A path is `/{version}/{reference}`, the same as on the website. Leave out the version to get the site's default. References are written the way the site accepts them: `john3.16`, `john3.16-18`, `John 3:16`, `1ne3.7`, `dc4`, and several pieces joined with `;` (`john3.16;rom8.28`). Encode spaces as `%20`.
 
+Hosts: `api.` is the full JSON API (everything below). `json.`, `yml.` (or `yaml.`), `md.` (or `markdown.`) and `txt.` (or `plain.`) return one passage in a small fixed format, and take no options; search, parallel and the version list are on `api.` only. `https://scripture.guide/api/...` is the same as `https://api.scripture.guide/...`. `https://api.scripture.guide/` returns a short index with links to this file, the version list and an example.
+
 ## Authentication
 
 The API is open today. A key may be required later. Set it up now so that a future key is a config change, not a code change:
@@ -48,7 +50,7 @@ You can use the API with the curl lines above every time. Building a small CLI o
 2. **Build `scripture`** to the CLI spec below. Copy the reference CLI, or port it. Put it on your `PATH` (or note its full path).
 3. **Run the checks:**
    - `scripture get john3.16` prints the verse and exits 0.
-   - `scripture get jon3.16` exits 1 and prints `Jonah 3 has 10 verses. Try: jon3.10` to stderr.
+   - `scripture get jon3.16` exits 1 and prints `Jonah 3 has 10 verses. Try: Jonah 3:10` to stderr.
    - `scripture search loved the world -V nrsv` lists John 3:16.
    - `scripture versions -l ko` lists only Korean versions.
 4. **Write your own `/scripture` skill** in the place your harness keeps skills (for Claude Code: `~/.claude/skills/scripture/SKILL.md`). Use the frontmatter at the top of this file, then the command table from the CLI spec, and the path to the CLI. Keep it short: it only needs to tell you which command answers which question.
@@ -77,7 +79,7 @@ Rules:
 - `-V, --versions` takes version ids, case-insensitive, comma-separated (`nrsv,kjv`). Without it the site's default version is used. `--version` (singular) prints the CLI's own version.
 - `<ref>` and `<terms...>` may be several words (`scripture get John 3:16`). The CLI passes the reference through as written and lets the API parse it.
 - `-f text` is the default for every command. It prints plain lines meant for reading. `-f json` prints the API response unchanged. `-f md` prints a Markdown blockquote with the citation.
-- `--ids` returns references and verse ids only, with no text. `--html` adds a semantic HTML fragment to each passage (JSON only).
+- `--ids` returns references and verse ids only, with no text (for `search`: no text or highlights). `--html` adds a semantic HTML fragment to each passage (JSON only).
 - `--volume` limits `search` and `random` to the Old Testament, New Testament, Book of Mormon, Doctrine and Covenants or Pearl of Great Price.
 - `-l, --language` filters `versions` by ISO 639-1 code (`en`, `ko`, `hi`).
 - Exit codes: `0` ok, `1` the API returned an error (message and suggestion on stderr), `2` bad arguments, `3` network error.
@@ -97,15 +99,17 @@ Every CLI command is one GET to `https://api.scripture.guide/v1/...`. Options co
 | `parallel kjv/isa2 lds/2ne12` | `/v1/kjv/isa2~lds/2ne12` |
 | `search loved the world` | `/v1/search/loved+the+world` |
 | `search loved the world -V nrsv --volume nt -p 2` | `/v1/search/nrsv/nt/page-2/loved+the+world` |
-| `random -V nrsv --volume bom` | `/v1/nrsv/random/bom` |
+| `random -V lds --volume bom` | `/v1/lds/random/bom` |
 | `versions -l ko` | `/v1/versions` (filtered on the client) |
 
 ### Passage (`get`, `random`)
 
+`/v1/nrsv.kjv/john3.16`:
+
 ```json
 {
   "api": "v1",
-  "query": "nrsv.kjv/john3.16",
+  "query": "john3.16",
   "versions": [
     { "id": "NRSV", "name": "New Revised Standard Version", "language": "en", "copyright": null },
     { "id": "KJV", "name": "King James Version", "language": "en", "copyright": null }
@@ -115,10 +119,11 @@ Every CLI command is one GET to `https://api.scripture.guide/v1/...`. Options co
       "start": { "chapter": 3, "verse": 16 }, "end": { "chapter": 3, "verse": 16 } }
   ],
   "passages": [
-    { "headings": { "NRSV": null, "KJV": null },
+    { "headings": { "NRSV": "Nicodemus Visits Jesus", "KJV": null },
       "verses": [
         { "id": 26137, "chapter": 3, "verse": 16,
-          "texts": { "NRSV": "For God so loved the world…", "KJV": "For God so loved the world…" } }
+          "texts": { "NRSV": "“For God so loved the world that he gave his only Son, …",
+                     "KJV": "For God so loved the world, that he gave his only begotten Son, …" } }
       ] }
   ],
   "parallels": [{ "reference": "JST John 3:16", "slug": "jst.john.3.16" }],
@@ -126,6 +131,7 @@ Every CLI command is one GET to `https://api.scripture.guide/v1/...`. Options co
 }
 ```
 
+- `query` is the reference as written in the URL.
 - `versions`, `reference` and `passages` are always arrays, even for one item.
 - `texts` and `headings` are keyed by version id. A version that lacks a verse has `null` for it.
 - A new passage starts at each heading or where the reference jumps.
@@ -133,39 +139,44 @@ Every CLI command is one GET to `https://api.scripture.guide/v1/...`. Options co
 
 ### Parallel
 
+`/v1/kjv/isa2~lds/2ne12`:
+
 ```json
 {
   "api": "v1",
-  "left":  { "version": { "id": "KJV", "…": "…" }, "reference": [ { "label": "Isaiah 2", "…": "…" } ] },
-  "right": { "version": { "id": "LDS", "…": "…" }, "reference": [ { "label": "2 Nephi 12", "…": "…" } ] },
+  "query": "kjv/isa2~lds/2ne12",
+  "left":  { "version": { "id": "KJV", "name": "King James Version", "language": "en", "copyright": null }, "reference": "Isaiah 2" },
+  "right": { "version": { "id": "LDS", "name": "Current LDS Scriptures", "language": "en", "copyright": null }, "reference": "2 Nephi 12" },
   "rows": [
     { "match": "quote", "significant": true,
-      "left":  { "verse_id": 17687, "reference": "Isaiah 2:1", "text": "…" },
-      "right": { "verse_id": 32147, "reference": "2 Nephi 12:1", "text": "…" } },
-    { "match": "none", "significant": false, "left": null, "right": { "…": "…" } }
-  ]
+      "left":  { "verse_id": 17687, "reference": "Isaiah 2:1", "text": "The word that Isaiah the son of Amoz saw concerning Judah and Jerusalem." },
+      "right": { "verse_id": 32018, "reference": "2 Nephi 12:1", "text": "The word that Isaiah, the son of Amoz, saw concerning Judah and Jerusalem:" } }
+  ],
+  "links": { "web": "https://scripture.guide/kjv/isa.2~lds/2.ne.12" }
 }
 ```
 
-`match` is `quote`, `allusion` or `none`. A side with no matching verse is `null`.
+`left.reference` and `right.reference` are strings. `match` is `quote`, `allusion` or `none`. A side with no matching verse is `null`.
 
 ### Search
+
+`/v1/search/nrsv/nt/loved+the+world`:
 
 ```json
 {
   "api": "v1",
   "query": "loved the world",
   "scope": { "version": "NRSV", "volume": "nt" },
-  "total": 42, "truncated": false, "page": 1, "per_page": 50,
+  "total": 14, "truncated": false, "page": 1, "per_page": 50,
   "results": [
     { "id": 26137, "reference": "John 3:16", "slug": "john.3.16", "version": "NRSV",
-      "text": "For God so loved the world…", "highlights": [[8, 23]] }
+      "text": "“For God so loved the world that he gave his only Son, …", "highlights": [[12, 27]] }
   ],
-  "links": { "next": null, "web": "https://scripture.guide/nrsv/search/loved%20the%20world" }
+  "links": { "next": null, "web": "https://scripture.guide/nrsv/loved.the.world" }
 }
 ```
 
-Results are in canon order. `highlights` are `[start, end]` character offsets into `text`. When `truncated` is true, `total` is a lower bound. No matches is `results: []`, not an error.
+Results are in canon order, 50 a page. `highlights` are `[start, end]` offsets into `text` in UTF-16 code units (JavaScript string indexes, Python needs `text.encode('utf-16-le')` for characters outside the BMP). Only text with ASCII letters is highlighted: Korean or Hindi results get `highlights: []`. With `ids`, results have no `text` or `highlights`. When `truncated` is true, `total` is a lower bound. No matches is `results: []`, not an error.
 
 ### Versions
 
@@ -175,24 +186,38 @@ Results are in canon order. `highlights` are `[start, end]` character offsets in
 
 ### Errors
 
-Errors have a 4xx status and this body:
+Errors have a 4xx status (or 503, below) and this body:
 
 ```json
-{ "api": "v1", "error": { "code": "verse_out_of_range", "message": "Jonah 3 has 10 verses.", "suggestion": "jon3.10" } }
+{ "api": "v1", "error": { "code": "verse_out_of_range", "message": "Jonah 3 has 10 verses.", "suggestion": "Jonah 3:10" } }
 ```
+
+`suggestion` is a reference that would work, written as a label (`Jonah 3:10`, `Alma 63`). It can be sent back as the reference.
 
 | Code | Status | What to do |
 |---|---|---|
-| `unparseable_reference` | 400 | Rewrite the reference (`john3.16`, `John 3:16`) and retry once |
+| `unparseable_reference` | 400 | Rewrite the reference (`john3.16`, `John 3:16`) and retry once. Also when a version has no reference after it (`/v1/nrsv/`) or a parallel side finds no verses |
 | `unknown_book` | 404 | Use `suggestion` if there is one, or ask the user |
 | `chapter_out_of_range` | 404 | Use `suggestion`, or tell the user the book is shorter |
 | `verse_out_of_range` | 404 | Use `suggestion`, or tell the user the chapter is shorter |
 | `unknown_version` | 404 | Run `scripture versions` and pick a real id |
+| `unknown_volume` | 404 | Use `ot`, `nt`, `bom`, `dc` or `pgp` |
+| `not_in_version` | 404 | None of the versions has that text (NRSV has no D&C). Drop `-V` or pick another version |
+| `reference_too_large` | 400 | Ask for less (see Limits) |
 | `unsupported_api_version` | 404 | Use `/v1/` |
 | `empty_query` | 400 | Search needs at least one term |
 | `parallel_not_supported` | 400 | Parallel works on `api.` only |
+| `search_not_supported` | 400 | Search works on `api.` only |
+| `versions_not_supported` | 400 | The version list is on `api.` only |
+| `service_unavailable` | 503 | The database is not answering. Wait for `Retry-After` (30 seconds) and retry once |
 
-Every field is always present with the same type. `suggestion` is the only optional field.
+Apart from `suggestion`, every field is always present with the same type. The options change that on purpose: `ids` removes `texts` and `headings`, and `html` adds `html`.
+
+### Limits
+
+- At most 100 reference pieces, counted as the `;`-separated pieces you write. A `,` verse list inside a piece (`ps119.1,3,5`) is still one piece.
+- At most 5,000 verses and 10 versions per request.
+- Larger requests return `reference_too_large`. Split them.
 
 ## Core samples
 
@@ -383,8 +408,8 @@ def cmd_parallel(a):
     if a.format == "json":
         return data
     cell = lambda c: f'{c["reference"]}  {c["text"]}' if c else "—"
-    head = [f'L = {label(data["left"]["reference"])} ({data["left"]["version"]["id"]})',
-            f'R = {label(data["right"]["reference"])} ({data["right"]["version"]["id"]})', ""]
+    head = [f'L = {data["left"]["reference"]} ({data["left"]["version"]["id"]})',
+            f'R = {data["right"]["reference"]} ({data["right"]["version"]["id"]})', ""]
     rows = [f'L: {cell(r["left"])}\nR: {cell(r["right"])}\n   [{r["match"]}]' for r in data["rows"]]
     return "\n".join(head) + "\n\n".join(rows)
 
@@ -469,7 +494,7 @@ if __name__ == "__main__":
 
 ## Etiquette
 
-- Responses are cached for a day, so repeating a lookup is cheap. Look things up instead of quoting from memory.
-- `random` is never cached. Call it once per request, not in a loop.
+- Responses are cached (a day in your client, a week at the CDN; errors for 5 minutes), so repeating a lookup is cheap. Look things up instead of quoting from memory. Each response has an `ETag`; send it back as `If-None-Match` to get a `304`.
+- `random` and 5xx errors are never cached. Call `random` once per request, not in a loop.
 - When you quote, give the reference and the version id (`John 3:16, NRSV`). When a version's `copyright` is not `null`, include it.
 - Send a `User-Agent` that names your client (`scripture-cli/1`).
