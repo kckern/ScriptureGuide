@@ -52,14 +52,15 @@ export function footnotesHtml(html, rows) {
   }
   const start = bodyStart(html);
   let version = null;
-  const body = html.slice(start).replace(SCAN, (all, ver, space, idText) => {
+  const body = html.slice(start).replace(SCAN, (all, ver, space, idText, offset, whole) => {
     if (ver !== undefined) {
       version = ver;
       return all;
     }
     const id = Number(idText);
     const notes = byId.get(id) ?? [];
-    if (!notes.length) return space;
+    // Dropped: its leading space goes too when a space follows, or the text would show two
+    if (!notes.length) return space && /\s/.test(whole[offset + all.length] ?? '') ? '' : space;
     const own = notes.filter(n => n.version === version);
     return noteSpan(id, own.length ? own : notes) + space;
   });

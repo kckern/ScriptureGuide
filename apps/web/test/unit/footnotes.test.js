@@ -42,6 +42,9 @@ describe('footnotesHtml', () => {
   test('a marker with no note at all is dropped, not shown', () => {
     expect(footnotesHtml('<body><p version="SEBOM">text｢99999｣ more</p>', rows)).toBe('<body><p version="SEBOM">text more</p>');
   });
+  test('a dropped marker between two spaces leaves one space, not two', () => {
+    expect(footnotesHtml('<body><h3 version="KRSEB">회개한 ｢99999｣ 조램인들</h3>', rows)).toBe('<body><h3 version="KRSEB">회개한 조램인들</h3>');
+  });
   test('nothing before <body> changes: markers in meta tags stay out of attributes', () => {
     const head = '<head><meta property="og:description" content="a ｢2771｣"></head>';
     expect(footnotesHtml(head + '<body><p version="SEBOM">x｢2771｣</p>', rows).startsWith(head)).toBe(true);
