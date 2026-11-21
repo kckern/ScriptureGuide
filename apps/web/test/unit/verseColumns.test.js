@@ -33,13 +33,10 @@ describe('verse-per-paragraph passages', () => {
     expect($('.passage > h3.heading').length).toBe(1);
     expect($('.passage > .vcols').length).toBe(1);
   });
-  test('each wrapper starts with an empty running head, so its height is there from the first paint', async () => {
+  test('the first block has no running head (the chapter heading is above it)', async () => {
     const $ = await render(result(['§¶In the beginning.', '¶And the earth.']));
-    const head = $('.vcols > .vhead');
-    expect(head.length).toBe(1);
-    expect($('.vcols').children().first().is('.vhead')).toBe(true);
-    expect(head.attr('aria-hidden')).toBe('true');
-    expect(head.text()).toBe('');
+    expect($('.vhead').length).toBe(0);
+    expect($('.vcols').children().first().is('p.prose')).toBe(true);
   });
   test('the /passage form (version switch) carries the wrapper too', async () => {
     const $ = await render(result(['§¶In the beginning.', '¶And the earth.']), PASSAGE);

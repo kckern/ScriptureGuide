@@ -20,9 +20,10 @@
 //   on or above the screen while they still fit, and rebuild only the blocks after them (also
 //   when one of those is under 45% full). Only when a block on screen no longer fits is the
 //   section rebuilt; the first verse on screen then keeps its height in the window by scrolling.
-// - Each block starts with a running head (.vhead): a rule with the references of the left
-//   column at its left end and of the right column at its right end. The server renders it
-//   empty, so its height is there from the first paint; labels() fills in the text.
+// - Every block after a section's first starts with a running head (.vhead): a rule with the
+//   references of the left column at its left end and of the right column at its right end.
+//   The first block has none (the chapter heading is above it). The heads are made with their
+//   blocks, before they are drawn, so they never push text down.
 // - Below 700px wide, or with the preference off, the CSS shows the blocks as one plain column.
 (function () {
   var MIN_WIDTH = 700; // matches the @media rule in style.css
@@ -44,13 +45,13 @@
     return top - GAP;
   }
 
-  // Room for a block (its running-head rule included), given where its top edge sits in the
+  var headLine = 8; // px from the top of a later block to just under its head's line (measured in layout())
+
+  // Room for a block (its running head included), given where its top edge sits in the
   // window. The block, its bottom margin and the line of the next block's running head must
   // all end above the toolbar.
   function room(block, top) {
-    var head = headOf(block);
-    var below = head ? head.offsetHeight / 2 + 1 : 1;
-    return usable() - top - px(block, 'borderTopWidth') - px(block, 'paddingTop') - px(block, 'marginBottom') - below;
+    return usable() - top - px(block, 'borderTopWidth') - px(block, 'paddingTop') - px(block, 'marginBottom') - headLine;
   }
   function headOf(block) { return block.querySelector(':scope > .vhead'); }
   function parasOf(block) { return Array.prototype.slice.call(block.querySelectorAll(':scope > p')); }
@@ -167,8 +168,7 @@
   }
 
   // A running head: a rule with the left column's references at its left end and the right
-  // column's at its right end. section.ejs renders an empty one in each .vcols, so its height
-  // is there from the first paint; labels() fills in the text.
+  // column's at its right end; labels() fills in the text.
   function newHead() {
     var head = document.createElement('div');
     head.className = 'vhead';
@@ -201,9 +201,7 @@
   // runs from the left column into the right is in both
   function labels(blocks) {
     blocks.forEach(function (block, i) {
-      block.classList.toggle('vcols-end', i === blocks.length - 1);
       var head = headOf(block);
-      if (!head) return;
       var box = block.getBoundingClientRect();
       var mid = box.left + box.width / 2;
       var left = [];
@@ -215,14 +213,21 @@
         var rects = p.getClientRects();
         var inLeft = false;
         var inRight = false;
+        var start = null;
         for (var k = 0; k < rects.length; k++) {
           if (!rects[k].height) continue;
-          if (rects[k].left < mid) inLeft = true; else inRight = true;
+          var isLeft = rects[k].left < mid;
+          if (start === null) start = isLeft;
+          if (isLeft) inLeft = true; else inRight = true;
         }
+        // The column the verse starts in, for its copy button (style.css)
+        p.classList.toggle('vstart-l', start === true);
+        p.classList.toggle('vstart-r', start === false);
         if (inLeft) left.push(ref);
         if (inRight) right.push(ref);
       });
       var lead = block.classList.contains('vcols-lead');
+      if (!head) return;
       head.firstChild.textContent = lead ? '' : rangeLabel(left[0], left[left.length - 1]);
       head.lastChild.textContent = lead ? '' : rangeLabel(right[0], right[right.length - 1]);
     });
@@ -263,13 +268,15 @@
       parasOf(blocks[b]).forEach(function (p) { first.appendChild(p); });
       blocks[b].parentNode.removeChild(blocks[b]);
     }
-    if (!headOf(first)) first.insertBefore(newHead(), first.firstChild);
+    var oldHead = headOf(first);
+    if (oldHead) first.removeChild(oldHead);
     var paras = parasOf(first);
     if (!paras.length) return;
     var heights = paras.map(heightOf);
     var plan = firstPlan(first);
     var probe = newBlock(first);
     var laterRoom = room(probe, 0); // a later block's room, with its rule and padding
+    var laterHead = headHeight(probe);
     probe.parentNode.removeChild(probe);
 
     var start = 0;
@@ -289,8 +296,7 @@
     }
 
     // Greedy split, whole verses. Later groups move out first, so each block keeps verse order.
-    var hh = headHeight(head);
-    var groups = partition(heights.slice(start), [firstRoom - hh, laterRoom - hh], lineHeight(first));
+    var groups = partition(heights.slice(start), [firstRoom - headHeight(head), laterRoom - laterHead], lineHeight(first));
     var chain = [head];
     var block = head;
     for (var g = 1; g < groups.length; g++) {
@@ -313,6 +319,11 @@
     if (!active()) return;
     var secs = sections();
     if (!secs.length) return;
+    // Where a later block's head line is, from its top (padding, then the head)
+    var probe = newBlock(secs[0][0]);
+    var head = headOf(probe);
+    headLine = head.getBoundingClientRect().top - probe.getBoundingClientRect().top + head.offsetHeight / 2 + 1;
+    probe.parentNode.removeChild(probe);
     var a = null;
     secs.forEach(function (blocks) {
       var keep = keepable(blocks);

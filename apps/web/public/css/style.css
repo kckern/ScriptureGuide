@@ -567,17 +567,14 @@
     -webkit-user-select: none;
     user-select: none;
 }
-.vhead::before, .vhead::after, .vhead i {
-    content: '';
+.vhead i {
+    flex: 1;
     border-top: 1px solid #5a4636;
 }
-.vhead::before, .vhead::after { flex: 0 0 10px; }
-.vhead i { flex: 1; }
-.vhead span {
-    padding: 0 .5em;
-    white-space: nowrap;
-}
-.vhead span:empty { padding: 0; }
+/* The labels sit flush with the block's edges; the rule runs between them */
+.vhead span { white-space: nowrap; }
+.vhead .vhead-l:not(:empty) { padding-right: .5em; }
+.vhead .vhead-r:not(:empty) { padding-left: .5em; }
 
 /* One verse per paragraph (KJV, LDS): section.ejs wraps the paragraphs in .vcols. With the
    "Two columns" preference on (the default; prefs.js sets sg-one-column when off) the verses sit
@@ -594,7 +591,7 @@ html:not(.sg-one-column) .vcols p.prose {
 @media (min-width: 700px) {
     html:not(.sg-one-column) .vcols {
         column-count: 2;
-        column-gap: 1.3em;
+        column-gap: 2.2em;
         column-rule: 1px solid #5a4636;
         overflow-anchor: none;
         margin-bottom: .6em;
@@ -602,18 +599,13 @@ html:not(.sg-one-column) .vcols p.prose {
     html:not(.sg-one-column) .vcols.vcols-lead {
         column-count: 1;
     }
-    /* Running head on each block (columns.js): a rule with the left column's references set
-       into its left end and the right column's into its right end, and a plain rule under the
-       last block */
+    /* Running head on each block after a section's first (columns.js): a rule with the left
+       column's references at its left end and the right column's at its right end */
     html:not(.sg-one-column) .vcols > .vhead {
         display: flex;
     }
     html:not(.sg-one-column) .vcols.vcols-lead > .vhead {
         display: none;
-    }
-    html:not(.sg-one-column) .vcols.vcols-end {
-        border-bottom: 1px solid #5a4636;
-        padding-bottom: .4em;
     }
     html:not(.sg-one-column) .vcols p.prose,
     html:not(.sg-one-column) .vcols .verse {
@@ -636,8 +628,12 @@ html:not(.sg-one-column) .vcols p.prose {
         line-height: 0;
         color: #7a5a48;
     }
-    /* The copy button (layout activateCopyButtons) leaves the column: it shows over the top
-       right of the verse under the pointer, so it takes no width and moves nothing. */
+    /* The copy button (layout activateCopyButtons) leaves the text: on hover it shows level
+       with the verse's first line, just past the edge of the column the verse starts in. For
+       the left column that is the gutter, left of the rule (the gap is 2.2em, so the button's
+       1.1em slot ends at the rule); for the right column, the container's side padding.
+       columns.js marks each verse's starting column (vstart-l, vstart-r). The slot starts at
+       the column's edge, so the pointer can move to it without leaving the verse. */
     html:not(.sg-one-column) .vcols p.prose > div {
         display: block !important;
         position: relative;
@@ -645,13 +641,17 @@ html:not(.sg-one-column) .vcols p.prose {
     html:not(.sg-one-column) .vcols .copyprose {
         position: absolute;
         top: 0;
-        right: 0;
-        line-height: 1;
+        left: 100%;
+        width: 1.1em;
+        height: 1.15em;
+        display: flex;
+        align-items: center;
+        justify-content: center;
         text-indent: 0;
-        padding: 1px 0 3px 6px;
-        background: #ece6da;
-        border-radius: 0 0 0 4px;
         visibility: hidden;
+    }
+    html:not(.sg-one-column) .vcols p.vstart-r .copyprose {
+        width: 1.5em;
     }
     html:not(.sg-one-column) .vcols p.prose > div:hover .copyprose {
         visibility: visible;
@@ -663,4 +663,16 @@ html:not(.sg-one-column) .vcols p.prose {
     html:not(.sg-one-column) .vcols .copyprose img:hover {
         opacity: 1;
     }
+    /* The right column's button sits in the container's padding: let it show past the passage
+       (flow-root keeps the passage holding its floats, as overflow: hidden did). Not while
+       main.js animates a version switch (.fading), which needs the clip. */
+    html:not(.sg-one-column) .passage:has(> .vcols):not(.fading) {
+        overflow: visible;
+        display: flow-root;
+    }
+    /* Room above each running head, between it and the block before */
+    html:not(.sg-one-column) .vcols.vcols-split {
+        padding-top: .6em;
+    }
+}
 }
