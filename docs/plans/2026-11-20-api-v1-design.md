@@ -26,6 +26,8 @@ Problems with the old response that v1 fixes:
 | `md.` / `markdown.` | Markdown blockquote with citation | None |
 | `txt.` / `plain.` | Verse text only | None |
 
+`plain.` and `markdown.` move to the v1 renderers along with `txt.` and `md.`, and their legacy parity cases are retired. `plainFor` in `formats/plain.js` stays, because `AjaxController` uses it.
+
 Other existing format subdomains (`xml.`, `raw.`, `meta.`, `latex.`, `notes.`, `audio.`, `cover.`, `img.`) are out of scope and stay as they are.
 
 All hosts accept the same `/{translation}/{reference}` path as the website, including the translation-less form (`/john3.16`). The lookup picks the default translation in that case, as the site does.
@@ -55,7 +57,7 @@ An unknown translation segment is an error, not a fallback. The open question at
 
 | Segment | Effect |
 |---|---|
-| `html` | Adds an `html` field to each passage: a semantic fragment (`<p>`, `<span class="verse" data-verse="16">`, `<h3 class="heading">`), with no layout attributes and no ellipses |
+| `html` | Adds an `html` field to each passage: a semantic fragment (`<p>`, `<span class="verse" data-verse="16">`, `<h3 class="heading">`), with no layout attributes and no ellipses. v1 fragments don't keep paragraph breaks, because verse text is flattened by `plainText` |
 | `ids` | Leaves out verse text and headings: references and verse ids only (replaces `meta_only`) |
 
 Options can be combined (`/v1/html/ids/...` is valid but pointless; the response just has no html). Unknown option words are not possible, because an unknown segment is read as a translation or a reference.
@@ -74,7 +76,7 @@ Options can be combined (`/v1/html/ids/...` is valid but pointless; the response
   "reference": {
     "label": "John 3:16–18",
     "book": "John",
-    "osis": "John.3.16-John.3.18",
+    "slug": "john.3.16-18",
     "start": { "chapter": 3, "verse": 16 },
     "end": { "chapter": 3, "verse": 18 }
   },
@@ -86,14 +88,15 @@ Options can be combined (`/v1/html/ids/...` is valid but pointless; the response
       ]
     }
   ],
-  "parallels": [{ "translation": "JST", "reference": "jst.john.3.16" }],
+  "parallels": [{ "reference": "JST John 3:16", "slug": "jst.john.3.16" }],
   "links": { "web": "https://scripture.guide/nrsv/john.3.16" }
 }
 ```
 
 - A reference with several pieces (`john3.16;rom8.28`) returns `reference` as an array with one entry per piece, and `passages` in the same order. A single piece is still an array of length one, so the type never changes. (The example above shows `reference` as an object for readability; the implementation uses an array.)
 - `passages` splits where the text has a heading or where the reference jumps.
-- `parallels` is `[]` when there are none. A heading is `null` when the passage has none in that translation.
+- `reference` entries carry `slug`, the site's URL form of the reference (`john.3.16-18`). There is no OSIS book table, so v1 has no `osis` field.
+- `parallels` lists the source passages that `scripture_references` links to, without a translation. It is `[]` when there are none. A heading is `null` when the passage has none in that translation.
 - `translations`, `headings` and `texts` have the same shape for one translation or several (see "Several translations" below).
 - Every field is always present with the same type.
 
@@ -158,17 +161,17 @@ Several translations of the same reference stay on the dot syntax above. `~` is 
   "left":  { "translation": { "id": "KJV", … }, "reference": [ … ] },
   "right": { "translation": { "id": "LDS", … }, "reference": [ … ] },
   "rows": [
-    { "match": "significant",
-      "left":  [{ "id": 17656, "chapter": 2, "verse": 1, "text": "…" }],
-      "right": [{ "id": 32147, "chapter": 12, "verse": 1, "text": "…" }] },
-    { "match": "none", "left": [], "right": [{ … }] }
+    { "match": "quote", "significant": true,
+      "left":  { "verse_id": 17687, "reference": "Isaiah 2:1", "text": "…" },
+      "right": { "verse_id": 32147, "reference": "2 Nephi 12:1", "text": "…" } },
+    { "match": "none", "significant": false, "left": null, "right": { … } }
   ]
 }
 ```
 
-- A row holds one or more verses per side. Compound verses (several verses matched to one) share a row.
-- `match` is `significant` (the text differs in a meaningful way), `standin` (same passage) or `none` (only one side has it). These come from the `significant` and `standin` columns.
-- With `html`, each side of a row gets its own `html` field.
+- Each side of a row is one verse group or `null`. `ParallelService.build` already joins compound verses (several verses matched to one) into one cell, so a side is an object, not an array.
+- `match` is `quote`, `allusion` or `none` (only one side has it), read from the row's CSS class. `significant` is a separate boolean from the `significant` column.
+- The `html` option does not apply to parallel.
 - Parallel is `api.` only. The simple hosts return a 400 `parallel_not_supported` error.
 
 ## Search: `/v1/search/{scope...}/{terms}`
@@ -197,7 +200,7 @@ Terms are the last segment. Spaces can be written as `%20`, `+` or `.`, as the s
   "page": 1,
   "per_page": 50,
   "results": [
-    { "id": 26137, "reference": "John 3:16", "osis": "John.3.16", "translation": "NRSV",
+    { "id": 26137, "reference": "John 3:16", "slug": "john.3.16", "translation": "NRSV",
       "text": "“For God so loved the world…", "highlights": [[16, 31]] }
   ],
   "links": { "next": null, "web": "https://scripture.guide/nrsv/search/loved%20the%20world" }
@@ -233,10 +236,10 @@ These build from the same lookup as `api.` v1 and render a fixed subset. A bad r
 **`json.`**
 
 ```json
-{ "reference": "John 3:16", "translation": "NRSV", "text": "“For God so loved the world…", "verses": [{ "verse": 16, "text": "…" }], "copyright": "…" }
+{ "reference": "John 3:16", "translation": "NRSV", "text": "“For God so loved the world…", "verses": [{ "chapter": 3, "verse": 16, "text": "…" }], "copyright": "…" }
 ```
 
-Several pieces join `reference` with `; ` and `text` with a space between verses. `verses` items carry `chapter` only when the result spans more than one chapter. (Open: always include `chapter`, for a fixed shape.)
+Several pieces join `reference` with `; ` and `text` with a space between verses. `verses` items always carry `chapter`, so the shape is fixed. With several translations the body is a list with one object per translation.
 
 **`yml.` / `yaml.`** The same fields as `json.`, as YAML.
 
@@ -258,7 +261,7 @@ Headers match `api.` (caching, ETag, CORS), with the right content type for each
 - New v1 presenter (`presentation/presenters/formats/apiV1.js`) and simple presenters (`json`, `yaml`, `markdown`, `plain`) built from one shared result-to-data function, so `api.` and the simple hosts agree.
 - Errors: the lookup reports why a reference failed (book, chapter or verse out of range) instead of returning an empty result.
 - Remove the legacy `ApiPresenter`, the `?meta_only` / `?output_only` handling, and the api/json cases in the parity harness (`apps/web/test/parity`) and its allow list.
-- `/api/` and `/json/` path prefixes on the main host: point them at v1 and the simple JSON format to match the subdomains.
+- `/api/` and `/json/` path prefixes on the main host: `scripture.guide/api/...` and `/json/...` are served by the v1 router as if they came from those subdomains.
 - `packages/scripture-guide/docs/api-reference.md` and a new public `docs/API.md` describing v1.
 
 ## Infra
