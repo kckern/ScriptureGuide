@@ -51,6 +51,20 @@ export function ogImageUrl(host, pagePath) {
   return `https://${host}/og/${p || 'site'}.jpg`;
 }
 
+// The page's text from the v1 API, for <link rel="alternate" type="application/json">. With a
+// version in the URL it names the version the page shows: the site reads separators and
+// version words the API does not ("/kjv,nrsv/", "/hbrs/" falls back to LDS). Without one it
+// names none, and the API picks the same default by verse range. null for a page without
+// verses, a not-found page (no normalized reference) or text only from the verse index.
+export function apiAlternateUrl(result, data) {
+  const slug = data?.canonicalRefSlug;
+  if (!slug || !result.verses?.length || !result.reference?.normalized) return null;
+  if (!result.config?.versionSpec) return `https://api.scripture.guide/v1/${slug}`;
+  const version = result.config.version;
+  if (!version || version === 'INDEX') return null;
+  return `https://api.scripture.guide/v1/${version.toLowerCase()}/${slug}`;
+}
+
 export class HtmlPresenter {
   present(result, req, res) {
     const data = this.serialize(result);
@@ -65,6 +79,7 @@ export class HtmlPresenter {
       config: result.config,
       title,
       ogMeta,
+      apiAlternate: apiAlternateUrl(result, data),
       // 'There is no version "HBRS". Showing LDS.' (ScriptureController.versionNote)
       versionNote: result.versionNote ? escapeHtml(result.versionNote) : null,
     });

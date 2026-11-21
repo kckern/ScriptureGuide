@@ -29,6 +29,9 @@
 <meta name="twitter:description" content="<%= ogMeta.description %>" />
 <meta name="twitter:image" content="<%= ogMeta.image %>" />
 <% } %>
+<% if (typeof apiAlternate !== 'undefined' && apiAlternate) { %>
+<link rel="alternate" type="application/json" href="<%= apiAlternate %>">
+<% } %>
 <link rel="stylesheet" href="//code.jquery.com/ui/1.11.4/themes/smoothness/jquery-ui.css">
 <link rel="stylesheet" href="/css/style.css<%= av %>">
 <link rel="stylesheet" href="/css/versions.css<%= av %>">

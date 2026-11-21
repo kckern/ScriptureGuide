@@ -1,4 +1,6 @@
 import { describe, test, expect } from 'vitest';
+import ejs from 'ejs';
+import { fileURLToPath } from 'node:url';
 import { HtmlPresenter } from '../../src/presentation/presenters/HtmlPresenter.js';
 import { Verse } from '../../src/domain/entities/Verse.js';
 import { Reference } from '../../src/domain/entities/Reference.js';
@@ -150,5 +152,48 @@ describe('HtmlPresenter: the note on an unknown version', () => {
   });
   test('none without one', () => {
     expect(render(undefined).versionNote).toBeNull();
+  });
+});
+
+// The page's API URL (<link rel="alternate" type="application/json">)
+describe('HtmlPresenter api alternate link', () => {
+  const LAYOUT = fileURLToPath(new URL('../../src/presentation/views/layouts/main.ejs', import.meta.url));
+  function john316({ versionSpec = null, version = 'NRSV', slug = 'john.3.16', normalized = 'John 3:16', verses = true } = {}) {
+    return new ScriptureResult({
+      reference: new Reference({ query: 'john.3.16', normalized, verseIds: verses ? [26137] : [] }),
+      verses: verses ? [new Verse({ id: 26137, chapter: 3, verseNum: 16, text: 'For God so loved the world.', version })] : [],
+      headings: [],
+      config: { version, versionSpec, _bookTitle: 'John', _canonicalRefSlug: slug },
+    });
+  }
+  function present(result) {
+    let locals;
+    new HtmlPresenter().present(result, { headers: { host: 'scripture.guide' }, path: '/x' }, { render: (view, l) => { locals = l; } });
+    return locals.apiAlternate;
+  }
+
+  test('/nrsv/john.3.16 links to /v1/nrsv/john.3.16', () => {
+    expect(present(john316({ versionSpec: 'NRSV' }))).toBe('https://api.scripture.guide/v1/nrsv/john.3.16');
+  });
+  test('/john.3.16 links to /v1/john.3.16: the API picks the same default version', () => {
+    expect(present(john316())).toBe('https://api.scripture.guide/v1/john.3.16');
+  });
+  test('the version is the one shown, not the segment as typed', () => {
+    // "/kjv,nrsv/…" (the site's separators) and "/hbrs/…" (no such version, the page falls back)
+    expect(present(john316({ versionSpec: 'kjv,nrsv', version: 'KJV' }))).toBe('https://api.scripture.guide/v1/kjv/john.3.16');
+    expect(present(john316({ versionSpec: 'hbrs', version: 'LDS' }))).toBe('https://api.scripture.guide/v1/lds/john.3.16');
+  });
+  test('no link without verses, for a not-found page, or for text only in the verse index', () => {
+    expect(present(john316({ verses: false }))).toBeNull();
+    expect(present(john316({ normalized: '' }))).toBeNull();
+    expect(present(john316({ slug: '' }))).toBeNull();
+    expect(present(john316({ versionSpec: 'nrsv', version: 'INDEX' }))).toBeNull();
+  });
+  test('the layout writes the link, escaped, only when there is one', async () => {
+    const render = locals => ejs.renderFile(LAYOUT, { body: '<div id="container"></div>', config: {}, ...locals });
+    const html = await render({ apiAlternate: 'https://api.scripture.guide/v1/nrsv/d&c.84' });
+    expect(html).toContain('<link rel="alternate" type="application/json" href="https://api.scripture.guide/v1/nrsv/d&amp;c.84">');
+    expect(await render({})).not.toContain('rel="alternate"');
+    expect(await render({ apiAlternate: null })).not.toContain('rel="alternate"');
   });
 });
