@@ -81,3 +81,28 @@ describe.each([true, false])('detectReferences flags (contextAware:%s)', (contex
       .toBe('Read [Lk 3:16; 4:1] today.');
   });
 });
+
+// Every HTML entity ends with ";", which is not a list separator: entities are decoded before the
+// grouped test, the verse test and the book comparison.
+describe.each([true, false])('flags with HTML entities (contextAware:%s)', (contextAware) => {
+  const find = (text, opts) => texts(findReferences(text, { contextAware, ...opts }));
+  const detect = (text, opts) => detectReferences(text, (t) => `[${t}]`, { contextAware, ...opts });
+
+  test('chapterOnly:false drops "Matthew 5&ndash;7"', () => {
+    expect(find('Read Matthew 5&ndash;7 today.', { chapterOnly: false })).toEqual([]);
+    expect(detect('Read Matthew 5&ndash;7 today.', { chapterOnly: false })).toBe('Read Matthew 5&ndash;7 today.');
+  });
+
+  test('chapterOnly:false keeps "Matthew 5:3&ndash;5"', () => {
+    expect(find('Read Matthew 5:3&ndash;5 today.', { chapterOnly: false })).toEqual(['Matthew 5:3&ndash;5']);
+  });
+
+  test.each(['Mt 5:3&ndash;5', 'JS&mdash;H 1:17'])('abbreviations:false drops %j', (ref) => {
+    expect(find(`Read ${ref} today.`, { abbreviations: false })).toEqual([]);
+    expect(detect(`Read ${ref} today.`, { abbreviations: false })).toBe(`Read ${ref} today.`);
+  });
+
+  test('abbreviations:false keeps "Matthew 5:3&ndash;5"', () => {
+    expect(find('Read Matthew 5:3&ndash;5 today.', { abbreviations: false })).toEqual(['Matthew 5:3&ndash;5']);
+  });
+});

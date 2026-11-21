@@ -1107,14 +1107,18 @@ const hasVerseComponent = (text) => /\d\s*[:.]\s*\d/.test(text);
 // Post-collection filters for the abbreviations / chapterOnly options. Grouped
 // citations (joiner-merged, so text contains ";" "," or " and ") always survive
 // — the flags target single-reference matches.
+// The span keeps the page's HTML entities ("Mt 5:3&ndash;5"), and every entity ends with ";",
+// which is not a list separator: the tests read the decoded span.
 const applyDetectionFlags = (records, opts) => {
+    if (opts.chapterOnly !== false && opts.abbreviations !== false) return records;
     const isGrouped = (text) => /[;,]| and /i.test(text);
+    const decoded = (m) => normalizeEntities(m.text).text;
     let out = records;
     if (opts.chapterOnly === false) {
-        out = out.filter(m => isGrouped(m.text) || hasVerseComponent(m.text));
+        out = out.filter(m => isGrouped(decoded(m)) || hasVerseComponent(decoded(m)));
     }
     if (opts.abbreviations === false) {
-        out = out.filter(m => isGrouped(m.text) || bookPortion(m.text) === bookPortion(m.ref));
+        out = out.filter(m => isGrouped(decoded(m)) || bookPortion(decoded(m)) === bookPortion(m.ref));
     }
     return out;
 }
