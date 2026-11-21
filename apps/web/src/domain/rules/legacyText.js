@@ -84,10 +84,13 @@ export function transposeRef(ref, ver) {
 }
 
 // scriptutil::renderHeadingHTML — heading text: "/" is a line break, subscript digits ₁–₄ are <sub>.
+// Unicode subscript digits (Alma₂) as <sub>: the page fonts have no glyph for them
+export function subscriptDigits(text) {
+  return String(text ?? '').replace(/[\u2080-\u2089]/g, c => `<sub>${c.charCodeAt(0) - 0x2080}</sub>`);
+}
+
 export function renderHeadingHtml(text) {
-  return String(text ?? '')
-    .replace(/\//g, '<br/>')
-    .replace(/[\u2081-\u2084]/g, c => `<sub>${c.charCodeAt(0) - 0x2080}</sub>`);
+  return subscriptDigits(String(text ?? '').replace(/\//g, '<br/>'));
 }
 
 // Heading fields scriptutil::buildHeading passes through renderHeadingHTML.

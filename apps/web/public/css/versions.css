@@ -462,3 +462,10 @@
   cursor:pointer;
   }
   
+/* Footnote marks inside headings: sized to the line of text they sit in, not to the heading */
+.ver_SEBOM h2 .fn, .ver_SEBOM h3 .fn, .ver_KRSEB h2 .fn, .ver_KRSEB h3 .fn
+{
+  font-size: .35em;
+  top: -1.6em;
+  margin-left: .15em;
+}
