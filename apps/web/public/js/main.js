@@ -627,7 +627,7 @@ function activateVerses(time)
  		{
  			ref = "<img src='/img/ver.png'>"+ver_names[$(this).parents(".passage").children("h3").attr("ver")];
  		}
- 		ref += "<img src='/img/ref.png'>"+$(this).attr("ref");
+ 		ref += "<img src='/img/ref.png'><span class='sref'>"+$(this).attr("ref")+"</span>";
  		
  		$("#status_msg").html(ref)
  		

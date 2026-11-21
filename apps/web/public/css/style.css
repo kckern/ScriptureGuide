@@ -21,7 +21,8 @@
      font-display: swap;
      src: url('/css/webfont/GoudyScripture-Italic.woff2') format('woff2');
 }
- /* Roboto Condensed (OFL): interface text and reference labels, never scripture text. */
+ /* Roboto Condensed (OFL): interface text (edition names, tabs, buttons, panels). Scripture text and
+    references to it ("John 14:1") are always Goudy Scripture. */
  @font-face {
      font-family: 'Roboto Condensed';
      font-style: normal;
@@ -174,7 +175,7 @@
      margin: 0;
      margin-left: 10px;
      margin-right: -122px;
-     font-family: 'Roboto Condensed', 'Arial Narrow', sans-serif;
+     font-family: 'Goudy Scripture', 'Sorts Mill Goudy', Georgia, serif;
      font-size: .4em;
      line-height: 1em;
      color: #777;
@@ -185,7 +186,7 @@
 }
 .refblock
 {
-     font-family: 'Roboto Condensed', 'Arial Narrow', sans-serif;
+     font-family: 'Goudy Scripture', 'Sorts Mill Goudy', Georgia, serif;
      font-size: 1em;
      line-height: 1em;
      font-weight:800;
@@ -675,4 +676,9 @@ html:not(.sg-one-column) .vcols p.prose {
         padding-top: .6em;
     }
 }
+}
+
+/* References in the toolbar status are scripture, not interface (main.js wraps them). */
+#status_msg .sref {
+     font-family: 'Goudy Scripture', 'Sorts Mill Goudy', Georgia, serif;
 }

@@ -27,9 +27,6 @@ describe('Roboto Condensed (interface text)', () => {
     ['ui.css', '#toolbar'],
     ['ui.css', 'ul.tabs {'],
     ['ui.css', '.tipsy {'],
-    ['style.css', ' h4 {'],
-    ['style.css', '.refblock'],
-    ['parallel.css', '.parallel td.ref a'],
   ])('%s %s uses it', (sheet, selector) => {
     expect(rule(css(sheet), selector)).toContain(UI);
   });
@@ -40,3 +37,22 @@ describe('Roboto Condensed (interface text)', () => {
     expect(home).toContain('e.g. \\u2018" + examples[pointer] + "\\u2019"');
   });
 });
+
+// References to scripture use the scripture font, even inside interface chrome.
+describe('references use Goudy Scripture', () => {
+  const GS = "font-family: 'Goudy Scripture', 'Sorts Mill Goudy', Georgia, serif;";
+  test.each([
+    ['style.css', ' h4 {'],
+    ['style.css', '.refblock'],
+    ['style.css', '#status_msg .sref'],
+    ['parallel.css', '.parallel td.ref a'],
+  ])('%s %s', (sheet, selector) => {
+    expect(rule(css(sheet), selector)).toContain(GS);
+  });
+
+  test('main.js wraps the toolbar reference so it takes the scripture font', () => {
+    const main = readFileSync(path.join(pub, 'js/main.js'), 'utf8');
+    expect(main).toContain("<span class='sref'>\"+$(this).attr(\"ref\")+\"</span>");
+  });
+});
+
