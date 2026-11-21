@@ -10,7 +10,7 @@ import { applyFormatOverride } from '../domain/rules/formatOverride.js';
 import { getBook, slugifyRef, slugBook, splitRuns } from '../domain/rules/legacyReference.js';
 import { numericVerseIds, cleanReference } from '../domain/rules/cleanReference.js';
 import { parseVerseIdList } from '../domain/rules/referenceParsing.js';
-import { isCompoundLine } from '../domain/rules/legacyText.js';
+import { isCompoundLine, isFillerText } from '../domain/rules/legacyText.js';
 import { wantsChapterNav, chapterNavLinks, sectionNavLinks, sectionRef } from '../domain/rules/chapterNav.js';
 import { verseStartsSection } from '../domain/rules/sectionStart.js';
 
@@ -192,6 +192,10 @@ export class ScriptureLookupService {
       verseRows = await this.verseRepository.findIndexByIds(verseIds);
     }
     const verses = verseRows.map(row => Verse.fromRow(row));
+    // Every row filler: the version leaves the passage out, and the page says so by its title
+    if (verses.length && version !== 'INDEX' && verses.every(v => isFillerText(v.text))) {
+      config._versionTitle = await this.verseRepository.findVersionTitle(version);
+    }
 
     // Build verse_id → chapter map from canonical verse table (covers ALL verse_ids, including
     // heading-only ones that have no text entry in scripture_verses for this version, e.g. NRSV Psalms)

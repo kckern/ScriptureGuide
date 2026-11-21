@@ -51,6 +51,7 @@ describe('lookup: the short book title for compound refs', () => {
   const verses = {
     findByIds: async ids => ids.map(id => ({ ...rows[id], version: 'KJV' })),
     findChaptersByVerseIds: async ids => ids.map(id => ({ verse_id: id, chapter: rows[id].chapter })),
+    findVersionTitle: async () => 'King James Version',
   };
   const headings = {
     findBookId: async () => ({ book_id: 1, lds_org: 'gen', book_title: 'Genesis', book_title_short: 'Gen.' }),
@@ -400,5 +401,30 @@ describe('lookup: the canonical slug of several references', () => {
   test('does not change the first section\'s config', async () => {
     const r = await svc.lookup('gen.1.1;john.3.16');
     expect(r.sections[0].config._canonicalRefSlug).toBe('gen.1.1');
+  });
+});
+
+describe('lookup: a passage the version leaves out', () => {
+  const make = texts => {
+    const rows = texts.map((text, i) => ({ verse_id: 32102 + i, verse: i + 1, chapter: 16, text }));
+    const refs = { parse: () => ({ isEmpty: false, book: '2 Nephi', normalized: '2 Nephi 16', verseIds: rows.map(r => r.verse_id), chapter: 16 }) };
+    const titles = [];
+    const verses = {
+      findByIds: async () => rows.map(r => ({ ...r, version: '2HRBOM' })),
+      findChaptersByVerseIds: async ids => rows.filter(r => ids.includes(r.verse_id)).map(r => ({ verse_id: r.verse_id, chapter: r.chapter })),
+      findVersionTitle: async v => { titles.push(v); return '2-hour Book of Mormon'; },
+    };
+    const headings = { findBookId: async () => null, findByVerseIds: async () => [], findFaxVerseIds: async () => [] };
+    return { svc: new ScriptureLookupService(refs, verses, headings), titles };
+  };
+  test('every verse filler ("*", "/", spaces): the version title is loaded for the note', async () => {
+    const { svc, titles } = make(['*', '/', ' * ']);
+    expect((await svc.lookup('2.ne.16', { version: '2HRBOM' })).config._versionTitle).toBe('2-hour Book of Mormon');
+    expect(titles).toEqual(['2HRBOM']);
+  });
+  test('a verse with text: no extra query', async () => {
+    const { svc, titles } = make(['And it came to pass.', '*']);
+    expect((await svc.lookup('2.ne.16', { version: '2HRBOM' })).config._versionTitle).toBeUndefined();
+    expect(titles).toEqual([]);
   });
 });

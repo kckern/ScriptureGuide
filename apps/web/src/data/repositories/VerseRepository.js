@@ -154,6 +154,12 @@ export class VerseRepository {
     };
   }
 
+  // scripture_versions.title of a version, or null
+  async findVersionTitle(version) {
+    const rows = await db.query('SELECT title FROM scripture_versions WHERE id = ? LIMIT 1', [version]);
+    return rows[0]?.title ?? null;
+  }
+
   async findAvailableVersions(verseIds) {
     if (!verseIds || verseIds.length === 0) return [];
 

@@ -154,3 +154,11 @@ describe('isCompoundLine', () => {
     expect(isCompoundLine(null)).toBe(false);
   });
 });
+
+describe('isFillerText', async () => {
+  const { isFillerText } = await import('../../src/domain/rules/legacyText.js');
+  it('is text of only "*", "/" or spaces (a gap row)', () => {
+    for (const t of ['*', ' * ', '/', '', '  ', '*/']) expect(isFillerText(t)).toBe(true);
+    for (const t of ['And it came to pass.', '* and', 'a/b']) expect(isFillerText(t)).toBe(false);
+  });
+});

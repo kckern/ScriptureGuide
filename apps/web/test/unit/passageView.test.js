@@ -191,3 +191,56 @@ describe('a first verse with a label before its "§"', () => {
     expect($('h3.heading').next().text()).toBe('Book 4 (Psalms 90-106)§A prayer of Moses.');
   });
 });
+
+// 2HRBOM leaves out 2 Nephi 12-24: every row there is a "*" filler line
+function abridged(texts, { title = '2-hour Book of Mormon' } = {}) {
+  const verses = texts.map((text, i) => new Verse({ id: 32102 + i, verseNum: i + 1, chapter: 16, text, version: '2HRBOM' }));
+  return new ScriptureResult({
+    reference: new Reference({ query: '2.ne.16', normalized: '2 Nephi 16', verseIds: verses.map(v => v.id) }),
+    verses,
+    headings: [{ verse_id: 32102, type: 'heading', text: '2 Nephi 16', last_verse_id: 32102 + texts.length - 1, synthetic: true }],
+    config: { version: '2HRBOM', _bookTitle: '2 Nephi', _bookShort: '2 Ne.', _versionTitle: title },
+  });
+}
+
+describe('a passage the version leaves out (every verse is filler)', () => {
+  const SECTION = fileURLToPath(new URL('../../src/presentation/views/partials/section.ejs', import.meta.url));
+  test('says the version does not include it, with the version title', async () => {
+    const data = new HtmlPresenter().serialize(abridged(['*', ' * ', '/', '*']));
+    data.chapterNav = { prev: { href: '/2hrbom/2.ne.15', label: '2 Nephi 15' } };
+    const $ = cheerio.load(await ejs.renderFile(SECTION, { data }));
+    expect($('span.verse').length).toBe(1);
+    expect($('span.verse').text()).toBe('The 2-hour Book of Mormon (2HRBOM) does not include 2 Nephi 16.');
+    expect($('h3').text().trim()).toBe('2 Nephi 16');
+    expect($('.chapterNav a.prev').attr('href')).toBe('/2hrbom/2.ne.15');
+    expect($.html()).not.toContain('>*<');
+  });
+  test('a title that starts with "The" is not given another', () => {
+    const data = new HtmlPresenter().serialize(abridged(['*'], { title: 'The Earliest Text' }));
+    expect(data.absent).toBe('The Earliest Text (2HRBOM) does not include 2 Nephi 16.');
+  });
+  test('no title: the version id', () => {
+    const data = new HtmlPresenter().serialize(abridged(['*'], { title: null }));
+    expect(data.absent).toBe('2HRBOM does not include 2 Nephi 16.');
+  });
+  test('a verse with text among the filler renders as before (compound verse)', async () => {
+    const data = new HtmlPresenter().serialize(abridged(['And it came to pass.', '*', '*']));
+    expect(data.absent).toBeNull();
+    const $ = cheerio.load(await ejs.renderFile(SECTION, { data }));
+    expect($('span.verse').attr('compound')).toBe('3');
+    expect($('span.verse').text()).toBe('And it came to pass.');
+  });
+});
+
+describe('a passage the version leaves out: link preview', () => {
+  test('the description is the note, not the filler', () => {
+    const verses = ['*', '*'].map((text, i) => new Verse({ id: 32102 + i, verseNum: i + 1, chapter: 16, text, version: '2HRBOM' }));
+    const result = new ScriptureResult({
+      reference: new Reference({ query: '2.ne.16', normalized: '2 Nephi 16', verseIds: [32102, 32103] }),
+      verses, headings: [], config: { version: '2HRBOM', _versionTitle: '2-hour Book of Mormon', _subChapter: false },
+    });
+    const p = new HtmlPresenter();
+    const og = p._buildOgMeta(result, p.serialize(result), '2 Nephi 16', { headers: {}, path: '/2hrbom/2.ne.16' });
+    expect(og.description).toBe('2 Nephi 16— The 2-hour Book of Mormon (2HRBOM) does not include 2 Nephi 16.');
+  });
+});

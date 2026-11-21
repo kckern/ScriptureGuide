@@ -110,6 +110,12 @@ export function isCompoundLine(text) {
   return String(text ?? '').trim() === '*';
 }
 
+// A gap row: no verse text, only the filler of a compound verse ("*", "/") or spaces. A version
+// that leaves a passage out (2HRBOM skips 2 Nephi 12-24) has only these rows there.
+export function isFillerText(text) {
+  return /^[*/\s]*$/.test(String(text ?? ''));
+}
+
 // scriptures::formattedData: the format and paragraph class of each segment of a verse, from the
 // verse's own format and the marker before each segment. A marker's format holds for the rest of
 // the verse: ¶▼ poetry, ¶↪ indent, ¶► prose; ¶◄ starts a "flush" paragraph, ¶◤ a "linebreak"

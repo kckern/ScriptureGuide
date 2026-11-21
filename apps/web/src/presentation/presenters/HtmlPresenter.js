@@ -3,7 +3,7 @@ import { displayReference, blankHeading } from '../../domain/rules/referencePars
 
 import { versionImg, formatReference as referenceFromVerseIds, splitRuns } from '../../domain/rules/legacyReference.js';
 import { isEmptyRange } from '../../domain/rules/blockIds.js';
-import { renderHeadingHtml, renderHeadingFields, RENDERED_HEADING_FIELDS, segmentFormats, escapeHtml, isCompoundLine } from '../../domain/rules/legacyText.js';
+import { renderHeadingHtml, renderHeadingFields, RENDERED_HEADING_FIELDS, segmentFormats, escapeHtml, isCompoundLine, isFillerText } from '../../domain/rules/legacyText.js';
 import { verseStartsSection } from '../../domain/rules/sectionStart.js';
 
 // versionImg takes lds_scriptures_volumes.volume_id; Reference.volume is a volume code.
@@ -34,6 +34,14 @@ export function foldCompounds(lines, bookShort) {
     host.compoundLabel = host.compoundRef.replace(/^.*?:/, '');
   }
   return out;
+}
+
+// A passage the version leaves out (every verse a filler row): "The 2-hour Book of Mormon
+// (2HRBOM) does not include 2 Nephi 16." null when any verse has text.
+export function absentNote(verses, version, title, reference) {
+  if (!verses.length || !verses.every(v => isFillerText(v.text))) return null;
+  const name = title ? `${/^the\s/i.test(title) ? '' : 'The '}${title} (${version})` : version;
+  return `${name} does not include ${reference}.`;
 }
 
 // The link-preview card of a page (routes/og.js draws it): /og/<page path>.jpg, or the site card
@@ -75,7 +83,10 @@ export class HtmlPresenter {
     // Append verse text until we reach ~1000 chars
     const prefix = descriptor ? ' ' : '— ';
     let addedVerses = false;
-    for (const v of result.verses) {
+    // A passage the version leaves out is described by the note shown in its place
+    const absent = absentNote(result.verses, result.config.version || 'KJV', result.config._versionTitle, data.title);
+    if (absent) description += prefix + absent;
+    for (const v of absent ? [] : result.verses) {
       const plain = v.text.replace(/^[§¶]+/, '').replace(/｟([^｠]*)｠/g, '$1').replace(/\s+/g, ' ').trim();
       description += (addedVerses ? ' ' : prefix) + plain;
       addedVerses = true;
@@ -438,10 +449,14 @@ export class HtmlPresenter {
       (typesByVerse[h.verse_id] ??= {})[h.type] = RENDERED_HEADING_FIELDS.includes(h.type) ? renderHeadingHtml(h.text) : h.text;
     }
 
+    const displayTitle = displayReference(result.reference.normalized, result.reference.verseIds?.length ?? 0);
+    const absent = absentNote(result.verses, version, result.config._versionTitle, displayTitle);
     return {
       reference: result.reference.normalized,
       // Page title: the reference with en dashes for ranges (PHP referenceFromVerseIds)
-      title: displayReference(result.reference.normalized, result.reference.verseIds?.length ?? 0),
+      title: displayTitle,
+      // The version leaves the passage out: this note shows instead of its filler verses
+      absent: absent && escapeHtml(absent),
       // Heading for a reference block that matched no verses (scriptures::blankData)
       // escaped: it echoes the request (the PHP site reflected it raw)
       blank: result.verses.length ? null : escapeHtml(result.legacyBlock ? result.legacyBlock.orig : blankHeading(result.reference.query)),
