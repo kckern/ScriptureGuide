@@ -11,4 +11,8 @@ describe('highlightOffsets', () => {
   test('no marks', () => {
     expect(highlightOffsets('plain text')).toEqual([]);
   });
+  test('an unclosed mark gives no offset and stops', () => {
+    expect(highlightOffsets("a <span class='searchterm'>b")).toEqual([]);
+    expect(highlightOffsets("so loved the <span class='searchterm'>world")).toEqual([]);
+  });
 });

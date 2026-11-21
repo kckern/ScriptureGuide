@@ -10,6 +10,7 @@ export function highlightOffsets(marked) {
   while (i < marked.length) {
     if (marked.startsWith(OPEN, i)) {
       const end = marked.indexOf(CLOSE, i + OPEN.length);
+      if (end === -1) break; // an unclosed mark: nothing after it can be placed
       const length = end - (i + OPEN.length);
       if (length > 0) out.push([plain, plain + length]);
       plain += length;
