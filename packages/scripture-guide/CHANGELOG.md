@@ -1,5 +1,12 @@
 # scripture-guide
 
+## 1.1.1
+
+### Patch Changes
+
+- 4b04056: `lookupReference(query, { maxVerses })` sets how many verses one range expands to. The default stays 1000.
+- 21bcf0a: Song of Solomon references resolve in every common form ("Song of Solomon", "Song", "SoS", "Canticles", "Song of Songs", "Solomon's Song"), and English refs read "Solomon's Song", the name the LDS edition uses.
+
 ## 1.1.0
 
 ### Minor Changes
