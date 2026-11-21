@@ -30,8 +30,11 @@ const js = (body = 'var clicky={};', type = 'text/javascript') =>
 
 const appWith = opts => express().use(clickyProxy(opts));
 
+// Lets a background refresh (fake fetch, resolved in microtasks) finish
+const settle = () => new Promise(r => setTimeout(r, 5));
+
 describe('GET /cd7dba44d5.js', () => {
-  test('fetches the tracking code with no cookie, the visitor appended to X-Forwarded-For and their User-Agent', async () => {
+  test('fetches the tracking code with no cookie, no X-Forwarded-For and the proxy\'s own User-Agent', async () => {
     const fetchImpl = fakeFetch(js());
     const res = await request(appWith({ fetchImpl })).get('/cd7dba44d5.js')
       .set('X-Forwarded-For', '203.0.113.7').set('User-Agent', 'Visitor/1.0').set('Cookie', 'a=b; _cky_ignore=x');
@@ -43,18 +46,13 @@ describe('GET /cd7dba44d5.js', () => {
     const { url, init, headers } = fetchImpl.calls[0];
     expect(url).toBe(JS_URL);
     expect(init.signal).toBeInstanceOf(AbortSignal);
+    // One copy is shared by every visitor, so nothing of the first visitor's is sent
     expect(headers.get('cookie')).toBeNull();
-    expect(headers.get('x-forwarded-for')).toBe('203.0.113.7, 127.0.0.1');
-    expect(headers.get('user-agent')).toBe('Visitor/1.0');
+    expect(headers.get('x-forwarded-for')).toBeNull();
+    expect(headers.get('user-agent')).toBe('scripture.guide clicky-proxy');
   });
 
-  test('X-Forwarded-For is the visitor alone when none came in', async () => {
-    const fetchImpl = fakeFetch(js());
-    await request(appWith({ fetchImpl })).get('/cd7dba44d5.js');
-    expect(fetchImpl.calls[0].headers.get('x-forwarded-for')).toBe('127.0.0.1');
-  });
-
-  test('is cached for an hour, then fetched again', async () => {
+  test('is cached for an hour; after that the old copy is served while it is fetched again', async () => {
     let t = 1_000_000;
     const fetchImpl = fakeFetch(js('one'), js('two'));
     const app = appWith({ fetchImpl, now: () => t });
@@ -63,30 +61,71 @@ describe('GET /cd7dba44d5.js', () => {
     expect((await request(app).get('/cd7dba44d5.js')).text).toBe('one');
     expect(fetchImpl.calls).toHaveLength(1);
     t += 2;
+    expect((await request(app).get('/cd7dba44d5.js')).text).toBe('one');
+    await settle();
+    expect(fetchImpl.calls).toHaveLength(2);
     expect((await request(app).get('/cd7dba44d5.js')).text).toBe('two');
     expect(fetchImpl.calls).toHaveLength(2);
   });
 
-  test('serves the stale copy when the refetch fails', async () => {
+  test('serves the stale copy at once while a refresh is in flight, and starts only one refresh', async () => {
     let t = 0;
-    const fetchImpl = fakeFetch(js('cached'), new Error('down'));
+    let release;
+    const slow = () => new Promise(r => { release = () => r(new Response('fresh', { headers: { 'Content-Type': 'text/javascript' } })); });
+    const fetchImpl = fakeFetch(js('stale'), slow);
+    const app = appWith({ fetchImpl, now: () => t });
+    await request(app).get('/cd7dba44d5.js');
+    t += HOUR + 1;
+    const [a, b] = await Promise.all([request(app).get('/cd7dba44d5.js'), request(app).get('/cd7dba44d5.js')]);
+    expect([a.text, b.text]).toEqual(['stale', 'stale']);
+    expect(fetchImpl.calls).toHaveLength(2);
+    release();
+    await settle();
+    expect((await request(app).get('/cd7dba44d5.js')).text).toBe('fresh');
+  });
+
+  test('keeps the stale copy when the refresh fails, and waits a minute before trying again', async () => {
+    let t = 0;
+    const fetchImpl = fakeFetch(js('cached'), new Error('down'), js('back'));
     const app = appWith({ fetchImpl, now: () => t });
     await request(app).get('/cd7dba44d5.js');
     t += HOUR + 1;
     const res = await request(app).get('/cd7dba44d5.js');
+    await settle();
     expect(fetchImpl.calls).toHaveLength(2);
     expect(res.status).toBe(200);
     expect(res.text).toBe('cached');
     expect(res.headers['content-type']).toMatch(/^application\/javascript/);
+    t += 30_000;
+    expect((await request(app).get('/cd7dba44d5.js')).text).toBe('cached');
+    await settle();
+    expect(fetchImpl.calls).toHaveLength(2);
+    t += 30_001;
+    await request(app).get('/cd7dba44d5.js');
+    await settle();
+    expect(fetchImpl.calls).toHaveLength(3);
+    expect((await request(app).get('/cd7dba44d5.js')).text).toBe('back');
   });
 
-  test('a failed upstream status counts as a failure too', async () => {
+  test.each([
+    ['a failed status', () => new Response('oops', { status: 502, headers: { 'Content-Type': 'text/javascript' } })],
+    ['an empty body', () => new Response('', { status: 200, headers: { 'Content-Type': 'text/javascript' } })],
+    ['an HTML block page', () => new Response('<!DOCTYPE html><title>Attention Required!</title>', { status: 200, headers: { 'Content-Type': 'text/html' } })],
+  ])('%s is never cached', async (_name, bad) => {
     let t = 0;
-    const fetchImpl = fakeFetch(js('cached'), () => new Response('oops', { status: 502 }));
+    const fetchImpl = fakeFetch(js('cached'), bad);
     const app = appWith({ fetchImpl, now: () => t });
     await request(app).get('/cd7dba44d5.js');
     t += HOUR + 1;
+    await request(app).get('/cd7dba44d5.js');
+    await settle();
+    expect(fetchImpl.calls).toHaveLength(2);
     expect((await request(app).get('/cd7dba44d5.js')).text).toBe('cached');
+    // and with nothing cached it is a 204, not the bad body
+    const fresh = appWith({ fetchImpl: fakeFetch(bad) });
+    const res = await request(fresh).get('/cd7dba44d5.js');
+    expect(res.status).toBe(204);
+    expect(res.text).toBe('');
   });
 
   test('answers 204 with an empty body when the fetch fails and nothing is cached', async () => {
@@ -94,6 +133,21 @@ describe('GET /cd7dba44d5.js', () => {
     const res = await request(appWith({ fetchImpl })).get('/cd7dba44d5.js');
     expect(res.status).toBe(204);
     expect(res.text).toBe('');
+  });
+
+  test('after a first failure with nothing cached, answers 204 at once for a minute, then tries again', async () => {
+    let t = 0;
+    const fetchImpl = fakeFetch(new Error('down'), js('ok'));
+    const app = appWith({ fetchImpl, now: () => t });
+    expect((await request(app).get('/cd7dba44d5.js')).status).toBe(204);
+    t += 59_999;
+    expect((await request(app).get('/cd7dba44d5.js')).status).toBe(204);
+    expect(fetchImpl.calls).toHaveLength(1);
+    t += 2;
+    const res = await request(app).get('/cd7dba44d5.js');
+    expect(fetchImpl.calls).toHaveLength(2);
+    expect(res.status).toBe(200);
+    expect(res.text).toBe('ok');
   });
 });
 
@@ -175,6 +229,33 @@ describe('/e9b1e2e71a (the beacon)', () => {
     expect(res.headers['set-cookie']).toEqual(['_cky_ignore=abc; Path=/', '_cky_osa=def; Path=/', 'third=3']);
     expect(res.headers['cache-control']).toBe('no-store');
     expect(res.text).toBe('/* ok */');
+  });
+
+  test('does not follow redirects: relays the status and Location', async () => {
+    const fetchImpl = fakeFetch(() => new Response(null, { status: 302, headers: { Location: 'https://clicky.com/elsewhere' } }));
+    const res = await request(appWith({ fetchImpl })).get('/e9b1e2e71a?site_id=1');
+    expect(fetchImpl.calls[0].init.redirect).toBe('manual');
+    expect(res.status).toBe(302);
+    expect(res.headers.location).toBe('https://clicky.com/elsewhere');
+  });
+
+  test('a POST body over the limit answers 204 without calling Clicky', async () => {
+    const fetchImpl = fakeFetch(beacon());
+    const res = await request(appWith({ fetchImpl })).post('/e9b1e2e71a')
+      .set('Content-Type', 'text/plain').send('x'.repeat(65 * 1024));
+    expect(res.status).toBe(204);
+    expect(res.text).toBe('');
+    expect(fetchImpl.calls).toHaveLength(0);
+  });
+
+  test('a POST with an unsupported Content-Encoding answers 204, through createApp too', async () => {
+    const fetchImpl = fakeFetch(beacon());
+    const app = createApp({ log: false, clicky: clickyProxy({ fetchImpl }) });
+    const res = await request(app).post('/e9b1e2e71a').set('Host', 'scripture.guide')
+      .set('Content-Type', 'text/plain').set('Content-Encoding', 'bogus').send('abc');
+    expect(res.status).toBe(204);
+    expect(res.text).toBe('');
+    expect(fetchImpl.calls).toHaveLength(0);
   });
 
   test('answers 204 when the upstream fails or times out', async () => {
