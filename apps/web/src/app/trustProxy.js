@@ -1,8 +1,10 @@
-// Express 'trust proxy' for production: Cloudflare edge -> AWS ALB -> nginx-proxy-manager -> app.
-// The ALB and NPM are private addresses, the Cloudflare edge is one of Cloudflare's ranges, so
-// req.ip walks X-Forwarded-For from the right past those hops to the visitor. A hop outside
-// these ranges (traffic that bypassed Cloudflare) stops the walk, so a forged leftmost
-// X-Forwarded-For entry is never used.
+// Express 'trust proxy' for production. Today the chain is CloudFront -> nginx on bom -> app.
+// nginx and the Docker network are private addresses and trusted; CloudFront's ranges are not
+// listed, so req.ip stops at the CloudFront edge address rather than the visitor. Cloudflare's
+// ranges are listed for the planned move to Cloudflare (Cloudflare Tunnel -> nginx -> app), where
+// every hop the app sees is private and the visitor comes from CF-Connecting-IP (see clientIp.js).
+// req.ip walks X-Forwarded-For from the right past trusted hops; the first untrusted hop stops
+// the walk, so a forged leftmost X-Forwarded-For entry is never used.
 //
 // Known gap (X-Real-IP): nginx-proxy-manager sets `real_ip_header X-Real-IP` globally and trusts
 // the ALB, so a visitor who sends their own X-Real-IP has it replace the ALB hop in $remote_addr,

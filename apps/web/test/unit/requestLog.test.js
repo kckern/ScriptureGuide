@@ -55,6 +55,17 @@ test('logs the Cloudflare ray id and the raw X-Forwarded-For chain', async () =>
   expect(JSON.parse(lines[0])).toMatchObject({ cf_ray: '8d1f2e3a4b5c6d7e-SJC', xff: '198.51.100.7, 162.158.10.20' });
 });
 
+test('client_ip is CF-Connecting-IP when the request comes from a private hop', async () => {
+  const lines = [];
+  const app = express();
+  app.use(requestLog({ write: l => lines.push(l) }));
+  app.get('/x', (req, res) => res.send('ok'));
+  await request(app).get('/x').set('CF-Connecting-IP', '203.0.113.9');
+  const rec = JSON.parse(lines[0]);
+  expect(rec.ip).toMatch(/127\.0\.0\.1|::1/);
+  expect(rec.client_ip).toBe('203.0.113.9');
+});
+
 test('bytes is the compressed size on the wire when the response is gzipped', async () => {
   const lines = [];
   const app = express();

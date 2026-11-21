@@ -1,11 +1,14 @@
 // One JSON line per request on stdout, for the container log shipper.
 // Fields: time, msg:'request', method, host, path, status, bytes, duration_ms, format, ua, referer,
-// ip, cf_ray, xff; aborted:true when the client went away before the response finished (status is
-// then null unless the headers had already gone out).
+// ip, client_ip, cf_ray, xff; aborted:true when the client went away before the response finished
+// (status is then null unless the headers had already gone out).
 // bytes counts the body bytes written to the socket (nginx's $body_bytes_sent). Register this before
 // compression() so the count is the compressed size.
+// ip is Express's req.ip (the last untrusted hop); client_ip is the visitor (clientIp.js), which
+// differs only when the request came through the Cloudflare Tunnel with CF-Connecting-IP.
 
 import { writeLine } from '../log.js';
+import { clientIp } from '../clientIp.js';
 
 const SKIP = new Set(['/health', '/healthz']);
 
@@ -47,6 +50,7 @@ export function requestLog({ write = writeLine } = {}) {
         ua: req.headers['user-agent'] ?? null,
         referer: req.headers.referer ?? null,
         ip: req.ip ?? null,
+        client_ip: clientIp(req),
         cf_ray: req.headers['cf-ray'] ?? null,
         xff: req.headers['x-forwarded-for'] ?? null
       };
