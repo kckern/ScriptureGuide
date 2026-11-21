@@ -72,6 +72,8 @@ describe('parseApiPath: errors', () => {
     expect(errorOf('/v1/nrsv/').message).toBe('No reference was given after the version.');
     // Not every piece is a version: read as a reference
     expect(parse('/v1/nrsv.john3')).toMatchObject({ kind: 'passage', reference: 'nrsv.john3' });
+    // A number alone is a verse id, even where it is also a version id (1830)
+    expect(parse('/v1/1830')).toMatchObject({ kind: 'passage', versions: [], reference: '1830' });
   });
 });
 

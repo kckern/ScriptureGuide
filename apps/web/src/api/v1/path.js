@@ -71,9 +71,10 @@ export function parseApiPath(path, versions) {
 
   if (!segs.length) throw new ApiError('unparseable_reference', 'No reference was given.');
   if (segs.length === 1) {
-    // "/nrsv/" or "/nrsv.kjv": versions and nothing to look up in them
+    // "/nrsv/" or "/nrsv.kjv": versions and nothing to look up in them. A number alone is
+    // a verse id ("/1830"), even where a version has that id.
     const pieces = segs[0].split('.').map(piece => piece.split('*')[0]);
-    if (pieces.every(id => id && storedId(id, versions))) throw new ApiError('unparseable_reference', 'No reference was given after the version.');
+    if (!/^\d+$/.test(segs[0]) && pieces.every(id => id && storedId(id, versions))) throw new ApiError('unparseable_reference', 'No reference was given after the version.');
     return { ...base, kind: 'passage', versions: [], reference: segs[0] };
   }
   return {
