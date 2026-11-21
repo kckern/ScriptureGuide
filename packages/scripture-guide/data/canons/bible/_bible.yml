@@ -110,7 +110,7 @@ books:
     chapters: 12
     verses: [18, 26, 22, 16, 20, 12, 29, 17, 18, 20, 10, 14]
     first_verse_id: 17317
-  - key: solomon_s_song
+  - key: song_of_solomon
     order: 22
     chapters: 8
     verses: [17, 17, 11, 16, 16, 13, 13, 14]
