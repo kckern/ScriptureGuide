@@ -243,7 +243,7 @@ Results are in canon order (book, chapter, verse), as the site returns them.
 - Every version, in the database's priority order, with the same version objects as passage responses.
 - `versions` is a reserved path word, like `search` and `random`.
 - Same headers as other 200 responses. It lets a client list and check version ids.
-- `api.` only.
+- `api.` only. The simple hosts return a 400 `versions_not_supported` error, as they do for search and parallel.
 
 ## Simple format hosts
 
