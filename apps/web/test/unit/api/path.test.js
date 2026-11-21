@@ -41,6 +41,11 @@ describe('parseApiPath: errors', () => {
     expect(e).toBeInstanceOf(ApiError);
     expect(e.code).toBe('unknown_translation');
   });
+  test('a translation segment that names no translation', () => {
+    for (const path of ['/v1/../john3', '/v1/.*lds/john3', '/v1/./random']) {
+      expect(errorOf(path)?.code).toBe('unknown_translation');
+    }
+  });
   test('an unsupported api version', () => {
     expect(errorOf('/v2/john3.16').code).toBe('unsupported_api_version');
   });

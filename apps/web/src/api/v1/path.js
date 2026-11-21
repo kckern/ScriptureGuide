@@ -22,7 +22,8 @@ function storedId(id, translations) {
 
 // "nrsv.kjv*lds" → ['NRSV', 'KJV'] in stored case; the "*format" part is layout only
 function translationList(spec, translations) {
-  const ids = spec.split('.').filter(Boolean).map(piece => piece.split('*')[0]);
+  const ids = spec.split('.').map(piece => piece.split('*')[0]).filter(Boolean);
+  if (!ids.length) throw new ApiError('unknown_translation', `"${spec}" names no translation.`);
   return ids.map(id => {
     const stored = storedId(id, translations);
     if (!stored) throw new ApiError('unknown_translation', `There is no translation "${id}".`);
