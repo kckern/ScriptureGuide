@@ -8,6 +8,8 @@ import parallelRepository from '../data/repositories/ParallelRepository.js';
 import { arrayText, splitVerseLines } from '../domain/rules/legacyText.js';
 import { formatReference, slugifyRef, versionImg } from '../domain/rules/legacyReference.js';
 import { defaultVersions } from '../domain/rules/defaultVersions.js';
+import { parseVersionSpec } from '../domain/rules/requestParsing.js';
+import { unknownVersions, versionNote } from '../domain/rules/versionNotice.js';
 
 // A left side with no verses, or one of these years, is an edition: "1830~msg/john1"
 const EDITION_YEARS = ['1830', '1829', '1833', '1853', '1837', '1840', '1841', '1879', '1920', '1981', '2013'];
@@ -325,7 +327,9 @@ export class ParallelService {
     return out;
   }
 
-  async build(q) {
+  // known: the names a version segment may use (VersionRepository.knownVersions). With it the
+  // page gets versionNote, 'There is no version "HBRS". Showing LDS.' or null.
+  async build(q, { known } = {}) {
     const sides = parseSides(q);
     if (!sides) return null;
     const { left, right } = sides;
@@ -444,8 +448,14 @@ export class ParallelService {
     const rightheader = ref2(rightVerses, 'book_title_med');
     const volumeOf = ids => meta2.get(ids[0])?.volume_id;
 
+    // A side's version names nothing the site has: the text shown is a fallback
+    const note = known && versionNote(
+      unknownVersions([...parseVersionSpec(left.ver), ...parseVersionSpec(right.ver)], known),
+      [...new Set([lver, rver])].filter(v => v && v !== 'INDEX'));
+
     return {
       title: `${leftheader} ~ ${rightheader}`,
+      ...(known ? { versionNote: note } : {}),
       lver, rver,
       limg: versionImg(lver, volumeOf(leftids)),
       rimg: versionImg(rver, volumeOf(rightids)),

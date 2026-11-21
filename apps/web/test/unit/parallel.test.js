@@ -263,3 +263,36 @@ describe('ParallelService.build headers', () => {
     expect(page.title).not.toMatch(/\s{2}/);
   });
 });
+
+describe('ParallelService.build: a side naming no version', async () => {
+  const { knownVersions } = await import('../../src/domain/rules/versionNotice.js');
+  const VERSES = { 10: { book_id: 1, book_title: 'Alpha', book_title_short: 'Alp.', book_title_med: 'Alpha', chapter: 2, verse: 1, volume_id: 3 } };
+  const refs = { parse: s => new Reference({ query: s, normalized: s, verseIds: s === 'alp.2.1' ? [10] : [] }) };
+  refs.resolve = async s => refs.parse(s);
+  const repo = {
+    verses: async (ids, version) => (['KJV', 'LDS'].includes(String(version).toUpperCase()) ? ids.map(id => ({ verse_id: id, version: String(version).toUpperCase(), text: 'Word.', book: 'Alpha', chapter: 2, verse: 1 })) : []),
+    indexVerses: async () => [],
+    standinReferences: async () => ({ forward: [], backward: [] }),
+    verseMeta: async ids => ids.filter(id => VERSES[id]).map(id => ({ verse_id: id, ...VERSES[id] })),
+    chapterVerseIds: async () => [10],
+    chapterMaxima: async pairs => pairs.map(p => ({ book_id: p.bookId, chapter: p.chapter, max: 1 })),
+    faxIds: async () => new Set(),
+  };
+  const svc = new ParallelService({ refs, verses: { findBySlug: async () => null }, repo });
+  const known = knownVersions([{ id: 'KJV', volumes: 'ot,nt' }, { id: 'LDS', volumes: 'bom' }, { id: '1830', volumes: 'bom' }]);
+  test('notes it and names the versions shown', async () => {
+    const page = await svc.build('hbrs/alp.2.1~kjv/alp.2.1', { known });
+    expect(page.versionNote).toBe('There is no version "HBRS". Showing LDS and KJV.');
+  });
+  test('an unknown edition on the left is noted too', async () => {
+    expect((await svc.build('zzz~kjv/alp.2.1', { known })).versionNote).toBe('There is no version "ZZZ". Showing LDS and KJV.');
+  });
+  test('known versions, volume words and edition years are not', async () => {
+    expect((await svc.build('kjv/alp.2.1~lds/alp.2.1', { known })).versionNote).toBeNull();
+    expect((await svc.build('1830~kjv/alp.2.1', { known })).versionNote).toBeNull();
+    expect((await svc.build('bom/alp.2.1~1853/alp.2.1', { known })).versionNote).toBeNull();
+  });
+  test('without the version list (the API): no note', async () => {
+    expect((await svc.build('hbrs/alp.2.1~kjv/alp.2.1')).versionNote).toBeUndefined();
+  });
+});

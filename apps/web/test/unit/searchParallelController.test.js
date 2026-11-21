@@ -6,7 +6,8 @@ import { parseRequest } from '../../src/domain/rules/requestParsing.js';
 function setup() {
   const parallel = { build: vi.fn(async q => ({ title: q, rows: [] })) };
   const search = { search: vi.fn(async q => ({ query: q.replace(/\./g, ' '), count: 0, vols: [], rows: [] })) };
-  const ctl = new SearchParallelController(parallel, search);
+  const known = new Set(['KJV']);
+  const ctl = new SearchParallelController(parallel, search, { knownVersions: async () => known });
   const res = { render: vi.fn() };
   const req = (path, { host = 'scripture.guide', query = {} } = {}) =>
     ({ config: parseRequest({ host, path, query }), headers: { host }, originalUrl: path });
@@ -17,7 +18,7 @@ describe('SearchParallelController.dispatch', () => {
   test('a tilde after the first character is a parallel view, version included', async () => {
     const { ctl, parallel, res, req } = setup();
     expect(await ctl.dispatch(req('/kjv/isa.2.1~2ne.12.1'), res)).toBe(true);
-    expect(parallel.build).toHaveBeenCalledWith('kjv/isa.2.1~2ne.12.1');
+    expect(parallel.build).toHaveBeenCalledWith('kjv/isa.2.1~2ne.12.1', { known: new Set(['KJV']) });
     expect(res.render.mock.calls[0][0]).toBe('parallel');
   });
 

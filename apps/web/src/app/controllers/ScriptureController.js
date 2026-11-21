@@ -9,8 +9,8 @@ import { blockVerseIds } from '../../domain/rules/blockIds.js';
 import { RequestBudget } from '../../domain/rules/requestBudget.js';
 import { bookOnlyQuery } from '../../domain/rules/referenceParsing.js';
 import { isEmptyReference } from '../../domain/rules/requestParsing.js';
-import versionRepository from '../../data/repositories/VersionRepository.js';
-import { knownVersions, unknownVersions, shownVersions, versionNote } from '../../domain/rules/versionNotice.js';
+import versionRepository, { knownVersionSet } from '../../data/repositories/VersionRepository.js';
+import { unknownVersions, shownVersions, versionNote } from '../../domain/rules/versionNotice.js';
 
 // Formats whose reference blocks ("meta") name a book given alone (scriptures::loadMetaFromRef)
 const BOOK_ONLY_FORMATS = new Set(['meta']);
@@ -35,10 +35,9 @@ export class ScriptureController {
     this.versions = versions;
   }
 
-  // The names a version segment may use (versionNotice.knownVersions), read once
+  // The names a version segment may use, read once and shared with the parallel page
   knownVersions() {
-    this._known ??= this.versions.findAll().then(knownVersions, err => { this._known = null; throw err; });
-    return this._known;
+    return knownVersionSet(this.versions);
   }
 
   // 'There is no version "HBRS". Showing LDS.' when the version segment names a version the

@@ -45,7 +45,8 @@ const trs = rows.map(r => `
     description: '',
     url: ogUrl || ''
   },
-  body: `
+  body: `${typeof versionNote !== 'undefined' && versionNote ? `
+<div class="versionNote">${h(versionNote)}</div>` : ''}
 		<div id='container'>
 <table class='parallel' id="table_1">
 

@@ -1,5 +1,6 @@
 import parallelService from '../../services/ParallelService.js';
 import searchService from '../../services/SearchService.js';
+import versionRepository from '../../data/repositories/VersionRepository.js';
 import { slugifyRef } from '../../domain/rules/legacyReference.js';
 import { OutputFormat } from '../../domain/enums/OutputFormat.js';
 import { searchVersion, isEmptyReference } from '../../domain/rules/requestParsing.js';
@@ -13,9 +14,10 @@ import { ogImageUrl } from '../../presentation/presenters/HtmlPresenter.js';
 //   - /search/<query> or a reference with no digits: search, limited to the format of the last
 //     version piece; the terms are PHP's $ref ("&" fragments removed), dots read as spaces
 export class SearchParallelController {
-  constructor(parallel = parallelService, search = searchService) {
+  constructor(parallel = parallelService, search = searchService, versions = versionRepository) {
     this.parallel = parallel;
     this.searchService = search;
+    this.versions = versions;
   }
 
   // Returns true when it handled the request.
@@ -27,7 +29,9 @@ export class SearchParallelController {
     const ogImage = ogImageUrl((req.headers.host || 'scripture.guide').replace(/:\d+$/, ''), '/site');
 
     if (config.parallel) {
-      const page = await this.parallel.build(config.reference);
+      // The version list for the unknown-version note; without it the page has no note
+      const known = await this.versions.knownVersions().catch(() => undefined);
+      const page = await this.parallel.build(config.reference, { known });
       if (!page) return false;
       res.render('parallel', { ...page, config, ogUrl, ogImage });
       return true;
