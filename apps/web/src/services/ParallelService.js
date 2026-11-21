@@ -470,6 +470,8 @@ export class ParallelService {
       leftheaderSlug: slugifyRef(leftheader),
       rightheaderSlug: slugifyRef(rightheader),
       swapslug, chslug, fullslug, ischapter,
+      // The sides as read, after the edition swap ("1830~kjv/john.1": left 1830 at john.1)
+      sides: { left: { ver: left.ver, ref: left.ref }, right: { ver: right.ver, ref: right.ref } },
       rows,
     };
   }

@@ -127,6 +127,8 @@ describe('ParallelService.build', () => {
   test('a left side that is not a reference is an edition of the right one', async () => {
     const page = await svc.build('1830~kjv/alp.2.1');
     expect(page.lver).toBe('LDS'); // the fake labels every version but KJV as LDS
+    // the sides as read, after the edition swap: the API checks their versions
+    expect(page.sides).toEqual({ left: { ver: '1830', ref: 'alp.2.1' }, right: { ver: 'kjv', ref: 'alp.2.1' } });
     expect(page.title).toBe('Alpha 2:1 ~ Alpha 2:1');
   });
 });
