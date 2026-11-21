@@ -3,7 +3,7 @@ import { displayReference, blankHeading } from '../../domain/rules/referencePars
 
 import { versionImg, formatReference as referenceFromVerseIds, splitRuns } from '../../domain/rules/legacyReference.js';
 import { isEmptyRange } from '../../domain/rules/blockIds.js';
-import { renderHeadingHtml, renderHeadingFields, RENDERED_HEADING_FIELDS, segmentFormats, escapeHtml, isCompoundLine, isFillerText, subscriptDigits, sectionMarksHtml, readableText } from '../../domain/rules/legacyText.js';
+import { renderHeadingHtml, renderHeadingFields, RENDERED_HEADING_FIELDS, segmentFormats, escapeHtml, isCompoundLine, isFillerText, subscriptDigitsInHtml, sectionMarksHtml, readableText } from '../../domain/rules/legacyText.js';
 import { verseStartsSection } from '../../domain/rules/sectionStart.js';
 import { noteIdsIn, footnotesHtml } from '../../domain/rules/footnotes.js';
 import { FootnoteRepository } from '../../data/repositories/FootnoteRepository.js';
@@ -77,6 +77,7 @@ export class HtmlPresenter {
   // The rendered html with its ｢N｣ footnote markers as the ✱ spans the page script reads
   // (domain/rules/footnotes.js). Without notes (a failed read) the markers are dropped.
   async withFootnotes(html) {
+    html = subscriptDigitsInHtml(html);
     const ids = noteIdsIn(html);
     if (!ids.length) return html;
     let rows = [];
@@ -494,7 +495,7 @@ export class HtmlPresenter {
     const typesByVerse = {};
     for (const h of result.headings) {
       if (h.synthetic || h.preSectionSynthetic || !h.type || h.text == null) continue;
-      (typesByVerse[h.verse_id] ??= {})[h.type] = RENDERED_HEADING_FIELDS.includes(h.type) ? renderHeadingHtml(h.text) : (h.type === 'headnote' ? subscriptDigits(h.text) : h.text);
+      (typesByVerse[h.verse_id] ??= {})[h.type] = RENDERED_HEADING_FIELDS.includes(h.type) ? renderHeadingHtml(h.text) : h.text;
     }
 
     const displayTitle = displayReference(result.reference.normalized, result.reference.verseIds?.length ?? 0);

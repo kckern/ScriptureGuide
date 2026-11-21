@@ -89,6 +89,12 @@ export function subscriptDigits(text) {
   return String(text ?? '').replace(/[\u2080-\u2089]/g, c => `<sub>${c.charCodeAt(0) - 0x2080}</sub>`);
 }
 
+// The same for a whole page body: only text between tags is touched, never an attribute.
+// Study editions write Alma₂ in verse text, headnotes and headings alike.
+export function subscriptDigitsInHtml(html) {
+  return String(html ?? '').replace(/(<[^>]*>)|[\u2080-\u2089]/g, (m, tag) => (tag ? m : `<sub>${m.charCodeAt(0) - 0x2080}</sub>`));
+}
+
 export function renderHeadingHtml(text) {
   return subscriptDigits(String(text ?? '').replace(/\//g, '<br/>'));
 }

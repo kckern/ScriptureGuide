@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
   flattenText, splitVerseLines, arrayText, plainText, plainPassage,
   stemText, transposeRef, baseVersion, highlightSearchTerm, escapeHtml, renderHeadingHtml, segmentFormats, isCompoundLine,
-  sectionMarksHtml, readableText,
+  sectionMarksHtml, readableText, subscriptDigitsInHtml,
 } from '../../src/domain/rules/legacyText.js';
 
 // Fixtures are KJV (public domain) or hand-written.
@@ -204,5 +204,15 @@ describe('readableText', () => {
     expect(readableText('For God so loved the world, that he gave.')).toBe('For God so loved the world, that he gave.');
     expect(readableText('이와 같은 말로 나의 어머니가')).toBe('이와 같은 말로 나의 어머니가');
     expect(readableText('Ἐν ἀρχῇ ἦν ὁ λόγος')).toBe('Ἐν ἀρχῇ ἦν ὁ λόγος');
+  });
+});
+
+describe('subscriptDigitsInHtml', () => {
+  it('converts digits in text, in verses and headnotes alike, never in attributes', () => {
+    expect(subscriptDigitsInHtml('<div title="A₂">[Mormon₂’s heading] x</div>'))
+      .toBe('<div title="A₂">[Mormon<sub>2</sub>’s heading] x</div>');
+  });
+  it('leaves text without subscripts alone', () => {
+    expect(subscriptDigitsInHtml('<p>Alma 5:1</p>')).toBe('<p>Alma 5:1</p>');
   });
 });
