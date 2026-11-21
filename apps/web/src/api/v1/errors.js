@@ -1,4 +1,5 @@
-// Errors the v1 API answers with: a 4xx status and { code, message, suggestion? }.
+// Errors the v1 API answers with: a status (4xx, or 503 when the database fails) and
+// { code, message, suggestion? }.
 export const STATUS = Object.freeze({
   unparseable_reference: 400,
   empty_query: 400,
@@ -13,13 +14,14 @@ export const STATUS = Object.freeze({
   unknown_volume: 404,
   not_in_version: 404,
   unsupported_api_version: 404,
+  service_unavailable: 503,
 });
 
 export class ApiError extends Error {
   constructor(code, message, suggestion = null) {
     super(message);
     this.code = code;
-    this.status = STATUS[code] ?? 400;
+    this.status = STATUS[code] ?? 500;
     this.suggestion = suggestion;
   }
 

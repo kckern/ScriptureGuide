@@ -12,6 +12,7 @@ const passage = {
   parallels: [], links: {},
 };
 const seen = [];
+const logged = [];
 const deps = {
   repo: { versions: async () => new Map([['nrsv', { id: 'NRSV', name: 'NRSV', lang: 'en' }]]) },
   buildPassage: async req => {
@@ -23,6 +24,7 @@ const deps = {
   buildParallel: async () => ({ api: 'v1', rows: [] }),
   buildSearch: async () => ({ api: 'v1', results: [] }),
   pickRandomVerse: async () => 26137,
+  logError: (err, fields) => logged.push({ err, fields }),
   buildVersions: async () => ({ api: 'v1', versions: [{ id: 'NRSV', name: 'NRSV', language: 'en', copyright: null }] }),
 };
 const app = express()
@@ -117,10 +119,20 @@ describe('apiRouter', () => {
     const json = await get('scripture.guide', '/json/nrsv/john3.16');
     expect(json.body.version).toBe('NRSV');
   });
-  test('other failures go to the error handler', async () => {
+  test('other failures are logged and answered as a v1 503, never cached', async () => {
     const res = await get('api.scripture.guide', '/v1/boom');
-    expect(res.status).toBe(500);
-    expect(res.text).toBe('handled: database down');
+    expect(res.status).toBe(503);
+    expect(res.body).toEqual({ api: 'v1', error: { code: 'service_unavailable', message: 'The scripture database is not answering. Try again shortly.' } });
+    expect(res.headers['cache-control']).toBe('no-store');
+    expect(res.headers['retry-after']).toBe('30');
+    expect(res.headers['x-api-version']).toBe('1');
+    expect(logged.at(-1)).toMatchObject({ err: { message: 'database down' }, fields: { where: 'api', path: '/v1/boom' } });
+    const txt = await get('txt.scripture.guide', '/boom');
+    expect(txt.status).toBe(503);
+    expect(txt.text).toBe('The scripture database is not answering. Try again shortly.\n');
+  });
+  test('an error code with no status is a 500', () => {
+    expect(new ApiError('no_such_code', 'x').status).toBe(500);
   });
   test('only GET and HEAD', async () => {
     expect((await request(app).post('/v1/nrsv/john3.16').set('Host', 'api.scripture.guide')).status).toBe(418);

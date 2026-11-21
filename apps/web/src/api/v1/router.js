@@ -11,6 +11,7 @@ import { buildSearch } from './search.js';
 import { pickRandomVerse } from './random.js';
 import { buildVersions } from './versions.js';
 import { renderSimple, renderError, CONTENT_TYPES } from './render.js';
+import { logError } from '../../app/log.js';
 
 // Subdomain → body kind (render.js)
 const HOSTS = Object.freeze({
@@ -76,10 +77,16 @@ export function apiRouter(deps = DEFAULTS) {
       }
       const body = kind === 'api' ? JSON.stringify(data) : renderSimple(kind, data);
       send(req, res, kind, body, cache);
-    } catch (err) {
-      if (!(err instanceof ApiError)) return next(err);
+    } catch (caught) {
+      let err = caught;
+      // Anything else (the database down, a bug) is logged and still answered in the v1 shape
+      if (!(err instanceof ApiError)) {
+        (deps.logError ?? logError)(err, { where: 'api', method: req.method, path: req.originalUrl });
+        err = new ApiError('service_unavailable', 'The scripture database is not answering. Try again shortly.');
+      }
       res.status(err.status);
-      send(req, res, kind, renderError(kind, err), CACHE_ERROR);
+      if (err.status >= 500) res.set('Retry-After', '30');
+      send(req, res, kind, renderError(kind, err), err.status >= 500 ? CACHE_NONE : CACHE_ERROR);
     }
   });
   return router;
