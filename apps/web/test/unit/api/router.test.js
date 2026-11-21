@@ -9,7 +9,11 @@ const passage = {
   api: 'v1', query: 'john3.16',
   versions: [{ id: 'NRSV', name: 'NRSV', language: 'en', copyright: null }],
   reference: [{ label: 'John 3:16' }],
-  passages: [{ headings: { NRSV: null }, verses: [{ id: 26137, book: 'John', chapter: 3, verse: 16, texts: { NRSV: 'For God so loved the world.' } }] }],
+  passages: [{
+    headings: { NRSV: null },
+    blocks: { NRSV: [{ type: 'paragraph', style: null, pieces: [{ id: 26137, verse: 16, start: true, runs: [{ text: 'For God so loved the world.' }] }] }] },
+    verses: [{ id: 26137, book: 'John', chapter: 3, verse: 16, texts: { NRSV: 'For God so loved the world.' } }],
+  }],
   parallels: [], links: {},
 };
 const seen = [];
