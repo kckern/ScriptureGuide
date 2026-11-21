@@ -47,12 +47,15 @@ export class ApiRepository {
     );
   }
 
-  // The section heading in force at a verse: the last one at or before it in the same book
+  // The section heading in force at a verse: the last one at or before it in the same book.
+  // When one verse has several heading rows the later one (higher seq) is the narrower heading
+  // next to the text (ABWRKS 33825: "The Words and Acts of Alma the High Priest", seq 19, then
+  // "The Words of Alma and of Amulek at Ammonihah", seq 20). Rows without seq have no order.
   async headingAt(verseId, bookId, version) {
     const [row] = await this.db.query(
       `SELECT h.text FROM scripture_headings h JOIN lds_scriptures_verses v ON v.verse_id = h.verse_id
        WHERE h.version = ? AND h.type = 'heading' AND v.book_id = ? AND h.verse_id <= ?
-       ORDER BY h.verse_id DESC, h.seq LIMIT 1`,
+       ORDER BY h.verse_id DESC, h.seq DESC LIMIT 1`,
       [version, bookId, verseId]
     );
     return row?.text ?? null;
