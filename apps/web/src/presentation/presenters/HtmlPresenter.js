@@ -3,7 +3,7 @@ import { displayReference, blankHeading } from '../../domain/rules/referencePars
 
 import { versionImg, formatReference as referenceFromVerseIds, splitRuns } from '../../domain/rules/legacyReference.js';
 import { isEmptyRange } from '../../domain/rules/blockIds.js';
-import { renderHeadingHtml, renderHeadingFields, RENDERED_HEADING_FIELDS, segmentFormats, escapeHtml, isCompoundLine, isFillerText, sectionMarksHtml } from '../../domain/rules/legacyText.js';
+import { renderHeadingHtml, renderHeadingFields, RENDERED_HEADING_FIELDS, segmentFormats, escapeHtml, isCompoundLine, isFillerText, sectionMarksHtml, readableText } from '../../domain/rules/legacyText.js';
 import { verseStartsSection } from '../../domain/rules/sectionStart.js';
 
 // versionImg takes lds_scriptures_volumes.volume_id; Reference.volume is a volume code.
@@ -99,7 +99,7 @@ export class HtmlPresenter {
     // Build description: "{title}— {summary/heading} {verse text...}". The chapter summary leads
     // only for a whole chapter; a verse or verse range leads with its own text.
     let description = title;
-    const descriptor = result.config?._subChapter ? null : (ch?.summary || ch?.heading);
+    const descriptor = result.config?._subChapter ? null : readableText(ch?.summary || ch?.heading || '');
     if (descriptor) description += '— ' + descriptor;
     // Append verse text until we reach ~1000 chars
     const prefix = descriptor ? ' ' : '— ';
@@ -108,7 +108,9 @@ export class HtmlPresenter {
     const absent = absentNote(result.verses, result.config.version || 'KJV', result.config._versionTitle, data.title);
     if (absent) description += prefix + absent;
     for (const v of absent ? [] : result.verses) {
-      const plain = v.text.replace(/^[§¶]+/, '').replace(/｟([^｠]*)｠/g, '$1').replace(/\s+/g, ' ').trim();
+      // Plain reading text: no markers, inline marks or "/" line breaks (legacyText readableText)
+      const plain = readableText(v.text);
+      if (!plain) continue;
       description += (addedVerses ? ' ' : prefix) + plain;
       addedVerses = true;
       if (description.length >= 1000) break;

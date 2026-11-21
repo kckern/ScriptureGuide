@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
   flattenText, splitVerseLines, arrayText, plainText, plainPassage,
   stemText, transposeRef, baseVersion, highlightSearchTerm, escapeHtml, renderHeadingHtml, segmentFormats, isCompoundLine,
-  sectionMarksHtml,
+  sectionMarksHtml, readableText,
 } from '../../src/domain/rules/legacyText.js';
 
 // Fixtures are KJV (public domain) or hand-written.
@@ -181,5 +181,28 @@ describe('sectionMarksHtml', () => {
   it('leaves text without marks alone', () => {
     expect(sectionMarksHtml('By David.')).toBe('By David.');
     expect(sectionMarksHtml('')).toBe('');
+  });
+});
+
+// Verse text as plain reading text, for link previews (og:description, the og card): no markers,
+// "/" line breaks and "§" between a label and a superscription become spaces.
+describe('readableText', () => {
+  it('poetry: markers and line breaks become single spaces', () => {
+    expect(readableText('§Of David.¶▼Bless the Lord, O my soul,/_and all that is within me,/_bless his holy name.'))
+      .toBe('Of David. Bless the Lord, O my soul, and all that is within me, bless his holy name.');
+  });
+  it('a label and a superscription', () => {
+    expect(readableText('Book 4 (Psalms 90-106)§A prayer of Moses, the man of God.¶▼O Lord,/_you'))
+      .toBe('Book 4 (Psalms 90-106) A prayer of Moses, the man of God. O Lord, you');
+  });
+  it('inline marks keep their text; struck text, tags and compound lines go', () => {
+    expect(readableText('§¶｟In｠ the 〔beginning〕 「God」 {created} ~~old~~the <i>heaven</i>.')).toBe('In the beginning God created the heaven.');
+    expect(readableText('*')).toBe('');
+    expect(readableText('Bless ►the◄ Lord▲‾')).toBe('Bless the Lord');
+  });
+  it('plain text is unchanged, other scripts too', () => {
+    expect(readableText('For God so loved the world, that he gave.')).toBe('For God so loved the world, that he gave.');
+    expect(readableText('이와 같은 말로 나의 어머니가')).toBe('이와 같은 말로 나의 어머니가');
+    expect(readableText('Ἐν ἀρχῇ ἦν ὁ λόγος')).toBe('Ἐν ἀρχῇ ἦν ὁ λόγος');
   });
 });

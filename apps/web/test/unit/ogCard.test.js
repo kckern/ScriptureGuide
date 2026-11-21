@@ -166,6 +166,11 @@ describe('card content', () => {
     expect(card.badge).toBe('ldskjv');
   });
 
+  test('poetry shows as plain text: no markers, line breaks as spaces', () => {
+    const result = nephi({ text: '§Of David.¶▼Bless the Lord, O my soul,/_and all that is within me,/_bless his holy name.' });
+    expect(cardContent(result, {}, 'Psalms 103:1').body).toBe('Of David. Bless the Lord, O my soul, and all that is within me, bless his holy name.');
+  });
+
   test('a whole chapter shows its summary', () => {
     const result = nephi({ subChapter: false });
     const card = cardContent(result, {}, '1 Nephi 5');
@@ -231,6 +236,13 @@ describe('link-preview tags', () => {
     const req = { headers: { host: 'scripture.guide' }, path: '/lds/1.ne.5.3' };
     const meta = new HtmlPresenter()._buildOgMeta(nephi(), {}, '1 Nephi 5:3', req);
     expect(meta.image).toBe('https://scripture.guide/og/lds/1.ne.5.3.jpg');
+  });
+
+  test('og:description is plain text: no markers, ｟｠ marks or "/" line breaks', () => {
+    const req = { headers: { host: 'scripture.guide' }, path: '/nrsv/ps.103.1' };
+    const verse = '§Of David.¶▼Bless the ｟Lord｠, O my soul,/_and all that is within me,/_bless his holy name.';
+    const meta = new HtmlPresenter()._buildOgMeta(nephi({ text: verse }), {}, 'Psalms 103:1', req);
+    expect(meta.description).toBe('Psalms 103:1— Of David. Bless the Lord, O my soul, and all that is within me, bless his holy name.');
   });
 
   test('the layout declares a 1200×630 JPEG and a large Twitter card', async () => {

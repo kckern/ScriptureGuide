@@ -11,6 +11,7 @@ import satori from 'satori';
 import { Resvg } from '@resvg/resvg-js';
 import opentype from 'opentype.js';
 import jpeg from 'jpeg-js';
+import { readableText } from '../../domain/rules/legacyText.js';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const ASSETS = path.resolve(here, '../../../assets/og');
@@ -212,12 +213,9 @@ export function renderCard({ title, body, badge = null }) {
   ]));
 }
 
-// Plain verse text: no §¶ section markers, ｟…｠ brackets kept as their text, one space between words.
-export const plainVerse = text => String(text || '')
-  .replace(/[§¶]+/g, ' ')
-  .replace(/｟([^｠]*)｠/g, '$1')
-  .replace(/\s+/g, ' ')
-  .trim();
+// Plain verse text: no markers or line breaks, inline marks kept as their text (legacyText
+// readableText, as og:description)
+export const plainVerse = text => readableText(text);
 
 // What a passage card shows: its title, the edition badge name (as og:image used) and the body,
 // which for a verse or range is its text and for a whole chapter the chapter summary, else its

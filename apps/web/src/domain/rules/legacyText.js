@@ -146,6 +146,24 @@ export function sectionMarksHtml(text) {
   return String(text ?? '').replace(/^§+|§+$/gu, '').replace(/§+/gu, '<br/>');
 }
 
+// Verse text as plain reading text, for link previews (og:description and the og card): the
+// lines of the verse (split at markers and "/" line breaks, as the page splits them) joined by
+// spaces, without tags, struck text, footnote numbers, the brackets of inline marks (their text
+// stays) or any marker left (§ between a label and a superscription, ▼ ► ◄ ▲ ‾ _). Unlike
+// flattenText it keeps every script.
+export function readableText(text) {
+  return splitVerseLines(stripTags(text ?? ''))
+    .filter(line => !isCompoundLine(line))
+    .map(line => line
+      .replace(/~~(.*?)~~/g, '')
+      .replace(/｢\d+｣/gu, '')
+      .replace(/[｟｠「」〔〕《》⦅⦆{}]/gu, '')
+      .replace(/[§¶▼►◄▲‾◤↪▫_]/gu, ' '))
+    .join(' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
 // Strip a "*FMT" suffix: "NIV*KJV" → "NIV".
 export function baseVersion(ver) {
   return String(ver ?? '').replace(/\*.*$/, '');
