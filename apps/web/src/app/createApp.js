@@ -61,7 +61,8 @@ export function createApp({ log = config.env !== 'test' } = {}) {
   // Cookies (preferences are client cookies; there are no server-side sessions)
   app.use(cookieParser());
 
-  // Static files
+  // Static files. They come before the API router on purpose: every host serves them, so
+  // api.scripture.guide/SKILL.md (the docs the API index links) is the file, not a lookup.
   app.use(publicStatic());
   app.use(privacyPolicy());
 
