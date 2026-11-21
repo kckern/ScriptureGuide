@@ -29,8 +29,8 @@ const CACHE_NONE = 'no-store';
 export function hostKind(subdomain, path) {
   const kind = HOSTS[String(subdomain || '').toLowerCase()];
   if (kind) return { kind, path };
-  const m = String(path).match(/^\/(api|json)(\/.*)$/i);
-  return m ? { kind: SHORTCUTS[m[1].toLowerCase()], path: m[2] } : null;
+  const m = String(path).match(/^\/(api|json)(\/.*|)$/i);
+  return m ? { kind: SHORTCUTS[m[1].toLowerCase()], path: m[2] || '/' } : null;
 }
 
 function send(req, res, kind, body, cacheControl) {

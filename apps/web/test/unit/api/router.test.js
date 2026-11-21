@@ -43,6 +43,11 @@ describe('hostKind', () => {
     expect(hostKind('www', '/api/john3.16')).toEqual({ kind: 'api', path: '/john3.16' });
     expect(hostKind('www', '/john3.16')).toBeNull();
   });
+  test('the shortcuts without a trailing slash are the root', () => {
+    expect(hostKind('www', '/api')).toEqual({ kind: 'api', path: '/' });
+    expect(hostKind('www', '/JSON')).toEqual({ kind: 'json', path: '/' });
+    expect(hostKind('www', '/apis/john3.16')).toBeNull();
+  });
 });
 
 describe('apiRouter', () => {
