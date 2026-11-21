@@ -25,6 +25,12 @@
 //   The first block has none (the chapter heading is above it). The heads are made with their
 //   blocks, before they are drawn, so they never push text down.
 // - Below 700px wide, or with the preference off, the CSS shows the blocks as one plain column.
+//
+// Page keys: PageDown and Space scroll to the top of the next block, PageUp and Shift+Space to
+// the top of the previous one, the place each block is sized for. The browser keeps the key
+// when the columns are off, no block is within one window height in that direction, Ctrl, Alt
+// or Meta is held, the key goes to a form field, or a popup (preferences, featherlight, the
+// versions box, the paste box) is open.
 (function () {
   var MIN_WIDTH = 700; // matches the @media rule in style.css
   var GAP = 10; // px kept clear above the toolbar
@@ -346,7 +352,60 @@
     timer = setTimeout(layout, 120);
   }
 
-  window.SGColumns = { layout: layout, partition: partition, rangeLabel: rangeLabel };
+  var PAGE_SLACK = 4; // px: a block's top this close to the scroll position is the current block
+
+  // Where the page keys scroll to: the top of the next block (direction 1) or the previous one
+  // (-1), given the blocks' document tops in order; null when there is none within viewHeight.
+  function pageTarget(tops, scrollY, viewHeight, direction) {
+    var t = null;
+    for (var i = 0; i < tops.length; i++) {
+      if (direction > 0 && tops[i] > scrollY + PAGE_SLACK) { t = tops[i]; break; }
+      if (direction < 0 && tops[i] < scrollY - PAGE_SLACK) t = tops[i];
+    }
+    if (t === null || Math.abs(t - scrollY) > viewHeight) return null;
+    return t;
+  }
+
+  function shown(el) { return !!el && getComputedStyle(el).display !== 'none'; }
+
+  // A popup or overlay over the page: the keys are its own
+  function overlayOpen() {
+    var panel = document.getElementById('sg_prefs_panel');
+    if (panel && panel.classList.contains('open')) return true;
+    if (document.querySelector('.featherlight')) return true;
+    return shown(document.querySelector('.versionsbox')) || shown(document.getElementById('pastebin'));
+  }
+
+  function isField(el) {
+    if (!el || !el.tagName) return false;
+    return /^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName) || el.isContentEditable || (el.closest && !!el.closest('[contenteditable=""],[contenteditable="true"]'));
+  }
+
+  function onKey(e) {
+    var key = e.key;
+    var space = key === ' ' || key === 'Spacebar';
+    var dir = key === 'PageDown' ? 1 : key === 'PageUp' ? -1 : space ? (e.shiftKey ? -1 : 1) : 0;
+    if (!dir || e.defaultPrevented || e.ctrlKey || e.altKey || e.metaKey || e.isComposing) return;
+    var target = e.target;
+    if (isField(target)) return;
+    // Space on a button presses it
+    if (space && target.closest && target.closest('button,[role="button"],summary')) return;
+    if (!active() || overlayOpen()) return;
+    var blocks = document.querySelectorAll('.vcols');
+    var tops = [];
+    for (var i = 0; i < blocks.length; i++) {
+      var r = blocks[i].getBoundingClientRect();
+      if (r.height) tops.push(r.top + window.scrollY);
+    }
+    tops.sort(function (a, b) { return a - b; });
+    var top = pageTarget(tops, window.scrollY, window.innerHeight, dir);
+    if (top === null) return;
+    e.preventDefault();
+    window.scrollTo({ top: top, behavior: 'auto' });
+  }
+
+  window.SGColumns = { layout: layout, partition: partition, rangeLabel: rangeLabel, pageTarget: pageTarget };
+  document.addEventListener('keydown', onKey);
   window.addEventListener('resize', later);
   if (document.fonts) {
     if (document.fonts.addEventListener) document.fonts.addEventListener('loadingdone', layout);
