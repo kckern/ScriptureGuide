@@ -675,8 +675,22 @@ html:not(.sg-one-column) .vcols p.prose {
         justify-content: center;
         text-indent: 0;
         visibility: hidden;
+        z-index: 1;
     }
-    html:not(.sg-one-column) .vcols p.vstart-r .copyprose {
+    /* The margin beside every line of the verse is part of its hover area, so the pointer can
+       leave any line sideways and slide up to the button. An empty strip as wide as the button's
+       slot and as tall as the verse, under the button so clicks still reach it. */
+    html:not(.sg-one-column) .vcols p.prose > div::after {
+        content: '';
+        position: absolute;
+        top: 0;
+        bottom: 0;
+        left: 100%;
+        width: 1.1em;
+        z-index: 0;
+    }
+    html:not(.sg-one-column) .vcols p.vstart-r .copyprose,
+    html:not(.sg-one-column) .vcols p.vstart-r.prose > div::after {
         width: 1.5em;
     }
     html:not(.sg-one-column) .vcols p.prose > div:hover .copyprose,
