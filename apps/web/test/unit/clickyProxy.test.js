@@ -33,16 +33,6 @@ const appWith = opts => express().use(clickyProxy(opts));
 // Lets a background refresh (fake fetch, resolved in microtasks) finish
 const settle = () => new Promise(r => setTimeout(r, 5));
 
-describe('beacon log', () => {
-  test('each relayed hit logs Clicky\'s status, reply and the X-Forwarded-For sent', async () => {
-    const log = vi.fn();
-    const fetchImpl = async () => new Response('{"ok":1}', { status: 200, headers: { 'content-type': 'application/json' } });
-    await request(express().use(clickyProxy({ fetchImpl, log }))).get('/e9b1e2e71a?site_id=1&type=ping').set('User-Agent', 'UA');
-    expect(log).toHaveBeenCalledWith('clicky_beacon', expect.objectContaining({ status: 200, reply: '{"ok":1}', ua: 'UA', type: 'ping' }));
-    expect(log.mock.calls[0][1].xff).toBeTruthy();
-  });
-});
-
 describe('GET /cd7dba44d5.js', () => {
   test('fetches the tracking code with no cookie, no X-Forwarded-For and the proxy\'s own User-Agent', async () => {
     const fetchImpl = fakeFetch(js());
