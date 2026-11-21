@@ -80,6 +80,8 @@ export function apiRouter(overrides = {}) {
     const target = hostKind(req.subdomain, req.path);
     if (!target || PASS.has(req.path)) return next();
     const { kind } = target;
+    // The request log's format field: api, json, yaml, markdown or text
+    req.outputFormat = kind;
     // Every request served here is counted, the index and usage hints too. A failing check is
     // logged and the request goes on as allowed.
     let decision = null;

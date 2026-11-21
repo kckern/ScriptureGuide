@@ -163,3 +163,13 @@ describe('one access check shared by the API and the website', () => {
     expect(calls).toEqual([{ scope: 'api', path: '/v1/versions' }, { scope: 'html', path: '/nrsv/john.3.16' }]);
   });
 });
+
+describe('request log lines for the API', () => {
+  test('format is the host\'s body kind, and caller and tier are set', async () => {
+    const logged = createApp({ log: true, access: createAccess({ mode: 'observe' }) });
+    for (const host of ['api', 'json', 'yml', 'md', 'txt']) await request(logged).get('/nrsv/john3.16').set('Host', `${host}.scripture.guide`);
+    const requests = lines.filter(l => l.msg === 'request' && l.path === '/nrsv/john3.16');
+    expect(requests.map(l => l.format)).toEqual(['api', 'json', 'yaml', 'markdown', 'text']);
+    expect(requests.every(l => l.tier === 'anonymous' && /^ip6?:/.test(l.caller))).toBe(true);
+  });
+});
