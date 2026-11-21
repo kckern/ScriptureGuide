@@ -10,7 +10,7 @@ import { buildParallel } from './parallel.js';
 import { buildSearch } from './search.js';
 import { pickRandomVerse } from './random.js';
 import { buildVersions } from './versions.js';
-import { renderSimple, renderError, CONTENT_TYPES } from './render.js';
+import { renderSimple, renderError, renderUsage, CONTENT_TYPES } from './render.js';
 import { logError } from '../../app/log.js';
 
 // Subdomain → body kind (render.js)
@@ -24,6 +24,15 @@ const PASS = new Set(['/health', '/healthz', '/build-info', '/favicon.ico', '/ro
 const CACHE_OK = 'public, max-age=86400, s-maxage=604800, stale-while-revalidate=86400';
 const CACHE_ERROR = 'public, max-age=300';
 const CACHE_NONE = 'no-store';
+
+// What api.scripture.guide/ and /v1/ answer
+const API_INDEX = JSON.stringify({
+  api: 'v1',
+  docs: 'https://scripture.guide/SKILL.md',
+  versions: 'https://api.scripture.guide/v1/versions',
+  example: 'https://api.scripture.guide/v1/john3.16',
+});
+const API_ROOT = /^\/(v1\/?)?$/i;
 
 // { kind, path } for a request this router serves, else null
 export function hostKind(subdomain, path) {
@@ -56,6 +65,11 @@ export function apiRouter(deps = DEFAULTS) {
     const target = hostKind(req.subdomain, req.path);
     if (!target || PASS.has(req.path)) return next();
     const { kind } = target;
+    if (kind === 'api' && API_ROOT.test(target.path)) return send(req, res, kind, API_INDEX, CACHE_OK);
+    if (kind !== 'api' && target.path === '/') {
+      const host = HOSTS[String(req.subdomain).toLowerCase()] ? String(req.subdomain).toLowerCase() : kind;
+      return send(req, res, kind, renderUsage(kind, host), CACHE_OK);
+    }
     try {
       const versions = await deps.repo.versions();
       const parsed = parseApiPath(target.path, versions);

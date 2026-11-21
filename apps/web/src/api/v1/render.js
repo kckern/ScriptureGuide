@@ -60,3 +60,17 @@ export function renderError(kind, err) {
     default: return `${err.message}\n`;
   }
 }
+
+// What a simple host's root (/) answers: how to use it, in its own format. host is the
+// subdomain the request came in on (txt or plain, md or markdown, ...).
+export function renderUsage(kind, host) {
+  const usage = `https://${host}.scripture.guide/<version>/<reference>`;
+  const example = `https://${host}.scripture.guide/nrsv/john3.16`;
+  switch (kind) {
+    case 'json': return JSON.stringify({ usage, example });
+    case 'yaml': return dumpYaml({ usage, example });
+    case 'markdown': return `Usage: \`${usage}\`, e.g. <${example}>\n`;
+    case 'text': return `Usage: ${usage}, e.g. ${example}\n`;
+    default: throw new Error(`unknown simple format ${kind}`);
+  }
+}

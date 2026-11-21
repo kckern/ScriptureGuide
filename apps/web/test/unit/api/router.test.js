@@ -143,4 +143,25 @@ describe('apiRouter', () => {
     expect((await request(app).post('/v1/nrsv/john3.16').set('Host', 'api.scripture.guide')).status).toBe(418);
     expect((await request(app).head('/v1/nrsv/john3.16').set('Host', 'api.scripture.guide')).status).toBe(200);
   });
+  test('the api root is an index', async () => {
+    const index = { api: 'v1', docs: 'https://scripture.guide/SKILL.md', versions: 'https://api.scripture.guide/v1/versions', example: 'https://api.scripture.guide/v1/john3.16' };
+    for (const [host, path] of [['api.scripture.guide', '/'], ['api.scripture.guide', '/v1'], ['api.scripture.guide', '/v1/'], ['scripture.guide', '/api']]) {
+      const res = await get(host, path);
+      expect(res.status).toBe(200);
+      expect(res.body).toEqual(index);
+      expect(res.headers['cache-control']).toBe('public, max-age=86400, s-maxage=604800, stale-while-revalidate=86400');
+    }
+  });
+  test('a simple host root is a usage hint in its format', async () => {
+    const txt = await get('txt.scripture.guide', '/');
+    expect(txt.status).toBe(200);
+    expect(txt.text).toBe('Usage: https://txt.scripture.guide/<version>/<reference>, e.g. https://txt.scripture.guide/nrsv/john3.16\n');
+    expect((await get('plain.scripture.guide', '/')).text).toMatch(/^Usage: https:\/\/plain\.scripture\.guide\//);
+    expect((await get('json.scripture.guide', '/')).body).toEqual({ usage: 'https://json.scripture.guide/<version>/<reference>', example: 'https://json.scripture.guide/nrsv/john3.16' });
+    expect((await get('scripture.guide', '/json')).body.usage).toBe('https://json.scripture.guide/<version>/<reference>');
+    expect((await get('yml.scripture.guide', '/')).text).toBe('usage: https://yml.scripture.guide/<version>/<reference>\nexample: https://yml.scripture.guide/nrsv/john3.16\n');
+    const md = await get('md.scripture.guide', '/');
+    expect(md.headers['content-type']).toMatch(/text\/markdown/);
+    expect(md.text).toBe('Usage: `https://md.scripture.guide/<version>/<reference>`, e.g. <https://md.scripture.guide/nrsv/john3.16>\n');
+  });
 });

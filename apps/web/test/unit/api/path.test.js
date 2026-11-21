@@ -65,6 +65,14 @@ describe('parseApiPath: errors', () => {
   test('nothing to look up', () => {
     expect(errorOf('/v1').code).toBe('unparseable_reference');
   });
+  test('a version with no reference after it', () => {
+    for (const path of ['/v1/nrsv/', '/nrsv', '/v1/html/NRSV.kjv/']) {
+      expect(errorOf(path)).toMatchObject({ code: 'unparseable_reference', status: 400 });
+    }
+    expect(errorOf('/v1/nrsv/').message).toBe('No reference was given after the version.');
+    // Not every piece is a version: read as a reference
+    expect(parse('/v1/nrsv.john3')).toMatchObject({ kind: 'passage', reference: 'nrsv.john3' });
+  });
 });
 
 describe('parseApiPath: parallel', () => {
