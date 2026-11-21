@@ -3,6 +3,7 @@ import express from 'express';
 import request from 'supertest';
 import { apiRouter, hostKind } from '../../../src/api/v1/router.js';
 import { ApiError, isDatabaseError } from '../../../src/api/v1/errors.js';
+import { createAccess } from '../../../src/app/access/access.js';
 
 const passage = {
   api: 'v1', query: 'john3.16',
@@ -228,17 +229,28 @@ describe('apiRouter access check', () => {
     expect(access.calls).toHaveLength(2);
   });
 
-  test('allowed: the answer carries the RateLimit headers, success and error alike', async () => {
+  test('RateLimit headers only on answers no cache keeps: a cached one would show one caller\'s numbers to all', async () => {
     const access = fake(false);
     const { app: a } = appWith(access);
     const ok = await request(a).get('/v1/nrsv/john3.16').set('Host', 'api.scripture.guide');
     expect(ok.status).toBe(200);
-    expect(ok.headers['ratelimit-policy']).toBe(HEADERS['RateLimit-Policy']);
-    expect(ok.headers.ratelimit).toBe(HEADERS.RateLimit);
-    expect(ok.headers['retry-after']).toBeUndefined();
-    const err = await request(a).get('/v1/jon3.16').set('Host', 'api.scripture.guide');
-    expect(err.status).toBe(404);
-    expect(err.headers.ratelimit).toBe(HEADERS.RateLimit);
+    expect(ok.headers['cache-control']).toMatch(/^public/);
+    expect(ok.headers['ratelimit-policy']).toBeUndefined();
+    expect(ok.headers.ratelimit).toBeUndefined();
+    const notFound = await request(a).get('/v1/jon3.16').set('Host', 'api.scripture.guide');
+    expect(notFound.status).toBe(404);
+    expect(notFound.headers.ratelimit).toBeUndefined();
+    expect((await request(a).get('/v1').set('Host', 'api.scripture.guide')).headers.ratelimit).toBeUndefined();
+    const random = await request(a).get('/v1/random').set('Host', 'api.scripture.guide');
+    expect(random.headers['cache-control']).toBe('no-store');
+    expect(random.headers['ratelimit-policy']).toBe(HEADERS['RateLimit-Policy']);
+    expect(random.headers.ratelimit).toBe(HEADERS.RateLimit);
+    expect(random.headers['retry-after']).toBeUndefined();
+    for (const path of ['/v1/bug', '/v1/boom']) {
+      const res = await request(a).get(path).set('Host', 'api.scripture.guide');
+      expect(res.headers['cache-control']).toBe('no-store');
+      expect(res.headers.ratelimit, path).toBe(HEADERS.RateLimit);
+    }
     expect(access.calls.every(c => c.scope === 'api')).toBe(true);
   });
 
@@ -267,11 +279,12 @@ describe('apiRouter access check', () => {
     expect(res.headers['ratelimit-policy']).toBeUndefined();
   });
 
-  test('deps are merged over the defaults: no access dep still checks', async () => {
+  test('deps are merged over the defaults', async () => {
+    // Only these deps: the rest (buildVersions, buildSearch, …) are the defaults
     const a = express()
       .use((req, res, next) => { req.subdomain = req.headers.host.split('.')[0]; next(); })
-      .use(apiRouter({ ...deps }));
-    const res = await request(a).get('/v1/nrsv/john3.16').set('Host', 'api.scripture.guide');
+      .use(apiRouter({ repo: deps.repo, buildPassage: deps.buildPassage, pickRandomVerse: deps.pickRandomVerse, access: createAccess({ mode: 'observe' }) }));
+    const res = await request(a).get('/v1/random').set('Host', 'api.scripture.guide');
     expect(res.status).toBe(200);
     expect(res.headers['ratelimit-policy']).toBe('"anonymous";q=60;w=60');
   });

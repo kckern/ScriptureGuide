@@ -26,6 +26,8 @@ vi.mock('../../../src/data/db/connection.js', () => ({
 
 const { createApp } = await import('../../../src/app/createApp.js');
 const { setLogWriter } = await import('../../../src/app/log.js');
+const { createAccess } = await import('../../../src/app/access/access.js');
+const { TIERS } = await import('../../../src/app/access/policy.js');
 const app = createApp({ log: false });
 const get = (host, path) => request(app).get(path).set('Host', host);
 
@@ -101,13 +103,46 @@ describe('v1 through createApp', () => {
 });
 
 describe('access through createApp', () => {
-  test('an api request carries RateLimit headers; observe mode never refuses a burst', async () => {
+  test('observe: a burst past the limit is never refused, and is logged', async () => {
+    const observed = createApp({ log: false, access: createAccess({ mode: 'observe' }) });
     let last;
-    for (let i = 0; i < 70; i++) last = await get('api.scripture.guide', '/v1/versions');
+    for (let i = 0; i < 70; i++) last = await request(observed).get('/v1/versions').set('Host', 'api.scripture.guide');
     expect(last.status).toBe(200);
-    expect(last.headers['ratelimit-policy']).toBe('"anonymous";q=60;w=60');
-    expect(last.headers.ratelimit).toMatch(/^"anonymous";r=0;t=\d+$/);
+    // A cached answer: no RateLimit headers, or the cache would hand one caller's numbers to all
+    expect(last.headers['ratelimit-policy']).toBeUndefined();
     expect(lines.some(l => l.msg === 'rate_limit' && l.scope === 'api' && l.refused === false)).toBe(true);
+  });
+
+  test('an answer no cache keeps (a 503) carries the RateLimit headers', async () => {
+    const observed = createApp({ log: false, access: createAccess({ mode: 'observe' }) });
+    db.fail = true;
+    try {
+      const res = await request(observed).get('/v1/nrsv/john3.16').set('Host', 'api.scripture.guide');
+      expect(res.status).toBe(503);
+      expect(res.headers['cache-control']).toBe('no-store');
+      expect(res.headers['ratelimit-policy']).toBe('"anonymous";q=60;w=60');
+      expect(res.headers.ratelimit).toMatch(/^"anonymous";r=59;t=\d+$/);
+    } finally {
+      db.fail = false;
+    }
+  });
+
+  test('enforce: over the limit is a 429 rate_limited, never cached', async () => {
+    const enforced = createApp({ log: false, access: createAccess({ mode: 'enforce', tiers: { ...TIERS, anonymous: { limit: 2, windowMs: 60_000 } } }) });
+    const statuses = [];
+    let res;
+    for (let i = 0; i < 3; i++) {
+      res = await request(enforced).get('/v1/nrsv/john3.16').set('Host', 'api.scripture.guide');
+      statuses.push(res.status);
+    }
+    expect(statuses).toEqual([200, 200, 429]);
+    expect(res.body).toEqual({ api: 'v1', error: { code: 'rate_limited', message: 'Too many requests. Slow down, or use an API key.' } });
+    expect(Number(res.headers['retry-after'])).toBeGreaterThan(0);
+    expect(res.headers['cache-control']).toBe('no-store');
+    expect(res.headers['ratelimit-policy']).toBe('"anonymous";q=2;w=60');
+    expect(res.headers.ratelimit).toMatch(/^"anonymous";r=0;t=\d+$/);
+    // The website is never refused
+    expect((await request(enforced).get('/nrsv/john.3.16').set('Host', 'scripture.guide')).status).not.toBe(429);
   });
 });
 

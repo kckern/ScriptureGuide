@@ -46,9 +46,12 @@ export function hostKind(subdomain, path) {
   return m ? { kind: SHORTCUTS[m[1].toLowerCase()], path: m[2] || '/' } : null;
 }
 
-function send(req, res, kind, body, cacheControl) {
+// limitHeaders (RateLimit-Policy, RateLimit) go only on answers no cache keeps: a cached answer
+// is served to every caller, and would show the first one's numbers (or a key's policy) to all.
+function send(req, res, kind, body, cacheControl, limitHeaders = {}) {
   res.set('X-API-Version', '1');
   res.set('Cache-Control', cacheControl);
+  if (cacheControl === CACHE_NONE) res.set(limitHeaders);
   res.set('Content-Type', CONTENT_TYPES[kind]);
   // A strong ETag over the uncompressed body; res.send answers 304 itself when If-None-Match
   // matches it. compression() keeps the same ETag on the gzip and identity bodies. Cloudflare
@@ -83,18 +86,16 @@ export function apiRouter(overrides = {}) {
     try { decision = await access.check(req, { scope: 'api' }); } catch (err) {
       log(err, { where: 'api access', method: req.method, path: req.originalUrl });
     }
-    if (decision) {
-      req.access = decision;
-      res.set(decision.headers);
-      if (!decision.allowed) {
-        res.status(429).set('Retry-After', String(decision.retryAfter));
-        return send(req, res, kind, renderError(kind, new ApiError(...RATE_LIMITED)), CACHE_NONE);
-      }
+    if (decision) req.access = decision;
+    const reply = (body, cacheControl) => send(req, res, kind, body, cacheControl, decision?.headers);
+    if (decision && !decision.allowed) {
+      res.status(429).set('Retry-After', String(decision.retryAfter));
+      return reply(renderError(kind, new ApiError(...RATE_LIMITED)), CACHE_NONE);
     }
-    if (kind === 'api' && API_ROOT.test(target.path)) return send(req, res, kind, API_INDEX, CACHE_OK);
+    if (kind === 'api' && API_ROOT.test(target.path)) return reply(API_INDEX, CACHE_OK);
     if (kind !== 'api' && target.path === '/') {
       const host = HOSTS[String(req.subdomain).toLowerCase()] ? String(req.subdomain).toLowerCase() : kind;
-      return send(req, res, kind, renderUsage(kind, host), CACHE_OK);
+      return reply(renderUsage(kind, host), CACHE_OK);
     }
     try {
       const versions = await deps.repo.versions();
@@ -116,7 +117,7 @@ export function apiRouter(overrides = {}) {
         data = await deps.buildPassage({ reference, versions: parsed.versions, options: kind === 'api' ? parsed.options : [] });
       }
       const body = kind === 'api' ? JSON.stringify(data) : renderSimple(kind, data);
-      send(req, res, kind, body, cache);
+      reply(body, cache);
     } catch (caught) {
       let err = caught;
       // Anything else is logged and still answered in the v1 shape: a database failure as a 503
@@ -129,7 +130,7 @@ export function apiRouter(overrides = {}) {
       }
       res.status(err.status);
       if (err.status === 503) res.set('Retry-After', '30');
-      send(req, res, kind, renderError(kind, err), err.status >= 500 ? CACHE_NONE : CACHE_ERROR);
+      reply(renderError(kind, err), err.status >= 500 ? CACHE_NONE : CACHE_ERROR);
     }
   });
   return router;
