@@ -1,5 +1,5 @@
 import { describe, test, expect } from 'vitest';
-import { parseApiPath } from '../../../src/api/v1/path.js';
+import { parseApiPath, RESERVED } from '../../../src/api/v1/path.js';
 import { ApiError } from '../../../src/api/v1/errors.js';
 
 // The shape ApiRepository.versions() returns: lower-case id → { id, name, lang }
@@ -105,6 +105,21 @@ describe('parseApiPath: versions', () => {
   test('the version list', () => {
     expect(parse('/v1/versions')).toEqual({ api: 1, options: [], kind: 'versions' });
     expect(parse('/versions')).toMatchObject({ kind: 'versions' });
+  });
+});
+
+describe('parseApiPath: the verses option', () => {
+  test('verses is an option and a reserved word', () => {
+    expect(parse('/v1/verses/nrsv/john3.16')).toMatchObject({ options: ['verses'], kind: 'passage', versions: ['NRSV'], reference: 'john3.16' });
+    expect(parse('/v1/html/verses/john3.16')).toMatchObject({ options: ['html', 'verses'], versions: [], reference: 'john3.16' });
+    expect(RESERVED).toContain('verses');
+  });
+  test('the version list is not read as the option', () => {
+    expect(parse('/v1/versions')).toMatchObject({ kind: 'versions', options: [] });
+    expect(parse('/v1/verses/versions')).toMatchObject({ kind: 'versions', options: ['verses'] });
+  });
+  test('the option alone has no reference', () => {
+    expect(errorOf('/v1/verses').code).toBe('unparseable_reference');
   });
 });
 

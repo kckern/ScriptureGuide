@@ -24,6 +24,8 @@ const fakeRepo = (extra = {}) => ({
   versions: async () => NAMES,
   indexRows: async ids => ids.map(id => ROWS[id]).filter(Boolean),
   verses: async (ids, version) => ids.filter(id => TEXT[version]?.[id]).map(id => ({ verse_id: id, text: TEXT[version][id] })),
+  // The stored rows: the same text, as prose with no p or s
+  async storedVerses(ids, version) { return (await this.verses(ids, version)).map(r => ({ format: 'prose', p: '', s: '', ...r })); },
   headingStarts: async () => [],
   headingAt: async (_id, _book, version) => (version === 'NRSV' ? 'Nicodemus Visits Jesus' : null),
   parallelSources: async () => [],
@@ -65,17 +67,54 @@ describe('buildPassage', () => {
       parallels: [],
       links: { web: 'https://scripture.guide/nrsv/john.3.16-17' },
     });
+    // Blocks by default; no flat verse list
     expect(data.passages).toEqual([{
       headings: { NRSV: 'Nicodemus Visits Jesus' },
-      verses: [
-        { id: 26137, book: 'John', chapter: 3, verse: 16, texts: { NRSV: '“For God so loved the world.' } },
-        { id: 26138, book: 'John', chapter: 3, verse: 17, texts: { NRSV: '“Indeed, God did not send.' } },
-      ],
+      blocks: { NRSV: [{ type: 'paragraph', style: null, pieces: [
+        { id: 26137, verse: 16, start: true, runs: [{ text: '“For God so loved the world.' }] },
+        { id: 26138, verse: 17, start: true, runs: [{ text: ' “Indeed, God did not send.' }] },
+      ] }] },
     }]);
   });
 
+  test('the verses option adds the flat verse list, plain text per version', async () => {
+    const data = await build({ reference: 'john3.16-17', versions: ['NRSV'], options: ['verses'] });
+    expect(data.passages[0].verses).toEqual([
+      { id: 26137, book: 'John', chapter: 3, verse: 16, texts: { NRSV: '“For God so loved the world.' } },
+      { id: 26138, book: 'John', chapter: 3, verse: 17, texts: { NRSV: '“Indeed, God did not send.' } },
+    ]);
+    expect(data.passages[0].blocks.NRSV).toHaveLength(1);
+  });
+
+  test('blocks come from the stored rows: markers, format and p', async () => {
+    const stored = {
+      26137: { verse_id: 26137, text: '§For God so loved.¶▼He gave his Son,/_that all who believe', format: 'prose', p: '¶', s: '§' },
+      26138: { verse_id: 26138, text: 'might ｟live｠.', format: 'poetry', p: '', s: '' },
+    };
+    const r = fakeRepo({ storedVerses: async ids => ids.map(id => stored[id]).filter(Boolean) });
+    const data = await build({ reference: 'john3.16-17', versions: ['NRSV'] }, { repo: r });
+    expect(data.passages[0].blocks.NRSV).toEqual([
+      { type: 'subtitle', pieces: [{ id: 26137, verse: 16, start: true, runs: [{ text: 'For God so loved.' }] }] },
+      { type: 'poetry', style: null, lines: [
+        { indent: 0, pieces: [{ id: 26137, verse: 16, start: false, runs: [{ text: 'He gave his Son,' }] }] },
+        { indent: 1, pieces: [
+          { id: 26137, verse: 16, start: false, runs: [{ text: 'that all who believe' }] },
+          { id: 26138, verse: 17, start: true, runs: [{ text: ' might ' }, { text: 'live', mark: 'smallcaps' }, { text: '.' }] },
+        ] },
+      ] },
+    ]);
+  });
+
+  test('each version has its own blocks; a version without a verse leaves it out', async () => {
+    const data = await build({ reference: 'John 3:19', versions: ['NRSV', 'KJV'] });
+    expect(Object.keys(data.passages[0].blocks)).toEqual(['NRSV', 'KJV']);
+    const r = fakeRepo({ storedVerses: async (ids, version) => (version === 'NRSV' ? [{ verse_id: 26137, text: 'x', format: 'prose', p: '', s: '' }] : []) });
+    const two = await build({ reference: 'john3.16-17', versions: ['NRSV', 'KJV'] }, { repo: r });
+    expect(two.passages[0].blocks).toEqual({ NRSV: [{ type: 'paragraph', style: null, pieces: [{ id: 26137, verse: 16, start: true, runs: [{ text: 'x' }] }] }], KJV: [] });
+  });
+
   test('several versions share the verse list', async () => {
-    const data = await build({ reference: 'john3.16-17', versions: ['NRSV', 'KJV'] });
+    const data = await build({ reference: 'john3.16-17', versions: ['NRSV', 'KJV'], options: ['verses'] });
     expect(data.passages[0].headings).toEqual({ NRSV: 'Nicodemus Visits Jesus', KJV: null });
     expect(data.passages[0].verses[0].texts).toEqual({ NRSV: '“For God so loved the world.', KJV: 'For God so loved the world.' });
     expect(data.links.web).toBe('https://scripture.guide/nrsv.kjv/john.3.16-17');
@@ -101,7 +140,7 @@ describe('buildPassage', () => {
     expect(data.passages[0].verses[1].stored).toEqual({ NRSV: null, KJV: null });
   });
   test('without stored, no stored rows', async () => {
-    const data = await build({ reference: 'john3.16-17', versions: ['NRSV'] });
+    const data = await build({ reference: 'john3.16-17', versions: ['NRSV'], options: ['verses'] });
     expect(data.passages[0].verses[0]).not.toHaveProperty('stored');
   });
 
@@ -111,7 +150,7 @@ describe('buildPassage', () => {
   });
 
   test('a reference in pieces: each piece is a reference entry and a passage; a piece without a book takes the one before', async () => {
-    const data = await build({ reference: 'john3.16-17,19', versions: ['NRSV'] });
+    const data = await build({ reference: 'john3.16-17,19', versions: ['NRSV'], options: ['verses'] });
     expect(data.reference.map(r => r.label)).toEqual(['John 3:16-17', 'John 3:19']);
     expect(data.passages.map(p => p.verses.map(v => v.id))).toEqual([[26137, 26138], [26140]]);
     expect(data.links.web).toBe('https://scripture.guide/nrsv/john.3.16-17;john.3.19');
@@ -136,7 +175,7 @@ describe('buildPassage', () => {
   });
 
   test('ids option loads no text', async () => {
-    const noText = fakeRepo({ verses: async () => { throw new Error('text loaded'); } });
+    const noText = fakeRepo({ verses: async () => { throw new Error('text loaded'); }, storedVerses: async () => { throw new Error('text loaded'); } });
     const data = await build({ reference: 'john3.16-17', versions: ['NRSV'], options: ['ids'] }, { repo: noText });
     expect(data.passages[0].verses.map(v => v.id)).toEqual([26137, 26138]);
   });
@@ -148,7 +187,7 @@ describe('buildPassage', () => {
       headingStarts: async (_ids, version) => (version === 'NRSV' ? [{ verse_id: 26138, text: 'Wider' }, { verse_id: 26138, text: 'Narrower' }] : []),
       headingAt: async (id, _book, version) => { asked.push([id, version]); return version === 'NRSV' ? 'Nicodemus Visits Jesus' : null; },
     });
-    const data = await build({ reference: 'john3.16-17', versions: ['NRSV', 'KJV'] }, { repo: starts });
+    const data = await build({ reference: 'john3.16-17', versions: ['NRSV', 'KJV'], options: ['verses'] }, { repo: starts });
     expect(data.passages.map(p => p.verses.map(v => v.id))).toEqual([[26137], [26138]]);
     expect(data.passages.map(p => p.headings)).toEqual([{ NRSV: 'Nicodemus Visits Jesus', KJV: null }, { NRSV: 'Narrower', KJV: null }]);
     // headingAt only where no heading starts: not for NRSV at 26138
@@ -262,7 +301,7 @@ describe('passageSlug', () => {
       23147: { verse_id: 23147, book_id: 40, chapter: 1, verse: 2, book_title: 'Matthew', book_title_short: 'Matt.' } };
     const r = fakeRepo({ indexRows: async ids => ids.map(id => rows[id]).filter(Boolean), verses: async ids => ids.map(id => ({ verse_id: id, text: 'x' })) });
     const one = { resolve: async q => new Reference({ query: q, normalized: 'Malachi 4:5 - Matthew 1:2', verseIds: [23144, 23146, 23147] }) };
-    const data = await build({ reference: 'mal4.5-matt1.2', versions: ['KJV'] }, { repo: r, refs: one });
+    const data = await build({ reference: 'mal4.5-matt1.2', versions: ['KJV'], options: ['verses'] }, { repo: r, refs: one });
     expect(data.reference[0].slug).toBe('mal.4.5-matt.1.2');
     expect(data.reference[0]).toMatchObject({ book: 'Malachi', start: { book: 'Malachi', chapter: 4, verse: 5 }, end: { book: 'Matthew', chapter: 1, verse: 2 } });
     expect(data.links.web).toBe('https://scripture.guide/kjv/mal.4.5-matt.1.2');

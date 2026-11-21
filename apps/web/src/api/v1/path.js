@@ -6,7 +6,7 @@
 import { ApiError } from './errors.js';
 
 export const CURRENT_API = 1;
-export const OPTIONS = Object.freeze(['html', 'ids']);
+export const OPTIONS = Object.freeze(['html', 'ids', 'verses']);
 export const VOLUMES = Object.freeze(['ot', 'nt', 'bom', 'dc', 'pgp']);
 export const RESERVED = Object.freeze([...OPTIONS, ...VOLUMES, 'search', 'random', 'versions']);
 const API_VERSION = /^v([1-9]\d*)$/i; // v1, v2, …; "v01" and "v0" are not API versions

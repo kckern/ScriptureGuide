@@ -109,11 +109,11 @@ describe('apiRouter', () => {
     expect(raw.headers['x-api-version']).toBe('1');
     expect(raw.headers['cache-control']).toBe('public, max-age=86400, s-maxage=604800, stale-while-revalidate=86400');
     expect(raw.text).toBe('[{"id":26137,"version":"NRSV","book":"John","chapter":3,"verse":16,"format":"prose","p":"¶","s":"§","text":"§¶For God so loved the world."}]');
-    expect(seen.at(-1)).toMatchObject({ reference: 'john3.16', versions: ['NRSV'], options: [], stored: true });
+    expect(seen.at(-1)).toMatchObject({ reference: 'john3.16', versions: ['NRSV'], options: ['verses'], stored: true });
   });
-  test('only raw. asks for the stored rows, and it gets no options', async () => {
+  test('only raw. asks for the stored rows, and it gets no options from the path', async () => {
     await get('raw.scripture.guide', '/ids/nrsv/john3.16');
-    expect(seen.at(-1)).toMatchObject({ options: [], stored: true });
+    expect(seen.at(-1)).toMatchObject({ options: ['verses'], stored: true });
     await get('api.scripture.guide', '/v1/nrsv/john3.16');
     expect(seen.at(-1).stored).toBeUndefined();
     await get('json.scripture.guide', '/nrsv/john3.16');
@@ -144,9 +144,9 @@ describe('apiRouter', () => {
     expect((await get('scripture.guide', '/john3.16')).status).toBe(418);
     expect((await get('api.scripture.guide', '/health')).status).toBe(418);
   });
-  test('simple hosts get no options; api passes them on', async () => {
+  test('simple hosts take no options from the path and always ask for the verse list; api passes them on', async () => {
     await get('json.scripture.guide', '/html/nrsv/john3.16');
-    expect(seen.at(-1)).toMatchObject({ reference: 'john3.16', versions: ['NRSV'], options: [] });
+    expect(seen.at(-1)).toMatchObject({ reference: 'john3.16', versions: ['NRSV'], options: ['verses'] });
     await get('api.scripture.guide', '/v1/html/nrsv/john3.16');
     expect(seen.at(-1)).toMatchObject({ reference: 'john3.16', versions: ['NRSV'], options: ['html'] });
   });

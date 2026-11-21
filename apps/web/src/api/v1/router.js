@@ -116,9 +116,10 @@ export function apiRouter(overrides = {}) {
           reference = String(await deps.pickRandomVerse(parsed));
           cache = CACHE_NONE;
         }
-        // The simple hosts take no options. raw. dumps the stored rows (stored is never read
-        // from the path, so the api's answer does not change)
-        const request = { reference, versions: parsed.versions, options: kind === 'api' ? parsed.options : [] };
+        // The simple hosts take no options from the path; they read the blocks and the flat
+        // verse list. raw. dumps the stored rows (stored is never read from the path, so the
+        // api's answer does not change)
+        const request = { reference, versions: parsed.versions, options: kind === 'api' ? parsed.options : ['verses'] };
         if (kind === 'raw') request.stored = true;
         data = await deps.buildPassage(request);
       }

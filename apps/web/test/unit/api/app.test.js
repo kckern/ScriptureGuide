@@ -46,8 +46,9 @@ describe('v1 through createApp', () => {
     expect(res.body).toMatchObject({
       api: 'v1',
       versions: [{ id: 'NRSV', name: 'New Revised Standard Version', language: 'en', copyright: null }],
-      passages: [{ verses: [{ id: 26137, chapter: 3, verse: 16, texts: { NRSV: 'For God so loved the world.' } }] }],
+      passages: [{ blocks: { NRSV: [{ type: 'paragraph', style: null, pieces: [{ id: 26137, verse: 16, start: true, runs: [{ text: 'For God so loved the world.' }] }] }] } }],
     });
+    expect(res.body.passages[0]).not.toHaveProperty('verses');
     expect(res.headers['x-api-version']).toBe('1');
     expect(res.headers['cache-control']).toBe(CACHE_OK);
     expect(res.headers.etag).toMatch(/^"[^"]+"$/);
@@ -77,7 +78,12 @@ describe('v1 through createApp', () => {
   test('the main-host shortcut scripture.guide/api/v1/...', async () => {
     const res = await get('scripture.guide', '/api/v1/nrsv/john3.16');
     expect(res.status).toBe(200);
-    expect(res.body.passages[0].verses[0].texts.NRSV).toBe('For God so loved the world.');
+    expect(res.body.passages[0].blocks.NRSV[0].pieces[0].runs).toEqual([{ text: 'For God so loved the world.' }]);
+  });
+
+  test('the verses option adds the flat verse list', async () => {
+    const res = await get('api.scripture.guide', '/v1/verses/nrsv/john3.16');
+    expect(res.body.passages[0].verses).toEqual([{ id: 26137, book: 'John', chapter: 3, verse: 16, texts: { NRSV: 'For God so loved the world.' } }]);
   });
 
   test('raw. dumps the stored row, markers kept; the api text is cleaned', async () => {
@@ -86,7 +92,7 @@ describe('v1 through createApp', () => {
     expect(raw.headers['content-type']).toBe('application/json; charset=utf-8');
     expect(raw.headers['x-api-version']).toBe('1');
     expect(raw.body).toEqual([{ id: 26137, version: 'NRSV', book: 'John', chapter: 3, verse: 16, format: 'prose', p: '¶', s: '§', text: '§¶For God so loved the world.' }]);
-    const api = await get('api.scripture.guide', '/v1/nrsv/john3.16');
+    const api = await get('api.scripture.guide', '/v1/verses/nrsv/john3.16');
     expect(api.body.passages[0].verses[0]).toEqual({ id: 26137, book: 'John', chapter: 3, verse: 16, texts: { NRSV: 'For God so loved the world.' } });
   });
 
