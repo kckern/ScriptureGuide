@@ -56,6 +56,7 @@ export function parseApiPath(path, translations) {
   }
 
   const rest = segs.join('/');
+  // A "~" at the very start has no left side, so it can't be a parallel; let the lookup read it
   if (rest.slice(1).includes('~')) return { ...base, kind: 'parallel', query: rest };
 
   if (!segs.length) throw new ApiError('unparseable_reference', 'No reference was given.');
