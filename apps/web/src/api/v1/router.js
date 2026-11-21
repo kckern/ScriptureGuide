@@ -22,6 +22,8 @@ const SHORTCUTS = Object.freeze({ api: 'api', json: 'json' });
 const PASS = new Set(['/health', '/healthz', '/build-info', '/favicon.ico', '/robots.txt']);
 
 const CACHE_OK = 'public, max-age=86400, s-maxage=604800, stale-while-revalidate=86400';
+// Errors cache for 5 minutes. The version list is read once per process, so it changes only
+// with a restart; a cached unknown_version lasts at most 5 minutes after one.
 const CACHE_ERROR = 'public, max-age=300';
 const CACHE_NONE = 'no-store';
 
@@ -46,7 +48,9 @@ function send(req, res, kind, body, cacheControl) {
   res.set('X-API-Version', '1');
   res.set('Cache-Control', cacheControl);
   res.set('Content-Type', CONTENT_TYPES[kind]);
-  // A strong ETag; res.send answers 304 itself when If-None-Match matches it
+  // A strong ETag over the uncompressed body; res.send answers 304 itself when If-None-Match
+  // matches it. compression() keeps the same ETag on the gzip and identity bodies. Cloudflare
+  // weakens it (W/) when it re-encodes, and a weak If-None-Match still matches here.
   res.set('ETag', `"${createHash('sha1').update(body).digest('base64url')}"`);
   res.send(body);
 }
