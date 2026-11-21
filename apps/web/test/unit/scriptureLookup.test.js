@@ -419,8 +419,10 @@ describe('lookup: a passage the version leaves out', () => {
   };
   test('every verse filler ("*", "/", spaces): the version title is loaded for the note', async () => {
     const { svc, titles } = make(['*', '/', ' * ']);
-    expect((await svc.lookup('2.ne.16', { version: '2HRBOM' })).config._versionTitle).toBe('2-hour Book of Mormon');
+    const config = { version: '2HRBOM' };
+    expect((await svc.lookup('2.ne.16', config)).config._versionTitle).toBe('2-hour Book of Mormon');
     expect(titles).toEqual(['2HRBOM']);
+    expect(config._versionTitle).toBeUndefined(); // the caller's config is left alone
   });
   test('a verse with text: no extra query', async () => {
     const { svc, titles } = make(['And it came to pass.', '*']);

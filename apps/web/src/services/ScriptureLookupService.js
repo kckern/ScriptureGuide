@@ -193,9 +193,9 @@ export class ScriptureLookupService {
     }
     const verses = verseRows.map(row => Verse.fromRow(row));
     // Every row filler: the version leaves the passage out, and the page says so by its title
-    if (verses.length && version !== 'INDEX' && verses.every(v => isFillerText(v.text))) {
-      config._versionTitle = await this.verseRepository.findVersionTitle(version);
-    }
+    const versionTitle = verses.length && version !== 'INDEX' && verses.every(v => isFillerText(v.text))
+      ? await this.verseRepository.findVersionTitle(version)
+      : undefined;
 
     // Build verse_id → chapter map from canonical verse table (covers ALL verse_ids, including
     // heading-only ones that have no text entry in scripture_verses for this version, e.g. NRSV Psalms)
@@ -562,7 +562,7 @@ export class ScriptureLookupService {
       chapterHeading,
       chapterNav,
       annotations: [],
-      config: { ...config, version, headingVersion }
+      config: { ...config, version, headingVersion, ...(versionTitle !== undefined ? { _versionTitle: versionTitle } : {}) }
     });
   }
 
