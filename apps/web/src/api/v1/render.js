@@ -79,21 +79,91 @@ function runMarkdown(run) {
   const [, lead, body, trail] = run.text.match(/^(\s*)(.*?)(\s*)$/s);
   return body ? `${lead}${open}${body}${close}${trail}` : run.text;
 }
-const markdownPieces = pieces => pieces.flatMap(p => p.runs).map(runMarkdown).join('').replace(/\s+/g, ' ').trim();
+// A verse number in Markdown, bold. A number that starts a new chapter inside a block carries
+// the chapter ("**6:1**").
+const verseNumber = (piece, chapter) => `**${chapter ? `${chapter}:` : ''}${piece.verse}**`;
 
-// One blockquote: a paragraph per block (a ">" line between them), poetry and line-break lines
-// ending in a Markdown hard break, indented lines starting with an em space per indent
-function markdownQuote(blocks) {
-  let out = '';
-  for (const block of blocks) {
-    const lines = (block.lines ?? [{ indent: block.indent ?? 0, pieces: block.pieces }])
-      .map(l => ({ indent: l.indent, text: markdownPieces(l.pieces) })).filter(l => l.text)
-      .map(l => `> ${'&emsp;'.repeat(l.indent)}${l.text}`);
-    if (!lines.length) continue;
-    if (out) out += block.style === 'linebreak' ? '  \n' : '\n>\n';
-    out += lines.join('  \n');
+// The verses a reference entry covers, by book, chapter and verse (a range may cross books)
+function inReference(r, v) {
+  if (!r.start || !r.end) return true;
+  const at = (a, b) => (a.chapter - b.chapter) || (a.verse - b.verse);
+  if (r.start.book === r.end.book) return v.book === r.start.book && at(v, r.start) >= 0 && at(v, r.end) <= 0;
+  if (v.book === r.start.book) return at(v, r.start) >= 0;
+  if (v.book === r.end.book) return at(v, r.end) <= 0;
+  return true;
+}
+
+// Markdown for one version: the reference and version as the title, a "##" per chapter when
+// there are several, section headings, then a paragraph per block with bold verse numbers.
+// Poetry and line-break paragraphs keep their lines with Markdown hard breaks (two spaces at
+// the line end); indents are em spaces (U+2003), which Markdown keeps and plain text shows.
+// The title names only the references the version has text for.
+function markdownFor(data, t) {
+  const verses = data.passages.flatMap(p => p.verses ?? []).filter(v => v.texts?.[t.id] != null);
+  const byId = new Map(verses.map(v => [v.id, v]));
+  const chapterOf = v => `${v.book} ${v.chapter}`;
+  const several = new Set(verses.map(chapterOf)).size > 1;
+  const label = data.reference.filter(r => verses.some(v => inReference(r, v))).map(r => r.label).join('; ');
+  const out = [`# ${label || data.reference.map(r => r.label).join('; ')} (${t.id})`];
+  let chapter = null;
+  let heading = null;
+
+  // A list of pieces as one line of Markdown, with a verse number where a verse starts
+  const line = pieces => pieces.map(p => {
+    const v = byId.get(p.id);
+    let num = '';
+    if (p.start && p.verse != null) {
+      const key = v ? chapterOf(v) : chapter;
+      num = ` ${verseNumber(p, several && chapter !== null && key !== chapter ? v?.chapter : null)} `;
+      if (key !== chapter) chapter = key;
+    }
+    return num + p.runs.map(runMarkdown).join('');
+  }).join('').replace(/\s+/g, ' ').trim();
+
+  for (const passage of data.passages) {
+    const blocks = passage.blocks?.[t.id] ?? [];
+    if (!blocks.length) continue;
+    const h = passage.headings?.[t.id];
+    let headingDue = h && h !== heading;
+    for (const block of blocks) {
+      const pieces = block.lines ? block.lines.flatMap(l => l.pieces) : block.pieces;
+      const first = byId.get(pieces?.find(p => byId.has(p.id))?.id);
+      // A chapter heading where the block starts a new chapter, then the section heading (once:
+      // a section that runs on into the next chapter is not named again)
+      if (several && first && chapterOf(first) !== chapter && pieces[0]?.start !== false) {
+        chapter = chapterOf(first);
+        out.push(`## ${chapter}`);
+      }
+      if (headingDue) {
+        out.push(`${several ? '###' : '##'} ${h}`);
+        heading = h;
+        headingDue = false;
+      }
+      const indent = n => '\u2003\u2003'.repeat(n ?? 0);
+      let text;
+      if (block.type === 'subtitle') {
+        const num = pieces.find(p => p.start && p.verse != null);
+        const words = line(pieces.map(p => ({ ...p, start: false })));
+        if (!words) continue;
+        text = `${num ? `${verseNumber(num)} ` : ''}*${words}*`;
+      } else if (block.lines) {
+        const lines = block.lines.map(l => ({ indent: l.indent, text: line(l.pieces) })).filter(l => l.text);
+        if (!lines.length) continue;
+        text = lines.map(l => indent(l.indent) + l.text).join('  \n');
+      } else {
+        const words = line(block.pieces);
+        if (!words) continue;
+        text = indent((block.indent ?? 0) + (block.style === 'indent' ? 1 : 0)) + words;
+      }
+      // A line-break paragraph ("/" in prose) and a no-gap one go on the next line of the one before
+      if ((block.style === 'linebreak' || block.style === 'nogap') && out.length > 1 && !out.at(-1).startsWith('#')) {
+        out[out.length - 1] += `  \n${text}`;
+      } else {
+        out.push(text);
+      }
+    }
   }
-  return out;
+  return out.join('\n\n') + '\n';
 }
 
 // One object for one version, a list for several (the blocks are kept back for markdown)
@@ -113,7 +183,7 @@ export function renderSimple(kind, data) {
     case 'yaml': return dumpYaml(simpleData(data));
     case 'raw': return JSON.stringify(rawRows(data));
     case 'markdown':
-      return blocks.map(b => `${markdownQuote(b.blocks)}\n>\n> — ${b.reference} (${b.version})\n`).join('\n');
+      return data.versions.filter(t => blocks.some(b => b.version === t.id)).map(t => markdownFor(data, t)).join('\n');
     case 'text':
       return blocks.map(b => `${named ? `${b.version}: ` : ''}${b.text}\n`).join('\n');
     default: throw new Error(`unknown simple format ${kind}`);

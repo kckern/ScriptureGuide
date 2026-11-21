@@ -67,10 +67,30 @@ describe('renderSimple', () => {
     const body = renderSimple('yaml', { ...one, passages: [{ headings: {}, blocks: { NRSV: [para(piece(1, 16, true, [{ text: long }]))] }, verses: [{ id: 1, chapter: 3, verse: 16, texts: { NRSV: long } }] }] });
     expect(body).toContain(`text: ${long}\n`);
   });
-  test('markdown', () => expect(renderSimple('markdown', one)).toBe('> For God so loved. Indeed.\n>\n> — John 3:16-17 (NRSV)\n'));
-  test('markdown, a quote per version', () => expect(renderSimple('markdown', data)).toBe(
-    '> For God so loved. Indeed.\n>\n> — John 3:16-17 (NRSV)\n\n> For God so loved,\n>\n> — John 3:16-17 (KJV)\n'
+  test('markdown: the reference and version as the title, bold verse numbers', () => expect(renderSimple('markdown', one)).toBe(
+    '# John 3:16-17 (NRSV)\n\n**16** For God so loved. **17** Indeed.\n'
   ));
+  test('markdown, a titled section per version', () => expect(renderSimple('markdown', data)).toBe(
+    '# John 3:16-17 (NRSV)\n\n**16** For God so loved. **17** Indeed.\n\n# John 3:16-17 (KJV)\n\n**16** For God so loved,\n'
+  ));
+  test('markdown: section headings, and a heading per chapter when there are several', () => {
+    const v = (id, chapter, verse) => ({ id, book: 'Genesis', chapter, verse, texts: { NRSV: 'x' } });
+    const gen = {
+      versions: [data.versions[0]],
+      reference: [{ label: 'Genesis 1:31-2:4', start: { book: 'Genesis', chapter: 1, verse: 31 }, end: { book: 'Genesis', chapter: 2, verse: 4 } },
+        { label: 'Alma 5', start: { book: 'Alma', chapter: 5, verse: 1 }, end: { book: 'Alma', chapter: 5, verse: 62 } }],
+      passages: [
+        { headings: { NRSV: 'Six Days' }, blocks: { NRSV: [para(piece(1, 31, true, [{ text: 'Good.' }])), para(piece(2, 1, true, [{ text: 'Finished.' }]))] },
+          verses: [v(1, 1, 31), v(2, 2, 1)] },
+        { headings: { NRSV: 'Another Account' }, blocks: { NRSV: [para(piece(3, 4, true, [{ text: 'Generations.' }]))] }, verses: [v(3, 2, 4)] },
+      ],
+    };
+    // The title leaves out Alma 5, which the version has no text for; "Six Days" runs on into
+    // chapter 2 and is not named again
+    expect(renderSimple('markdown', gen)).toBe(
+      '# Genesis 1:31-2:4 (NRSV)\n\n## Genesis 1\n\n### Six Days\n\n**31** Good.\n\n## Genesis 2\n\n**1** Finished.\n\n### Another Account\n\n**4** Generations.\n'
+    );
+  });
   test('text, each version named when there are several, a blank line between them', () => {
     expect(renderSimple('text', data)).toBe('NRSV: For God so loved. Indeed.\n\nKJV: For God so loved,\n');
     expect(renderSimple('text', one)).toBe('For God so loved. Indeed.\n');
@@ -89,13 +109,14 @@ describe('renderSimple', () => {
     const two = { ...one, passages: [one.passages[0], { headings: {}, blocks: { NRSV: [para(piece(3, 18, true, [{ text: 'Next.' }]))] }, verses: [{ id: 3, chapter: 3, verse: 18, texts: { NRSV: 'Next.' } }] }] };
     expect(simpleData(two).text).toBe('For God so loved. Indeed.\n\nNext.');
   });
-  test('markdown: a blockquote paragraph per block, poetry lines with hard breaks, indents as em spaces, marks, the reference last', () => {
+  test('markdown: a paragraph per block, subtitles in italics, poetry lines with hard breaks, indents as em spaces, marks', () => {
+    const em = '\u2003\u2003';
     expect(renderSimple('markdown', psalm)).toBe(
-      '> Of David.\n>\n' +
-      '> Bless the Lord, O my soul,  \n> &emsp;and all that is *within* **me**\n>\n' +
-      '> Bless <sup>him</sup> ~~not~~\n>\n' +
-      '> Who forgives,  \n> &emsp;who heals.\n>\n' +
-      '> — Psalm 103:1-3 (NRSV)\n'
+      '# Psalm 103:1-3 (NRSV)\n\n' +
+      '**1** *Of David.*\n\n' +
+      `Bless the Lord, O my soul,  \n${em}and all that is *within* **me**\n\n` +
+      '**2** Bless <sup>him</sup> ~~not~~\n\n' +
+      `**3** Who forgives,  \n${em}who heals.\n`
     );
   });
   test('text prints the text with its breaks', () => {

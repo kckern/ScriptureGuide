@@ -16,7 +16,7 @@ The API is free and needs no account. Every URL below works in a browser.
 
 ```sh
 curl https://txt.scripture.guide/john3.16                  # verse text only
-curl https://md.scripture.guide/kjv/ps23                   # Markdown quote with citation
+curl https://md.scripture.guide/kjv/ps23                   # Markdown: title, headings, numbered verses
 curl https://raw.scripture.guide/nrsv/john3.16             # stored rows, markers kept (JSON)
 curl https://api.scripture.guide/v1/nrsv.kjv/john3.16      # full JSON, two versions side by side
 curl https://api.scripture.guide/v1/search/nrsv/loved+the+world
@@ -26,7 +26,7 @@ curl https://api.scripture.guide/v1/versions               # every version id, n
 
 A path is `/{version}/{reference}`, the same as on the website. Leave out the version to get the site's default. References are written the way the site accepts them: `john3.16`, `john3.16-18`, `John 3:16`, `1ne3.7`, `dc4`, and several pieces joined with `;` (`john3.16;rom8.28`). Encode spaces as `%20`.
 
-Hosts: `api.` is the full JSON API (everything below). `json.`, `yml.` (or `yaml.`), `md.` (or `markdown.`) and `txt.` (or `plain.`) return one passage in a small fixed format, and take no options. Their text keeps the passage's layout: a blank line between paragraphs, a line break between poetry lines, and two spaces for each indent (`md.` writes Markdown hard breaks and `&emsp;` indents). The `verses` list of `json.` and `yml.` is plain text per verse. `raw.` takes the same paths and returns the stored rows as a JSON array, one per version per verse: `{ "id", "version", "book", "chapter", "verse", "format", "p", "s", "text" }`, where `text` keeps the database's markup (`¶`, `§`, `/`, `▼` and others) and `format` is `prose`, `poetry`, `indent` or `sense`. Use `api.` for clean text; search, parallel and the version list are on `api.` only. `https://scripture.guide/api/...` is the same as `https://api.scripture.guide/...`. `https://api.scripture.guide/` returns a short index with links to this file, the version list and an example.
+Hosts: `api.` is the full JSON API (everything below). `json.`, `yml.` (or `yaml.`), `md.` (or `markdown.`) and `txt.` (or `plain.`) return one passage in a small fixed format, and take no options. Their text keeps the passage's layout: a blank line between paragraphs, a line break between poetry lines, and two spaces for each indent (`md.` writes a Markdown document: the reference and version as a `#` title, a `##` per chapter when there are several, section headings, bold verse numbers, poetry lines with hard breaks and em-space indents). The `verses` list of `json.` and `yml.` is plain text per verse. `raw.` takes the same paths and returns the stored rows as a JSON array, one per version per verse: `{ "id", "version", "book", "chapter", "verse", "format", "p", "s", "text" }`, where `text` keeps the database's markup (`¶`, `§`, `/`, `▼` and others) and `format` is `prose`, `poetry`, `indent` or `sense`. Use `api.` for clean text; search, parallel and the version list are on `api.` only. `https://scripture.guide/api/...` is the same as `https://api.scripture.guide/...`. `https://api.scripture.guide/` returns a short index with links to this file, the version list and an example.
 
 ## Authentication
 
