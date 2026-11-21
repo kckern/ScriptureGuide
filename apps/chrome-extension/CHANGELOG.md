@@ -1,5 +1,13 @@
 # scripture-guide-chrome-extension
 
+## 2.2.4
+
+### Patch Changes
+
+- e589401: References in lists and ranges written with dashes like "Ex 20:1−17" are linked correctly.
+- Updated dependencies [e589401]
+  - scripture-guide@1.1.4
+
 ## 2.2.3
 
 ### Patch Changes
