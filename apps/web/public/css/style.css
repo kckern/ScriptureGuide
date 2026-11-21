@@ -569,7 +569,7 @@
 }
 .vhead i {
     flex: 1;
-    border-top: 1px solid #5a4636;
+    border-top: 1px solid rgba(90, 70, 54, .3); /* #5a4636 at 30% */
 }
 /* The labels sit flush with the block's edges; the rule runs between them */
 .vhead span { white-space: nowrap; }
@@ -592,7 +592,7 @@ html:not(.sg-one-column) .vcols p.prose {
     html:not(.sg-one-column) .vcols {
         column-count: 2;
         column-gap: 2.2em;
-        column-rule: 1px solid #5a4636;
+        column-rule: 1px solid rgba(90, 70, 54, .3);
         overflow-anchor: none;
         margin-bottom: .6em;
     }
