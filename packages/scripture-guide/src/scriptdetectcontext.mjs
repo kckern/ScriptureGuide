@@ -73,9 +73,11 @@ export const collectReferencesWithContext = (content, books, lang_extra, lookupR
 };
 
 // Enhanced reference detection with contextual processing (string output)
-export const detectReferencesWithContext = (content, books, lang_extra, lookupReference, callback, options, generateReference = null) => {
+// filterRecords (optional) drops records before rendering: detectReferences' option flags.
+export const detectReferencesWithContext = (content, books, lang_extra, lookupReference, callback, options, generateReference = null, filterRecords = null) => {
     try {
-        const records = collectReferencesWithContext(content, books, lang_extra, lookupReference, options);
+        const collected = collectReferencesWithContext(content, books, lang_extra, lookupReference, options);
+        const records = filterRecords ? filterRecords(collected) : collected;
         if (!records.length) return content;
 
         const indices = records.map(({ start, end }) => [start, end]);
@@ -90,7 +92,7 @@ export const detectReferencesWithContext = (content, books, lang_extra, lookupRe
         return buildFinalOutput(cutItems, negativeItems, firstReferenceIsAtStart);
     } catch (e) {
         console.warn('Enhanced reference detection failed, falling back to basic detection:', e);
-        return processReferenceDetection(content, books, lang_extra, lookupReference, callback);
+        return processReferenceDetection(content, books, lang_extra, lookupReference, callback, filterRecords);
     }
 };
 

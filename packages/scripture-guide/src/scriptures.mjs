@@ -903,6 +903,8 @@ const detectReferences = (content, callBack, options = null) => {
         enableImpliedBooks: true,
         enableVerseAbbrev: true,
         chainAcrossMarkers: true,
+        abbreviations: true,
+        chapterOnly: true,
         // A bare "6:3" binds to an earlier book only when the token before it is
         // citation material. false restores pre-1.0.98 distance-only binding.
         strictImpliedBooks: true
@@ -921,13 +923,16 @@ const detectReferences = (content, callBack, options = null) => {
         ? restrictJoinersToStructural(config.lang_extra)
         : config.lang_extra;
 
+    // The abbreviations / chapterOnly flags, applied to the collected records as findReferences does
+    const filterRecords = detectionFlagFilter(finalOptions, effectiveLanguage);
+
     // Use enhanced processing if context-aware mode is enabled
     if (finalOptions.contextAware) {
-        return detectReferencesWithContext(content, books, langExtra, detectionLookup(effectiveLanguage), callBack, finalOptions, generateReference);
+        return detectReferencesWithContext(content, books, langExtra, detectionLookup(effectiveLanguage), callBack, finalOptions, generateReference, filterRecords);
     }
 
     // Fallback to original processing
-    return processReferenceDetection(content, books, langExtra, detectionLookup(effectiveLanguage), callBack);
+    return processReferenceDetection(content, books, langExtra, detectionLookup(effectiveLanguage), callBack, filterRecords);
 }
 
 // Position-based sibling of detectReferences: instead of returning a
@@ -1105,6 +1110,20 @@ const applyDetectionFlags = (records, opts) => {
         out = out.filter(m => isGrouped(m.text) || bookPortion(m.text) === bookPortion(m.ref));
     }
     return out;
+}
+
+// applyDetectionFlags for detectReferences' records, which carry no canonical `ref` (the plain
+// path's `ref` is the query as written). Returns null when both flags are on: nothing to filter.
+const detectionFlagFilter = (opts, language) => {
+    if (opts.chapterOnly !== false && opts.abbreviations !== false) return null;
+    return (records) => {
+        const kept = applyDetectionFlags(
+            records.map(record => ({ text: record.text, ref: generateReference(record.verse_ids || [], language), record })),
+            opts
+        );
+        const keep = new Set(kept.map(k => k.record));
+        return records.filter(record => keep.has(record));
+    };
 }
 
 // Built once per language and canon; callers only read it (and cleanRules caches by its identity)

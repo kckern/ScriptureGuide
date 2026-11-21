@@ -7,7 +7,7 @@
  * stays a distinct record — joiner-separated refs intentionally merge into one
  * grouped citation and are covered elsewhere.
  */
-import { findReferences } from '../../src/scriptures.mjs';
+import { findReferences, detectReferences } from '../../src/scriptures.mjs';
 
 const texts = (results) => results.map(m => m.text);
 
@@ -49,5 +49,35 @@ describe('flags compose', () => {
   test('both flags false: only full-name versed refs survive', () => {
     const out = findReferences('Gen 1 opens. Genesis 2 follows. Jn 3:16 quotes. John 3:17 concludes.', { contextAware: false, abbreviations: false, chapterOnly: false });
     expect(texts(out)).toEqual(['John 3:17']);
+  });
+});
+
+// detectReferences honours the same flags, with the same grouped exemption, on both paths.
+describe.each([true, false])('detectReferences flags (contextAware:%s)', (contextAware) => {
+  const detect = (text, opts = {}) => detectReferences(text, (t) => `[${t}]`, { contextAware, ...opts });
+
+  test('defaults link chapter-only and abbreviated refs', () => {
+    expect(detect('Read Luke 3 today. Then Lk 3:16 tonight.'))
+      .toBe('Read [Luke 3] today. Then [Lk 3:16] tonight.');
+  });
+
+  test('undefined flags behave like the defaults', () => {
+    expect(detect('Read Luke 3 today. Then Lk 3:16 tonight.', { chapterOnly: undefined, abbreviations: undefined }))
+      .toBe('Read [Luke 3] today. Then [Lk 3:16] tonight.');
+  });
+
+  test('chapterOnly:false drops "Luke 3", keeps "Luke 3:16"', () => {
+    expect(detect('Read Luke 3 today. Then Luke 3:16 tonight.', { chapterOnly: false }))
+      .toBe('Read Luke 3 today. Then [Luke 3:16] tonight.');
+  });
+
+  test('abbreviations:false drops "Lk 3:16", keeps "Luke 3:16"', () => {
+    expect(detect('Read Lk 3:16 today. Then Luke 3:16 tonight.', { abbreviations: false }))
+      .toBe('Read Lk 3:16 today. Then [Luke 3:16] tonight.');
+  });
+
+  test('a grouped "Lk 3:16; 4:1" survives both flags', () => {
+    expect(detect('Read Lk 3:16; 4:1 today.', { abbreviations: false, chapterOnly: false }))
+      .toBe('Read [Lk 3:16; 4:1] today.');
   });
 });

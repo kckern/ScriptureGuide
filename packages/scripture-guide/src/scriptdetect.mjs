@@ -256,10 +256,12 @@ const collectReferences = (content,books,lang_extra,lookupReference) => {
     }
 }
 
-const processReferenceDetection = (content,books,lang_extra,lookupReference,callback) =>
+// filterRecords (optional) drops records before rendering: detectReferences' option flags.
+const processReferenceDetection = (content,books,lang_extra,lookupReference,callback,filterRecords=null) =>
 {
     try{
-    const found = collectReferences(content,books,lang_extra,lookupReference);
+    const collected = collectReferences(content,books,lang_extra,lookupReference);
+    const found = filterRecords ? filterRecords(collected) : collected;
     if(!found.length) return content;
 
     const indices = found.map(({start,end})=>[start,end]);
