@@ -84,7 +84,7 @@ describe('ParallelService.build', () => {
     500: { book_id: 9, chapter: 12, verse: 1, volume_id: 3, book_title: 'Beta', book_title_short: 'Bet.', book_title_med: 'Beta', text: '§¶The word that came:' },
   };
   const refs = {
-    parse: s => new Reference({ query: s, normalized: s, verseIds: { 'alp.2.1': [10], 'bet.12.1': [500] }[s] || [] }),
+    parse: s => new Reference({ query: s, normalized: s, verseIds: { 'alp.2.1': [10], 'bet.12.1': [500], 'john.1': [10, 11] }[s] || [] }),
   };
   const repo = {
     verses: vi.fn(async (ids, version) => (version === 'XYZ' ? [] : ids.map(id => ({ verse_id: id, version: version === 'KJV' ? 'KJV' : 'LDS', text: VERSES[id].text, book: VERSES[id].book_title, chapter: VERSES[id].chapter, verse: VERSES[id].verse })))),
@@ -117,6 +117,13 @@ describe('ParallelService.build', () => {
     });
   });
 
+  test('1830~kjv/john.1: an edition year on the left reads the right side\'s reference', async () => {
+    const page = await svc.build('1830~kjv/john.1');
+    expect(page.sides).toEqual({ left: { ver: '1830', ref: 'john.1' }, right: { ver: 'kjv', ref: 'john.1' } });
+    expect(page.lver).toBe('LDS'); // the fake has no 1830 text, so the default version shows
+    expect(page.rver).toBe('KJV');
+    expect(page.rows.map(r => [r.left.verseId, r.right.verseId])).toEqual([[10, 10], [11, 11]]);
+  });
   test('each side\'s reference is looked up once per build', async () => {
     const parse = vi.fn(refs.parse);
     const counting = new ParallelService({ refs: { parse }, verses: { findBySlug: async () => null }, repo });
@@ -195,6 +202,16 @@ describe('alignRows: one reference in two versions', () => {
     ]);
   });
 
+  test('the same verses linked by stand-in references take the stand-in layout, not rows by verse', () => {
+    // the sides share verse 11 (sameVerses holds), but stand-ins link 10 → 11 and 11 → 12
+    const { rows, byVerse, found } = alignRows({
+      leftids: [10, 11], rightids: [11, 12], references: { forward: [ref(10, 11), ref(11, 12)], backward: [] },
+      spans: { left: new Map(), right: new Map() },
+    });
+    expect(byVerse).toBe(false);
+    expect(plain(rows)[0]).toEqual({ key: 10, left: [10], right: [11] }); // keyed by the left verse id
+    expect(found.has(10)).toBe(true);
+  });
   test('different references still go side by side', () => {
     const { rows } = alignRows({ leftids: [10, 11], rightids: [100, 101], references: none, spans: { left: new Map(), right: new Map() } });
     expect(plain(rows)).toEqual([{ key: 0, left: [10], right: [100] }, { key: 1, left: [11], right: [101] }]);
