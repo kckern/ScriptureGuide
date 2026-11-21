@@ -11,6 +11,7 @@ import { publicStatic, privacyPolicy } from './middleware/static.js';
 import { notFoundHandler, errorHandler } from './middleware/error.js';
 import { requestLog } from './middleware/requestLog.js';
 import { responseHeaders } from './middleware/headers.js';
+import { apiRouter } from '../api/v1/router.js';
 import { TRUST_PROXY } from './trustProxy.js';
 import { commit } from './buildInfo.js';
 import db from '../data/db/connection.js';
@@ -82,6 +83,9 @@ export function createApp({ log = config.env !== 'test' } = {}) {
 
   // Subdomain parsing
   app.use(subdomainMiddleware);
+
+  // The v1 API (api.) and the simple format hosts (json., yml., md., txt., plain.)
+  app.use(apiRouter());
 
   // Routes
   app.use('/', routes);
