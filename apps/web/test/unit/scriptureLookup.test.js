@@ -463,11 +463,16 @@ describe('lookup: the canonical slug of ranges across books and chapters', () =>
   test('across chapters: no colon', async () => {
     expect(await slugFor('Genesis 1:1-34:19', [[1, 1, 1, 1], [1000, 1, 34, 19]], 1)).toBe('gen.1-34.19');
   });
+  test('verses listed with ";" (the package\'s form of "gen.1.3,5"): one slug, no space or colon', async () => {
+    expect(await slugFor('Genesis 1:3; 1:5', [[3, 1, 1, 3], [5, 1, 1, 5]], 1)).toBe('gen.1.3,5');
+    expect(await slugFor('Genesis 1:3; 2:1-2', [[3, 1, 1, 3], [32, 1, 2, 1], [33, 1, 2, 2]], 1)).toBe('gen.1.3,2.1-2');
+  });
   test('a chapter range', async () => {
     expect(await slugFor('Genesis 1-2', [[1, 1, 1, 1], [56, 1, 2, 25]], null)).toBe('gen.1-2');
   });
   test('one chapter and its verses: as before', async () => {
     expect(await slugFor('Genesis 1:3,5', [[3, 1, 1, 3], [5, 1, 1, 5]], 1)).toBe('gen.1.3,5');
+    expect(await slugFor('Genesis 1:3', [[3, 1, 1, 3]], 1)).toBe('gen.1.3');
     expect(await slugFor('Genesis 1', [[1, 1, 1, 1]], 1)).toBe('gen.1');
   });
 });

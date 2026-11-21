@@ -147,3 +147,20 @@ describe('passageSlug (shared by the site and the API)', async () => {
     expect(passageSlug('Genesis 1:5-2:3', 'Gen.')).toBe('gen.1.5-2.3');
   });
 });
+
+describe('verseListSlug (verses of one book listed with ";")', async () => {
+  const { verseListSlug } = await import('../../src/domain/rules/legacyReference.js');
+  test('verses of one chapter join with ","', () => {
+    expect(verseListSlug('Alma 5:14; 5:19', 'Alma')).toBe('alma.5.14,19');
+    expect(verseListSlug('John 3:16; 3:18-20', 'John')).toBe('john.3.16,18-20');
+    expect(verseListSlug('Doctrine and Covenants 4:1; 4:3', 'D&C')).toBe('d&c.4.1,3');
+    expect(verseListSlug('1 Nephi 3:7; 3:9', '1 Ne.')).toBe('1.ne.3.7,9');
+  });
+  test('a new chapter is written chapter.verse', () => {
+    expect(verseListSlug('John 3:16; 4:2-3; 4:5', 'John')).toBe('john.3.16,4.2-3,5');
+  });
+  test('null for anything but chapter:verses pieces', () => {
+    expect(verseListSlug('John 3:16; 4', 'John')).toBeNull();
+    expect(verseListSlug('John 3:16', 'John')).toBeNull();
+  });
+});

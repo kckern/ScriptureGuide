@@ -28,6 +28,27 @@ export function passageSlug(label, shortTitle, endShortTitle = shortTitle) {
   return `${slugBook(shortTitle)}.${fromVerseOne ? `${fromVerseOne[1]}-${fromVerseOne[2]}.${fromVerseOne[3]}` : slugifyRef(tail)}`;
 }
 
+// Verses of one book that the reference package lists with ";" ("Alma 5:14; 5:19", "John 3:16;
+// 4:2-3") as one slug the site reads back to the same verses: "alma.5.14,19", "john.3.16,4.2-3".
+// A verse in the same chapter as the one before is written alone; a new chapter as chapter.verse.
+// null unless there are several pieces and each is chapter:verse(s).
+export function verseListSlug(normalized, shortTitle) {
+  const m = String(normalized || '').match(/^(.+?)\s(\d+:.*)$/);
+  if (!m || !shortTitle) return null;
+  const pieces = m[2].split(/;\s*/);
+  if (pieces.length < 2) return null;
+  let chapter = null;
+  const out = [];
+  for (const piece of pieces) {
+    const p = piece.match(/^(\d+):(\d+(?:[-–]\d+)?)$/);
+    if (!p) return null;
+    const verses = p[2].replace(/–/g, '-');
+    out.push(p[1] === chapter ? verses : `${p[1]}.${verses}`);
+    chapter = p[1];
+  }
+  return `${slugBook(shortTitle)}.${out.join(',')}`;
+}
+
 // scriptutil::getBook: the leading non-digit run, or the previous block's book.
 export function getBook(ref, lastBook) {
   const t = ref.trim();
