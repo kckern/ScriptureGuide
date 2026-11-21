@@ -21,13 +21,15 @@ export async function buildSearch({ terms, version, volume, page }, { search = s
   const opts = version && volume
     ? { forcedVersion: version, range: volumeRange(volume), requeryForced: true }
     : { forcedVersion: version ?? volume ?? null, requeryForced: true };
-  const result = await search.search(terms, opts);
-  const rows = [...result.rows];
-  rows.sort((a, b) => a.verse_id - b.verse_id);
+  // match() finds every hit; only the page asked for is read and highlighted
+  const result = await search.match(terms, opts);
+  const picks = [...result.picks];
+  picks.sort((a, b) => a.verse_id - b.verse_id);
 
-  const total = rows.length;
+  const total = picks.length;
   const start = (page - 1) * PER_PAGE;
-  const results = rows.slice(start, start + PER_PAGE).map(r => ({
+  const rows = await search.hydrate(result.query, picks.slice(start, start + PER_PAGE));
+  const results = rows.map(r => ({
     id: r.verse_id,
     reference: r.ref,
     slug: slugifyRef(r.refShort),

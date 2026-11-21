@@ -298,3 +298,20 @@ describe('helpers', () => {
     expect(formatOverride('¶the Lord’s house', null)).toBe('¶the Lord’s house');
   });
 });
+
+describe('SearchService.match and hydrate (the v1 API pages)', () => {
+  test('match finds the picks without reading texts; hydrate reads only the picks it is given', async () => {
+    const repo = fakeRepo();
+    const svc = new SearchService(repo, null);
+    const m = await svc.match('faith');
+    expect(m).toMatchObject({ query: 'faith', count: 2, truncated: false, capped: false });
+    expect(m.picks.map(p => p.verse_id)).toEqual([28679, 29564]);
+    expect(repo.texts).not.toHaveBeenCalled();
+    expect(repo.verseInfo).not.toHaveBeenCalled();
+    const rows = await svc.hydrate(m.query, m.picks.slice(1));
+    expect(repo.texts.mock.calls[0][0]).toEqual([{ verse_id: 29564, version: 'LDS' }]);
+    expect(repo.verseInfo.mock.calls[0][0]).toEqual([29564]);
+    const all = await new SearchService(fakeRepo(), null).search('faith');
+    expect(rows).toEqual(all.rows.slice(1));
+  });
+});

@@ -193,7 +193,28 @@ export class SearchService {
   //     instead of LDS/KJV as the site does
   //   range: [min, max] verse ids to search (a version and a volume); every query is limited
   //     to it, so the 5,000 caps are filled from inside it
-  async search(rawQuery, { forcedVersion = null, requeryForced = false, range = null } = {}) {
+  async search(rawQuery, options = {}) {
+    const m = await this.match(rawQuery, options);
+    const ids = [...new Set([...m.groupIds, ...m.picks.map(p => p.verse_id)])];
+    const info = new Map((await this.repo.verseInfo(ids)).map(r => [Number(r.verse_id), r]));
+
+    // Volume tabs, in order of first appearance
+    const vols = new Map();
+    for (const id of m.groupIds) {
+      const i = info.get(id);
+      if (!i) continue;
+      if (!vols.has(i.vol_org)) vols.set(i.vol_org, { key: i.vol_org, label: i.volume_title_med, count: 0 });
+      vols.get(i.vol_org).count++;
+    }
+
+    const rows = await this.hydrate(m.query, m.picks, info);
+    return { query: m.query, count: m.count, vols: [...vols.values()], rows, truncated: m.truncated, capped: m.capped };
+  }
+
+  // The hits of a search, grouped by verse in canon order: { query, count, groupIds, picks, truncated,
+  // capped }, each pick { key, version, verse_id } being the version and verse its row shows.
+  // No texts are read: hydrate() turns picks (all of them, or one page) into rows.
+  async match(rawQuery, { forcedVersion = null, requeryForced = false, range = null } = {}) {
     const query = String(rawQuery).replace(/\./g, ' ');
     let min = 0, max = 999999999;
     const budget = this.budget(); // one budget for all of this search's fallback queries
@@ -273,16 +294,14 @@ export class SearchService {
       return { key, version, verse_id: vers.get(version) };
     });
 
-    const ids = [...new Set([...groups.keys(), ...picks.map(p => p.verse_id)])];
-    const info = new Map((await this.repo.verseInfo(ids)).map(r => [Number(r.verse_id), r]));
+    return { query, count: groups.size, groupIds: [...groups.keys()], picks, truncated: budget.truncated, capped };
+  }
 
-    // Volume tabs, in order of first appearance
-    const vols = new Map();
-    for (const id of groups.keys()) {
-      const i = info.get(id);
-      if (!i) continue;
-      if (!vols.has(i.vol_org)) vols.set(i.vol_org, { key: i.vol_org, label: i.volume_title_med, count: 0 });
-      vols.get(i.vol_org).count++;
+  // Rows for picks from match(); info (verse_id → verseInfo row) when the caller has read it
+  async hydrate(query, picks, info = null) {
+    if (!info) {
+      if (!picks.length) return [];
+      info = new Map((await this.repo.verseInfo([...new Set(picks.map(p => p.verse_id))])).map(r => [Number(r.verse_id), r]));
     }
 
     // Texts, with the format override plain lookups apply (KJV → MEV)
@@ -316,8 +335,7 @@ export class SearchService {
         highlighted: highlightText(text),
       };
     });
-
-    return { query, count: groups.size, vols: [...vols.values()], rows, truncated: budget.truncated, capped };
+    return rows;
   }
 
   // referenceFromVerseIds([id], 'book_title_short') for each id
