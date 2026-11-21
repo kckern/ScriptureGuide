@@ -63,9 +63,11 @@ describe('passageText', () => {
     ].join('\n'));
   });
 
+  // The fixture was saved when the page still showed the "§" of the superscription: the copy
+  // leaves such marks out whatever the page shows
   test('poetry keeps each line; the number goes on the first line of its verse', () => {
     expect(text('psalm')).toBe([
-      '1 §Of David.',
+      '1 Of David.',
       '',
       'Bless the Lord, O my soul,',
       'and all that is within me,',
@@ -116,6 +118,18 @@ describe('passageText', () => {
     const { doc, C } = load('psalm');
     doc.querySelectorAll('.verse:not(.v_15552)').forEach(v => v.remove());
     expect(C.passageText()).toBe('Bless the Lord, O my soul,\nand do not forget all his benefits— (Psalms 103:2, NRSV)');
+  });
+
+  test('stray markers (§ ¶ ▼ ► ◄) are never copied', () => {
+    const { doc, C } = load('paragraphs');
+    doc.querySelector('.v_26135').textContent = '§¶▼Just as Moses ►lifted◄ up the snake§';
+    expect(C.passageText().split('\n')[0]).toMatch(/^14 Just as Moses lifted up the snake 15 that/);
+  });
+
+  test('a label and superscription on two lines (a <br> in the verse) copy as two lines', () => {
+    const { doc, C } = load('psalm');
+    doc.querySelector('.v_15551').innerHTML = 'Book 4 (Psalms 90–106)<br>A prayer of Moses.';
+    expect(C.passageText().split('\n').slice(0, 3)).toEqual(['1 Book 4 (Psalms 90–106)', 'A prayer of Moses.', '']);
   });
 
   test('no verses: nothing', () => {
@@ -195,6 +209,13 @@ describe('the button', () => {
     run();
     expect(button.textContent.trim()).toBe('Copy passage');
     expect(button.classList.contains('is-failed')).toBe(false);
+  });
+
+  test('the per-verse copy leaves out stray markers too', () => {
+    const writeText = vi.fn(() => Promise.resolve());
+    const { doc, C } = load('psalm', { clipboard: { writeText } });
+    C.click(doc.querySelector('.v_15551 + .copyprose img'), {});
+    expect(writeText).toHaveBeenCalledWith('Of David. (Psalms 103:1, NRSV)');
   });
 
   test('the per-verse copy still works next to it', () => {

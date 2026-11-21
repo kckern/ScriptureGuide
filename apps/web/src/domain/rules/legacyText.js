@@ -138,6 +138,14 @@ export function segmentFormats(verseFormat, segments) {
   });
 }
 
+// A verse line's text as the page shows it, without its "§" section marks, which PHP printed:
+// one before a superscription goes (NRSV Ps. 103:1 "§Of David."), as does one at the end, and
+// one between a division label and the superscription is a line break (NET Ps. 90:1
+// "Book 4 (Psalms 90-106)§A prayer of Moses…", NIV Ps. 73:1 "§Psalms 73–89§A psalm of Asaph.").
+export function sectionMarksHtml(text) {
+  return String(text ?? '').replace(/^§+|§+$/gu, '').replace(/§+/gu, '<br/>');
+}
+
 // Strip a "*FMT" suffix: "NIV*KJV" → "NIV".
 export function baseVersion(ver) {
   return String(ver ?? '').replace(/\*.*$/, '');

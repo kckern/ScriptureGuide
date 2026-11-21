@@ -117,6 +117,11 @@ describe('a passage whose first verse starts a section with "§"', () => {
     expect($('h3.heading').parent().attr('class')).toBe('passage ver_NIV');
     expect($('p.ellipses').length).toBe(0);
   });
+  test('the superscription shows without its "§"', async () => {
+    const $ = await render('§A psalm of David.¶▼The Lord is my shepherd');
+    expect($('span.verse').first().text()).toBe('A psalm of David.');
+    expect($('#x, body').text()).not.toContain('§');
+  });
   test('as a "§¶" first verse is (unchanged)', async () => {
     const $ = await render('§¶The Lord is my shepherd');
     expect($('h3.heading').text().trim()).toBe('Psalm 23');
@@ -154,7 +159,7 @@ describe('a first verse with text before its "§¶"', () => {
   test('the label gets a passage in the version, then the title and heading (NIV Ps. 1)', async () => {
     const { $ } = await render('NIV', '§Psalms 1–41§¶Blessed is the one', { verse_id: 1, version: 'NIV', heading: 'Psalm 1', title: 'Psalms', last: 2 }, 'Psalms', 'Psalm 1');
     expect(passages($)).toEqual([
-      { cls: 'passage ver_NIV', h2: '', h3: '', text: '§Psalms 1–41' },
+      { cls: 'passage ver_NIV', h2: '', h3: '', text: 'Psalms 1–41' },
       { cls: 'passage ver_NIV', h2: 'Psalms', h3: 'Psalm 1', text: 'Blessed is the one' },
     ]);
   });
@@ -188,7 +193,8 @@ describe('a first verse with a label before its "§"', () => {
     const $ = cheerio.load(await ejs.renderFile(SECTION, { data: new HtmlPresenter().serialize(result) }));
     expect($('div.passage').length).toBe(1);
     expect($('h3.heading').text().trim()).toBe('Psalm 90');
-    expect($('h3.heading').next().text()).toBe('Book 4 (Psalms 90-106)§A prayer of Moses.');
+    // the "§" between the label and the superscription is a line break, never shown
+    expect($('h3.heading').next().find('span.verse').first().html()).toBe('Book 4 (Psalms 90-106)<br>A prayer of Moses.');
   });
 });
 

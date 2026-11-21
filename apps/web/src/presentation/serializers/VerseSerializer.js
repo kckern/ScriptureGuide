@@ -93,7 +93,7 @@ export class VerseSerializer {
   static formatHtml(text) {
     if (!text) return '';
     // PHP strips ¶ (structural paragraph marker) from verse text before rendering
-    // § is a visible character (e.g. §A Psalm of David.) — do NOT strip
+    // § is kept here; the page drops it (legacyText sectionMarksHtml, in HtmlPresenter)
     // _ is consumed by splitLinebreaks before formatHtml is called — do NOT strip here
     return text
       .replace(/¶/gu, '')

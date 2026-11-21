@@ -108,6 +108,21 @@
     return 'plain';
   }
 
+  // The text of a verse span as copied. Never interface inside it (verse numbers, per-verse copy
+  // buttons, running heads, footnote markers) nor a stray text marker (§ ¶ ▼ ► ◄ ▲). A line break
+  // in the verse (a division label above a superscription) stays one.
+  var NOT_TEXT = 'sup.vnum, .copyprose, .vhead, button, sup.fn, sup.footnote, .footnote';
+  var MARKERS = /[§¶▼►◄▲]/g;
+  var BR = '\uE000';
+  function spanText(span) {
+    var c = span.cloneNode(true);
+    Array.prototype.forEach.call(c.querySelectorAll(NOT_TEXT), function (n) { n.parentNode.removeChild(n); });
+    Array.prototype.forEach.call(c.querySelectorAll('br'), function (n) { n.parentNode.replaceChild(c.ownerDocument.createTextNode(BR), n); });
+    return c.textContent.replace(MARKERS, '').split(BR).map(function (line) {
+      return line.replace(/\s+/g, ' ').trim();
+    }).filter(Boolean).join('\n');
+  }
+
   // ---- the page ----
   var state = { anchor: null, sel: [] };
   var HINT = 'Shift-click to copy a range, ' + (isMac ? '⌘' : 'Ctrl') + '-click to add a verse';
@@ -116,10 +131,7 @@
   function verseOf(img) { return img.parentElement && img.parentElement.previousElementSibling; }
   function itemOf(img) {
     var v = verseOf(img);
-    var vnum = v.querySelector('.vnum');
-    var text = v.textContent;
-    if (vnum && text.indexOf(vnum.textContent) === 0) text = text.slice(vnum.textContent.length);
-    return { id: v.getAttribute('verse_id'), ref: v.getAttribute('ref'), version: v.getAttribute('version'), text: text.trim() };
+    return { id: v.getAttribute('verse_id'), ref: v.getAttribute('ref'), version: v.getAttribute('version'), text: spanText(v) };
   }
 
   function show(all) {
@@ -179,16 +191,6 @@
   // .vcols blocks). With more than one verse each verse starts with its number. The reference of
   // the verses ends the text: on the last line for one verse, as the verse copy does, or on a
   // line of its own. Several references (john.3.16;rom.8.28) copy as blocks, each with its own.
-
-  // Interface inside the text, never copied: verse numbers, per-verse copy buttons, running
-  // heads, footnote markers
-  var NOT_TEXT = 'sup.vnum, .copyprose, .vhead, button, sup.fn, sup.footnote, .footnote';
-
-  function spanText(span) {
-    var c = span.cloneNode(true);
-    Array.prototype.forEach.call(c.querySelectorAll(NOT_TEXT), function (n) { n.parentNode.removeChild(n); });
-    return c.textContent.replace(/\s+/g, ' ').trim();
-  }
 
   // The verses a span stands for, [{ id, ref, num, chapter }]. A line of merged verses (compound,
   // ref "Gen. 7:5–6", the short book name) stands for each of them, named with the book as the

@@ -44,6 +44,25 @@ const CHECKS = {
     const l = strip(live), n = strip(node);
     return l.markup === n.markup && l.text === n.text;
   },
+  // Live printed the "§" section marks of a verse line (NRSV Ps. 103:1 "§Of David."); Node drops a
+  // leading or trailing one and writes one between a division label and a superscription as a
+  // line break (legacyText sectionMarksHtml). Live's quoted text lines rewritten that way give
+  // Node's response exactly, or pass one of the checks allowed on every path (a psalm's first
+  // verse often has both a mark and a stale section heading), and live had at least one mark.
+  sectionMarks: canonical => {
+    const { live, node } = canonical;
+    if (typeof live !== 'string' || typeof node !== 'string' || live === node) return false;
+    let marked = false;
+    const fixed = live.split('\n').flatMap(line => {
+      const m = /^(\s*)"(.*)"$/.exec(line);
+      if (!m || !m[2].includes('§')) return [line];
+      marked = true;
+      const parts = m[2].replace(/^§+|§+$/gu, '').split(/§+/u);
+      return parts.flatMap((part, i) => (i ? [`${m[1]}<br>`] : []).concat(`${m[1]}"${part}"`));
+    }).join('\n');
+    return marked && (fixed === node ||
+      ['staleSectionHeading', 'singleHeadingDrop'].some(name => CHECKS[name]({ ...canonical, live: fixed })));
+  },
   // PHP latex read the request's version only and dropped verses (JST) Node prints: every live
   // verse is in Node's output, and Node has more
   latexMissingVerses: ({ live, node }) => {

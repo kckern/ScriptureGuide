@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
   flattenText, splitVerseLines, arrayText, plainText, plainPassage,
   stemText, transposeRef, baseVersion, highlightSearchTerm, escapeHtml, renderHeadingHtml, segmentFormats, isCompoundLine,
+  sectionMarksHtml,
 } from '../../src/domain/rules/legacyText.js';
 
 // Fixtures are KJV (public domain) or hand-written.
@@ -160,5 +161,25 @@ describe('isFillerText', async () => {
   it('is text of only "*", "/" or spaces (a gap row)', () => {
     for (const t of ['*', ' * ', '/', '', '  ', '*/']) expect(isFillerText(t)).toBe(true);
     for (const t of ['And it came to pass.', '* and', 'a/b']) expect(isFillerText(t)).toBe(false);
+  });
+});
+
+// The page shows a verse line's text without its "§" section marks (NRSV Ps. 103:1 "§Of David.¶▼…"):
+// a mark before a superscription goes, and one between a division label and the superscription
+// becomes a line break (NET Ps. 90:1 "Book 4 (Psalms 90-106)§A prayer of Moses…").
+describe('sectionMarksHtml', () => {
+  it('drops a leading or trailing §', () => {
+    expect(sectionMarksHtml('§Of David.')).toBe('Of David.');
+    expect(sectionMarksHtml('§A Psalm of David, when he fled from his son Absalom.')).toBe('A Psalm of David, when he fled from his son Absalom.');
+    expect(sectionMarksHtml('Then Nathan went home.§')).toBe('Then Nathan went home.');
+  });
+  it('a § between a label and a superscription is a line break', () => {
+    expect(sectionMarksHtml('Book 4 (Psalms 90-106)§A prayer of Moses, the man of God.')).toBe('Book 4 (Psalms 90-106)<br/>A prayer of Moses, the man of God.');
+    expect(sectionMarksHtml('§Psalms 73–89§A psalm of Asaph.')).toBe('Psalms 73–89<br/>A psalm of Asaph.');
+    expect(sectionMarksHtml('<span class="smallcaps">Book</span> Iv§A prayer')).toBe('<span class="smallcaps">Book</span> Iv<br/>A prayer');
+  });
+  it('leaves text without marks alone', () => {
+    expect(sectionMarksHtml('By David.')).toBe('By David.');
+    expect(sectionMarksHtml('')).toBe('');
   });
 });

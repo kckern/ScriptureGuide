@@ -179,3 +179,20 @@ describe('allow.json: parallels', () => {
     expect(allowReason(allow, 'html', '/2hrbom/2.ne.16', '')).toMatch(/does not include/);
   });
 });
+
+// Live shows a verse line's "§" marks (NRSV Ps. 103:1 "§Of David."); Node drops a leading one and
+// writes one between a label and a superscription as a line break
+describe('allow.json: section marks', () => {
+  const allow = JSON.parse(readFileSync(new URL('./allow.json', import.meta.url), 'utf8'));
+  const page = lines => ['<div id="container">', '  <p class="prose">', ...lines.map(l => '    ' + l)].join('\n');
+  const live = page(['<span class="verse" verse_id="1">', '  "§Of David."', '<span class="verse" verse_id="2">', '  "Book 4 (Psalms 90-106)§A prayer."']);
+  const node = page(['<span class="verse" verse_id="1">', '  "Of David."', '<span class="verse" verse_id="2">', '  "Book 4 (Psalms 90-106)"', '  <br>', '  "A prayer."']);
+  test('only the marks differ', () => {
+    expect(allowReason(allow, 'html', '/nrsv/ps.103', live, { live, node })).toMatch(/§/);
+  });
+  test('not when other text differs too, nor when nothing had a mark', () => {
+    expect(allowReason(allow, 'html', '/nrsv/ps.103', live, { live, node: node.replace('A prayer', 'A Prayer') })).toBeUndefined();
+    const plain = page(['<span class="verse" verse_id="1">', '  "By David."']);
+    expect(allowReason(allow, 'html', '/web/ps.103', plain, { live: plain, node: plain.replace('By', 'Of') })).toBeUndefined();
+  });
+});

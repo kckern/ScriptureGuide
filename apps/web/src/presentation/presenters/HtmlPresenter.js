@@ -3,7 +3,7 @@ import { displayReference, blankHeading } from '../../domain/rules/referencePars
 
 import { versionImg, formatReference as referenceFromVerseIds, splitRuns } from '../../domain/rules/legacyReference.js';
 import { isEmptyRange } from '../../domain/rules/blockIds.js';
-import { renderHeadingHtml, renderHeadingFields, RENDERED_HEADING_FIELDS, segmentFormats, escapeHtml, isCompoundLine, isFillerText } from '../../domain/rules/legacyText.js';
+import { renderHeadingHtml, renderHeadingFields, RENDERED_HEADING_FIELDS, segmentFormats, escapeHtml, isCompoundLine, isFillerText, sectionMarksHtml } from '../../domain/rules/legacyText.js';
 import { verseStartsSection } from '../../domain/rules/sectionStart.js';
 
 // versionImg takes lds_scriptures_volumes.volume_id; Reference.volume is a volume code.
@@ -506,7 +506,7 @@ export class HtmlPresenter {
             chapter: v.chapter,
             book: v.book,
             mixmatch: v.mixmatch,
-            text: VerseSerializer.formatHtml(part.text),
+            text: sectionMarksHtml(VerseSerializer.formatHtml(part.text)),
             format: segFormat,
             // Extra class of the paragraph this segment starts ("flush", "linebreak", "nogap")
             paraClass: lbIdx === 0 ? paraClass : '',
