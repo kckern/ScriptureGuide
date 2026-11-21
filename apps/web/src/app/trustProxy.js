@@ -6,13 +6,15 @@
 // req.ip walks X-Forwarded-For from the right past trusted hops; the first untrusted hop stops
 // the walk, so a forged leftmost X-Forwarded-For entry is never used.
 //
-// Known gap (X-Real-IP): nginx-proxy-manager sets `real_ip_header X-Real-IP` globally and trusts
-// the ALB, so a visitor who sends their own X-Real-IP has it replace the ALB hop in $remote_addr,
-// which NPM then appends to X-Forwarded-For: "<visitor>, <cloudflare edge>, <forged>". The forged
-// address is the first untrusted hop, so req.ip reports it. This only affects log accuracy (nothing
-// authorizes on req.ip); the request log keeps the raw chain in `xff` and the `cf_ray` id. The fix
-// is upstream: strip X-Real-IP from visitor requests at Cloudflare (a request header transform
-// rule on the scripture.guide zone).
+// Known gap (X-Real-IP): nginx on bom is nginx-proxy-manager, which sets `real_ip_header X-Real-IP`
+// globally. When the hop in front of it is one it trusts (set_real_ip_from), a visitor who sends
+// their own X-Real-IP has it replace $remote_addr, which nginx then appends to X-Forwarded-For:
+// "<visitor>, <forged>". The forged address is the first untrusted hop, so req.ip reports it.
+// req.ip now decides the rate-limit identity (clientIp.js, src/app/access/): a forged X-Real-IP
+// would let a caller pick their own bucket, and after the move to Cloudflare a public forged value
+// also turns off CF-Connecting-IP. So X-Real-IP must be stripped from visitor requests at the edge
+// (CloudFront today; a request header transform rule on the Cloudflare zone after the move). The
+// request log keeps the raw chain in `xff`.
 //
 // Cloudflare ranges: https://api.cloudflare.com/client/v4/ips (keep in step with the proxy config).
 export const CLOUDFLARE_RANGES = [
