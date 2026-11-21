@@ -139,6 +139,18 @@ describe('buildPassage', () => {
     expect(data.links.web).toBe('https://scripture.guide/john.3.16-17');
   });
 
+  test('no default version has the verses: LDS, and the error says it was the default', async () => {
+    const empty = fakeRepo({ verses: async () => [] });
+    await expect(build({ reference: 'john3.16-17', versions: [] }, { repo: empty })).rejects.toMatchObject({
+      code: 'not_in_version', message: 'No text found for John 3:16-17 in the default version (LDS).',
+    });
+  });
+
+  test('verses missing from the index are an API error, not a crash', async () => {
+    const noIndex = fakeRepo({ indexRows: async () => [] });
+    await expect(build({ reference: 'john3.16-17', versions: ['NRSV'] }, { repo: noIndex })).rejects.toMatchObject({ code: 'not_in_version' });
+  });
+
   test('a version with none of the verses', async () => {
     await expect(build({ reference: 'john3.16-17', versions: ['LDS'] })).rejects.toMatchObject({ code: 'not_in_version' });
   });

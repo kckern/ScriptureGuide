@@ -20,7 +20,7 @@ const SITE = 'https://scripture.guide';
 // versions is the Map from ApiRepository.versions().
 export function versionInfo(id, versions) {
   const known = versions.get(String(id).toLowerCase());
-  return { id: known?.id ?? id, name: known?.name ?? id, language: languageFor(known?.lang), copyright: copyrightFor(id) };
+  return { id: known?.id ?? id, name: known?.name ?? id, language: languageFor(known?.lang), copyright: copyrightFor(known?.id ?? id) };
 }
 
 // The pieces of a reference ("John 3:16; 4:1; Romans 8:28"), each with its own verse ids.
@@ -66,6 +66,7 @@ export function passageSlug(label, shortTitle) {
 }
 
 function referenceEntry(label, rows) {
+  if (!rows.length) throw new ApiError('not_in_version', `No verses found for ${label}.`);
   const first = rows[0];
   const last = rows[rows.length - 1];
   return {
@@ -105,19 +106,21 @@ async function parallelsFor(ids, repo) {
 }
 
 // The versions to use: the requested ones, or the first default (by verse range) with text
+// at the first or last verse. fallback: no default had text, so LDS is used unchecked.
 async function chooseVersions(requested, ids, repo) {
-  if (requested.length) return requested;
+  if (requested.length) return { versions: requested, fallback: false };
+  const ends = [...new Set([ids[0], ids[ids.length - 1]])];
   for (const { version } of defaultVersions([], ids)) {
-    if ((await repo.verses(ids.slice(0, 1), version)).length) return [version];
+    if ((await repo.verses(ends, version)).length) return { versions: [version], fallback: false };
   }
-  return ['LDS'];
+  return { versions: ['LDS'], fallback: true };
 }
 
 export async function buildPassage({ reference, versions: requested, options = [] }, { repo = apiRepository, refs = referenceService } = {}) {
   const names = await repo.versions();
   const parts = await pieces(reference, { refs, repo });
   const allIds = parts.flatMap(p => p.ids);
-  const versions = await chooseVersions(requested, allIds, repo);
+  const { versions, fallback } = await chooseVersions(requested, allIds, repo);
   const idsOnly = options.includes('ids');
 
   // Text per version, keyed by verse id (none with the ids option)
@@ -128,7 +131,10 @@ export async function buildPassage({ reference, versions: requested, options = [
     }
   }
   if (!idsOnly && versions.every(t => texts[t].size === 0)) {
-    throw new ApiError('not_in_version', `${versions.join(', ')} has no text for ${parts.map(p => p.label).join('; ')}.`);
+    const ref = parts.map(p => p.label).join('; ');
+    throw new ApiError('not_in_version', fallback
+      ? `No text found for ${ref} in the default version (${versions[0]}).`
+      : `${versions.join(', ')} has no text for ${ref}.`);
   }
 
   const rows = new Map((await repo.indexRows(allIds)).map(r => [Number(r.verse_id), r]));
