@@ -558,10 +558,10 @@
     align-items: center;
     height: 14px;
     margin: 0 0 .4em;
-    font-family: 'Roboto Condensed', 'Arial Narrow', sans-serif;
-    font-size: 12px;
+    /* A scripture reference: the text face (interface text is Roboto Condensed) */
+    font-family: 'Goudy Scripture', 'Sorts Mill Goudy', Georgia, serif;
+    font-size: 13px;
     line-height: 14px;
-    letter-spacing: .3px;
     text-indent: 0;
     text-align: left;
     color: #5a4636;
