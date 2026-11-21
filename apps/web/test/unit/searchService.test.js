@@ -191,6 +191,24 @@ describe('SearchService with Sphinx', () => {
     const fewer = { search: vi.fn(async (q, { range }) => (range ? (range[0] === 23146 ? full.slice(1) : []) : many)) };
     expect((await new SearchService(fakeRepo(), fewer).search('faith')).capped).toBe(false);
   });
+  test('a range limits the search before the 5,000 cap (version and volume)', async () => {
+    const block = start => Array.from({ length: 5000 }, (_, i) => ({ verse_id: start + i, version: 'WEB' }));
+    const many = Array.from({ length: 301 }, (_, i) => ({ verse_id: 1 + i, version: 'WEB' }));
+    const sphinx = {
+      search: vi.fn(async (q, { range }) => {
+        if (!range) return many;
+        if (range[0] <= 1 && range[1] >= 1) return block(1);
+        if (range[0] <= 23146 && range[1] >= 23146) return block(23146);
+        return [];
+      }),
+    };
+    const repo = { ...fakeRepo(), texts: vi.fn(async pairs => pairs.map(p => ({ ...p, text: 'faith' }))) };
+    const r = await new SearchService(repo, sphinx).search('faith', { forcedVersion: 'WEB', range: [23146, 31102], requeryForced: true });
+    expect(r.rows.length).toBeGreaterThan(0);
+    expect(r.rows.every(row => row.verse_id >= 23146 && row.verse_id <= 31102)).toBe(true);
+    // only ranges that overlap the one asked for are searched
+    for (const [, opts] of sphinx.search.mock.calls) expect(opts.range).toEqual([23146, 31102]);
+  });
   test('a forced volume still requeries LDS/KJV when asked to keep the forced version', async () => {
     const many = Array.from({ length: 301 }, (_, i) => ({ verse_id: 28679 + i, version: 'WEB' }));
     const sphinx = { search: vi.fn(async (q, { range }) => (range ? [] : many)) };

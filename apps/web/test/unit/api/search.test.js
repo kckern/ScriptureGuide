@@ -15,11 +15,11 @@ describe('buildSearch', () => {
     expect(data.results[0]).toEqual({ id: 29996, reference: 'Ref 29996', slug: 'ref.29996', version: 'NRSV', text: 'God so loved the world', highlights: [[7, 12]] });
     expect(data.links.next).toBeNull();
   });
-  test('version and volume: the volume filters the rows', async () => {
-    const search = { search: async () => ({ rows: [row(100), row(26137)], truncated: false }) };
+  test('version and volume: SearchService searches the volume\'s range in that version', async () => {
+    const search = { search: vi.fn(async () => ({ rows: [row(26137)], truncated: false })) };
     const data = await buildSearch({ terms: 'loved', version: 'NRSV', volume: 'nt', page: 1 }, { search });
+    expect(search.search).toHaveBeenCalledWith('loved', { forcedVersion: 'NRSV', range: [23146, 31102], requeryForced: true });
     expect(data.results.map(r => r.id)).toEqual([26137]);
-    expect(data.total).toBe(1);
   });
   test('volume alone is the forced version', async () => {
     const search = { search: vi.fn(async () => ({ rows: [], truncated: false })) };

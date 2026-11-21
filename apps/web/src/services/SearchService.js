@@ -186,9 +186,12 @@ export class SearchService {
     return out.slice(0, limit);
   }
 
-  // requeryForced (the v1 API): a broad search in a forced version requeries that version by
-  // volume, instead of LDS/KJV as the site does
-  async search(rawQuery, { forcedVersion = null, requeryForced = false } = {}) {
+  // Options for the v1 API (the site passes neither):
+  //   requeryForced: a broad search in a forced version requeries that version by volume,
+  //     instead of LDS/KJV as the site does
+  //   range: [min, max] verse ids to search (a version and a volume); every query is limited
+  //     to it, so the 5,000 caps are filled from inside it
+  async search(rawQuery, { forcedVersion = null, requeryForced = false, range = null } = {}) {
     const query = String(rawQuery).replace(/\./g, ' ');
     let min = 0, max = 999999999;
     const budget = this.budget(); // one budget for all of this search's fallback queries
@@ -206,15 +209,19 @@ export class SearchService {
     } else {
       versions = await this.repo.searchableVersions();
     }
+    if (range) [min, max] = range;
 
-    let results = await this.hits(query, versions, { stopAfter: REQUERY_OVER, budget });
+    let results = await this.hits(query, versions, { range, stopAfter: REQUERY_OVER, budget });
     // capped: a limit (RANGE_LIMIT hits in a requery range, TOP verses) left matching verses out
     let capped = false;
     if (results.length > REQUERY_OVER) {
       const firstPass = results;
       results = [];
-      for (const range of BOOK_RANGES) {
-        const hits = await this.hits(query, requeryVersions, { range, limit: RANGE_LIMIT, budget });
+      for (const [from, to] of BOOK_RANGES) {
+        // A requery range outside [min, max] finds only hits that are dropped below
+        if (to < min || from > max) continue;
+        const span = range ? [Math.max(from, min), Math.min(to, max)] : [from, to];
+        const hits = await this.hits(query, requeryVersions, { range: span, limit: RANGE_LIMIT, budget });
         if (hits.length >= RANGE_LIMIT) capped = true;
         results.push(...hits);
       }

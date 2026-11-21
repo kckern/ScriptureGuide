@@ -15,15 +15,14 @@ function webLink(terms, version, volume) {
 }
 
 export async function buildSearch({ terms, version, volume, page }, { search = searchService } = {}) {
-  // SearchService takes a version or a volume word, not both: with both, it searches the
-  // version and the volume filters the rows here. requeryForced keeps a broad search in the
-  // version asked for (the site falls back to LDS/KJV).
-  const result = await search.search(terms, { forcedVersion: version ?? volume ?? null, requeryForced: true });
-  let rows = [...result.rows];
-  if (version && volume) {
-    const [min, max] = volumeRange(volume);
-    rows = rows.filter(r => r.verse_id >= min && r.verse_id <= max);
-  }
+  // forcedVersion is a version or a volume word, not both: with both, the version is forced and
+  // the volume becomes the range searched. requeryForced keeps a broad search in the version
+  // asked for (the site falls back to LDS/KJV).
+  const opts = version && volume
+    ? { forcedVersion: version, range: volumeRange(volume), requeryForced: true }
+    : { forcedVersion: version ?? volume ?? null, requeryForced: true };
+  const result = await search.search(terms, opts);
+  const rows = [...result.rows];
   rows.sort((a, b) => a.verse_id - b.verse_id);
 
   const total = rows.length;
