@@ -117,6 +117,13 @@ describe('ParallelService.build', () => {
     });
   });
 
+  test('each side\'s reference is looked up once per build', async () => {
+    const parse = vi.fn(refs.parse);
+    const counting = new ParallelService({ refs: { parse }, verses: { findBySlug: async () => null }, repo });
+    await counting.build('alp.2.1~kjv/bet.12.1');
+    expect(parse.mock.calls.filter(([s]) => s === 'alp.2.1')).toHaveLength(1);
+  });
+
   test('a left side that is not a reference is an edition of the right one', async () => {
     const page = await svc.build('1830~kjv/alp.2.1');
     expect(page.lver).toBe('LDS'); // the fake labels every version but KJV as LDS

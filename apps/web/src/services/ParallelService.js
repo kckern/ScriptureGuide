@@ -329,9 +329,12 @@ export class ParallelService {
     const sides = parseSides(q);
     if (!sides) return null;
     const { left, right } = sides;
+    // One lookup per reference string in this build (the edition check and each side reuse it)
+    const looked = new Map();
+    const verseIds = ref => { if (!looked.has(ref)) looked.set(ref, this.verseIds(ref)); return looked.get(ref); };
 
     if (!left.ver && right.ver) {
-      const ids = await this.verseIds(left.ref);
+      const ids = await verseIds(left.ref);
       if (!ids.length || EDITION_YEARS.includes(left.ref)) {
         left.ver = left.ref;
         left.ref = right.ref;
@@ -339,8 +342,8 @@ export class ParallelService {
     }
 
     // Slugs for the switch and full-chapter links
-    const leftVerses = await this.verseIds(left.ref);
-    const rightVerses = await this.verseIds(right.ref);
+    const leftVerses = await verseIds(left.ref);
+    const rightVerses = await verseIds(right.ref);
     const meta = await this.metaFor([...leftVerses, ...rightVerses]);
     // formatReference copies PHP's double space after a ";" between chapters ("Isaiah 9;  11")
     const ref = (ids, field) => this.reference(ids, field, meta).replace(/\s+/g, ' ');
