@@ -463,6 +463,7 @@ export class HtmlPresenter {
       title: displayTitle,
       // The version leaves the passage out: this note shows instead of its filler verses
       absent: absent && escapeHtml(absent),
+      absentHeading: absent && escapeHtml(displayTitle),
       // Heading for a reference block that matched no verses (scriptures::blankData)
       // escaped: it echoes the request (the PHP site reflected it raw)
       blank: result.verses.length ? null : escapeHtml(result.legacyBlock ? result.legacyBlock.orig : blankHeading(result.reference.query)),

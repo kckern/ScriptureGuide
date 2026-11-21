@@ -244,3 +244,17 @@ describe('a passage the version leaves out: link preview', () => {
     expect(og.description).toBe('2 Nephi 16— The 2-hour Book of Mormon (2HRBOM) does not include 2 Nephi 16.');
   });
 });
+
+describe('a passage the version leaves out: escaping', () => {
+  test('the heading is escaped like the note', async () => {
+    const SECTION = fileURLToPath(new URL('../../src/presentation/views/partials/section.ejs', import.meta.url));
+    const verses = [new Verse({ id: 32102, verseNum: 1, chapter: 16, text: '*', version: '2HRBOM' })];
+    const result = new ScriptureResult({
+      reference: new Reference({ query: 'x', normalized: '2 Nephi <b>16', verseIds: [32102] }),
+      verses, headings: [], config: { version: '2HRBOM', _versionTitle: 'T' },
+    });
+    const html = await ejs.renderFile(SECTION, { data: new HtmlPresenter().serialize(result) });
+    expect(html).not.toContain('<b>');
+    expect(cheerio.load(html)('h3').text()).toBe('2 Nephi <b>16');
+  });
+});

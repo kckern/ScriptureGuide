@@ -23,7 +23,7 @@ const navHtml = () => {
 
 // The version leaves the passage out (only filler rows): a note like "No scripture verses found"
 if (data.absent) {
-  return `\n      <div class="passage ver_">\n\t\t<h3>${data.title}</h3>\n\t\t<p><span class="verse">${data.absent}</span></p>\n      </div>` + navHtml();
+  return `\n      <div class="passage ver_">\n\t\t<h3>${data.absentHeading}</h3>\n\t\t<p><span class="verse">${data.absent}</span></p>\n      </div>` + navHtml();
 }
 
 // Helper: build a full <h3 class="heading"> with all production attrs
