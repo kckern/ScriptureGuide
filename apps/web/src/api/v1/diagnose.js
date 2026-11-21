@@ -1,5 +1,6 @@
 // Why a reference found no verses: an unknown book, a chapter or verse past the end, or text
 // that can't be read as a reference. Returns an ApiError (the caller throws it).
+// Only the start of a range is checked: "gen 1:1-99" is not diagnosed.
 import { lookupReference } from 'scripture-guide';
 import { ApiError } from './errors.js';
 
@@ -22,14 +23,17 @@ export async function diagnoseMiss(query, repo) {
   const book = row.book_title;
 
   const chapters = await repo.chapterCount(row.book_id);
-  const chapter = Number(chapterText);
+  // In a one-chapter book a lone number is a verse: "jude 30" is Jude 1:30
+  const [chapter, verse] = chapters === 1 && !verseText
+    ? [1, Number(chapterText)]
+    : [Number(chapterText), verseText ? Number(verseText) : null];
   if (chapter > chapters) {
     return new ApiError('chapter_out_of_range', `${book} has ${chapters} chapter${chapters === 1 ? '' : 's'}.`, `${book} ${chapters}`);
   }
-  if (verseText) {
+  if (verse !== null) {
     const verses = await repo.verseCount(row.book_id, chapter);
-    if (Number(verseText) > verses) {
-      return new ApiError('verse_out_of_range', `${book} ${chapter} has ${verses} verses.`, `${book} ${chapter}:${verses}`);
+    if (verse > verses) {
+      return new ApiError('verse_out_of_range', `${book} ${chapter} has ${verses} verse${verses === 1 ? '' : 's'}.`, `${book} ${chapter}:${verses}`);
     }
   }
   return unreadable();
