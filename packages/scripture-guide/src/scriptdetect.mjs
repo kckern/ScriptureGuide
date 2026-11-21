@@ -88,6 +88,8 @@ const findMatches = (content,books,lang_extra) => {
         return [substring,positions];
     }).filter(i=>!!i);
 
+    // [start, end] of matches the detection bar turned away: implied verses must not bind past them.
+    const rejectedByBar = [];
     const possiblyOverlappingMatches = bookSubStrings.map(([substring,positions])=>{
         // One sticky regex per book substring, matched at each position. Building a regex per
         // position and matching it against the rest of the text was quadratic in page length.
@@ -112,7 +114,10 @@ const findMatches = (content,books,lang_extra) => {
             // Detection's own bar (detectconfidence.mjs): a chapter-only match needs a book
             // token that looks like a book ("L3" and "lu 3" are labels); lookup stays lenient.
             // `substring` is the book token as written; the rest of the match is its numbers.
-            if(!passesDetectionBar(substring, match.slice(substring.length))) return null;
+            if(!passesDetectionBar(substring, match.slice(substring.length))){
+                rejectedByBar.push([posIn,posOut]);
+                return null;
+            }
             //console.log({content:content.slice(i),pattern,match,posIn,posOut});
             return [match,posIn,posOut];
         }
@@ -150,7 +155,10 @@ const findMatches = (content,books,lang_extra) => {
         //console.log({string,matches,tail});
         return matches;
     }).flat();
-    return [...new Set(matches)].filter(i=>!!i);
+    const found = [...new Set(matches)].filter(i=>!!i);
+    // Callers that only want the strings ignore this property; context binding reads it.
+    found.rejected = rejectedByBar;
+    return found;
 }
 
 

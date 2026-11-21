@@ -241,6 +241,24 @@ const findImpliedReferences = (content, explicitMatches, explicitIndices, lookup
     
     // Find all explicit book references to establish context
     const bookContexts = findBookContexts(content, explicitMatches, explicitIndices, lookupReference);
+
+    // A book token the detection bar rejected ("lu 3") still starts a new topic: an implied
+    // verse after it must not reach back past it to an earlier book. Rejected candidates
+    // inside an accepted span (the bare "S 3" of "1 S 3") are part of that reference.
+    const insideAccepted = spanCoverage(explicitIndices || []);
+    const rejectedStarts = ((explicitMatches && explicitMatches.rejected) || [])
+        .map(([start]) => start)
+        .filter(start => !insideAccepted(start))
+        .sort((a, b) => a - b);
+    // Is there a rejected start in [context.endPosition, position)? Binary search, not a scan.
+    const rejectedBetween = (context, position) => {
+        let lo = 0, hi = rejectedStarts.length;
+        while (lo < hi) {
+            const mid = (lo + hi) >> 1;
+            if (rejectedStarts[mid] < context.endPosition) lo = mid + 1; else hi = mid;
+        }
+        return lo < rejectedStarts.length && rejectedStarts[lo] < position;
+    };
     
     // Simple pattern to match "vv. X, Y, Z:A, B:C" - treat it as one unit
     const verseGroupPattern = /\b(?:vv?\.?\s*|vs\.?\s*|verses?\s+)([\d:,\s–—-]+?)(?=\s*[).;\n]|$)/gi;
@@ -253,7 +271,7 @@ const findImpliedReferences = (content, explicitMatches, explicitIndices, lookup
         
         // Find the nearest book context
         const context = getNearestBookContext(position, bookContexts, options.maxContextDistance);
-        if (context) {
+        if (context && !rejectedBetween(context, position)) {
             // Replace the "vv." with the actual book and chapter
             const impliedRef = `${context.book} ${context.chapter}:${verseSpec}`;
             const verification = lookupReference(impliedRef);
@@ -287,7 +305,7 @@ const findImpliedReferences = (content, explicitMatches, explicitIndices, lookup
 
         // Find the nearest book context
         const context = getNearestBookContext(position, bookContexts, options.maxContextDistance);
-        if (context && (options.strictImpliedBooks === false ||
+        if (context && !rejectedBetween(context, position) && (options.strictImpliedBooks === false ||
             bindsToBookContext(content.slice(context.endPosition, position), joiners))) {
             const impliedRef = `${context.book} ${chapter}:${verses}`;
             const verification = lookupReference(impliedRef);

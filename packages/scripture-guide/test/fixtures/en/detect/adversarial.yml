@@ -320,3 +320,13 @@ tests:
         expected_output: 'Read [Lu 3] today. Then rename lu 3 to lu 4. Read [Mt 5]. Level mt 5 unlocked.'
       contextAware_false:
         expected_output: 'Read [Lu 3] today. Then rename lu 3 to lu 4. Read [Mt 5]. Level mt 5 unlocked.'
+
+  - id: en-detect-adv-053
+    input: Read Mt 5:3. Then lu 3 (v. 16) says.
+    description: an implied verse does not bind past a book token the detection bar rejected
+    tags: [negative, implied, chapter-only]
+    context_variations:
+      contextAware_true:
+        expected_output: 'Read [Mt 5:3]. Then lu 3 (v. 16) says.'
+      contextAware_false:
+        expected_output: 'Read [Mt 5:3]. Then lu 3 (v. 16) says.'
