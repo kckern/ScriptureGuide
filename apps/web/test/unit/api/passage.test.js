@@ -165,6 +165,13 @@ describe('buildPassage', () => {
     expect(looked).toEqual(['many']);
   });
 
+  test('a long verse id list or too many pieces is refused before anything is looked up', async () => {
+    const never = { resolve: async () => { throw new Error('resolved'); } };
+    for (const reference of ['1-50000;50001-93000', '1-5001', Array(101).fill('john3.16').join(';'), Array(101).fill('1').join(',')]) {
+      await expect(build({ reference, versions: ['NRSV'] }, { refs: never })).rejects.toMatchObject({ code: 'reference_too_large' });
+    }
+  });
+
   test('more than 5000 verses is too large', async () => {
     const ids = Array.from({ length: 5001 }, (_, i) => i + 1);
     const big = { resolve: async q => new Reference({ query: q, normalized: 'Genesis 1-Exodus 2', verseIds: ids }) };

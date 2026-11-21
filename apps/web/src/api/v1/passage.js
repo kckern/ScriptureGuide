@@ -28,17 +28,31 @@ export function versionInfo(id, versions) {
 // reference, split where each piece's first verse appears, so together the pieces hold
 // exactly the whole reference's ids in order. Looking a piece up by name is only used to
 // find where it starts; a piece whose start can't be found joins the piece before it.
+const tooManyPieces = n => new ApiError('reference_too_large', `The reference has ${n} pieces. Ask for ${REQUEST_LIMITS.pieces} or fewer.`);
+const tooManyVerses = n => new ApiError('reference_too_large', `The reference has ${n} verses. Ask for ${REQUEST_LIMITS.verses} or fewer.`);
+
+// The limits checked on the text, before it is looked up: ";" and "," separated segments,
+// and for a verse id list ("1-500;900") the number of ids, counted without building them.
+function checkQuerySize(query) {
+  const segments = String(query).split(/[;,]/).filter(s => s.trim());
+  if (segments.length > REQUEST_LIMITS.pieces) throw tooManyPieces(segments.length);
+  if (!/^[\d\s;,-]+$/.test(query)) return;
+  let total = 0;
+  for (const segment of segments) {
+    const [a, b] = segment.replace(/\s+/g, '').split('-').filter(Boolean).map(Number);
+    total += b > a ? b - a + 1 : 1;
+  }
+  if (total > REQUEST_LIMITS.verses) throw tooManyVerses(total);
+}
+
 async function pieces(query, { refs, repo }) {
+  // The same limits as the site's pages (RequestBudget)
+  checkQuerySize(query);
   const whole = await refs.resolve(query);
   if (whole.isEmpty) throw await diagnoseMiss(query, repo);
   const labels = whole.normalized.split(';').map(s => s.trim()).filter(Boolean);
-  // The same limits as the site's pages (RequestBudget)
-  if (labels.length > REQUEST_LIMITS.pieces) {
-    throw new ApiError('reference_too_large', `The reference has ${labels.length} pieces. Ask for ${REQUEST_LIMITS.pieces} or fewer.`);
-  }
-  if (whole.verseIds.length > REQUEST_LIMITS.verses) {
-    throw new ApiError('reference_too_large', `The reference has ${whole.verseIds.length} verses. Ask for ${REQUEST_LIMITS.verses} or fewer.`);
-  }
+  if (labels.length > REQUEST_LIMITS.pieces) throw tooManyPieces(labels.length);
+  if (whole.verseIds.length > REQUEST_LIMITS.verses) throw tooManyVerses(whole.verseIds.length);
   const ids = whole.verseIds;
   if (labels.length < 2) return [{ label: whole.normalized, ids }];
   const found = [];
