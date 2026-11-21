@@ -99,7 +99,12 @@ describe('apiRouter', () => {
   test('simple hosts', async () => {
     expect((await get('txt.scripture.guide', '/nrsv/john3.16')).text).toBe('For God so loved the world.\n');
     expect((await get('json.scripture.guide', '/nrsv/john3.16')).body.version).toBe('NRSV');
-    expect((await get('md.scripture.guide', '/nrsv/john3.16')).headers['content-type']).toMatch(/text\/markdown/);
+    expect((await get('md.scripture.guide', '/nrsv/john3.16')).headers['content-type']).toBe('text/plain; charset=utf-8');
+  });
+  test('yml. and md. are text/plain, so browsers show them instead of downloading them', async () => {
+    for (const host of ['yml.scripture.guide', 'yaml.scripture.guide', 'md.scripture.guide', 'markdown.scripture.guide']) {
+      expect((await get(host, '/nrsv/john3.16')).headers['content-type']).toBe('text/plain; charset=utf-8');
+    }
   });
   test('simple hosts refuse search, parallel and the version list', async () => {
     expect((await get('json.scripture.guide', '/search/love')).body.error.code).toBe('search_not_supported');
@@ -229,7 +234,7 @@ describe('apiRouter', () => {
     expect((await get('scripture.guide', '/json')).body.usage).toBe('https://json.scripture.guide/<version>/<reference>');
     expect((await get('yml.scripture.guide', '/')).text).toBe('usage: https://yml.scripture.guide/<version>/<reference>\nexample: https://yml.scripture.guide/nrsv/john3.16\n');
     const md = await get('md.scripture.guide', '/');
-    expect(md.headers['content-type']).toMatch(/text\/markdown/);
+    expect(md.headers['content-type']).toBe('text/plain; charset=utf-8');
     expect(md.text).toBe('Usage: `https://md.scripture.guide/<version>/<reference>`, e.g. <https://md.scripture.guide/nrsv/john3.16>\n');
     const raw = await get('raw.scripture.guide', '/');
     expect(raw.headers['content-type']).toBe('application/json; charset=utf-8');

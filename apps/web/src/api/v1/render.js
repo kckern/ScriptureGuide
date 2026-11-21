@@ -10,8 +10,10 @@ const dumpYaml = value => yaml.dump(value, { lineWidth: -1, noRefs: true });
 export const CONTENT_TYPES = Object.freeze({
   api: 'application/json; charset=utf-8',
   json: 'application/json; charset=utf-8',
-  yaml: 'application/yaml; charset=utf-8',
-  markdown: 'text/markdown; charset=utf-8',
+  // text/plain so browsers show YAML and Markdown instead of downloading them
+  // (they download application/yaml and text/markdown); clients parse the body either way.
+  yaml: 'text/plain; charset=utf-8',
+  markdown: 'text/plain; charset=utf-8',
   text: 'text/plain; charset=utf-8',
   raw: 'application/json; charset=utf-8',
 });
