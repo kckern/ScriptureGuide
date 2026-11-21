@@ -2,20 +2,25 @@ import db from '../db/connection.js';
 import { knownVersions } from '../../domain/rules/versionNotice.js';
 
 // The names a version segment may use (versionNotice.knownVersions) from a repository's
-// findAll, read once per repository; a failed read is dropped so the next request retries
-const knownCache = new WeakMap();
-export function knownVersionSet(repo) {
-  if (!knownCache.has(repo)) {
-    knownCache.set(repo, Promise.resolve().then(() => repo.findAll()).then(knownVersions, err => {
-      knownCache.delete(repo);
-      throw err;
-    }));
-  }
-  return knownCache.get(repo);
+// findAll, read once per repository and kept for an hour, so a version added to
+// scripture_versions gets no "There is no version" note after at most that long. A failed read
+// is dropped so the next request retries.
+export const KNOWN_TTL_MS = 60 * 60 * 1000;
+const knownCache = new WeakMap(); // repo → { at, promise }
+export function knownVersionSet(repo, now = Date.now) {
+  const hit = knownCache.get(repo);
+  if (hit && now() - hit.at < KNOWN_TTL_MS) return hit.promise;
+  const entry = { at: now() };
+  entry.promise = Promise.resolve().then(() => repo.findAll()).then(knownVersions, err => {
+    if (knownCache.get(repo) === entry) knownCache.delete(repo);
+    throw err;
+  });
+  knownCache.set(repo, entry);
+  return entry.promise;
 }
 
 export class VersionRepository {
-  // The names a version segment may use, read once (knownVersionSet)
+  // The names a version segment may use, cached for an hour (knownVersionSet)
   knownVersions() {
     return knownVersionSet(this);
   }

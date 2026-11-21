@@ -15,3 +15,20 @@ describe('knownVersionSet: the names a version segment may use, read once per re
     expect((await knownVersionSet(repo)).has('LDS')).toBe(true);
   });
 });
+
+describe('knownVersionSet: kept for an hour', () => {
+  test('read again after KNOWN_TTL_MS', async () => {
+    const { KNOWN_TTL_MS } = await import('../../src/data/repositories/VersionRepository.js');
+    expect(KNOWN_TTL_MS).toBe(60 * 60 * 1000);
+    let t = 1000;
+    const now = () => t;
+    const repo = { findAll: vi.fn(async () => [{ id: 'KJV', volumes: '' }]) };
+    await knownVersionSet(repo, now);
+    t += KNOWN_TTL_MS - 1;
+    await knownVersionSet(repo, now);
+    expect(repo.findAll).toHaveBeenCalledTimes(1);
+    t += 1;
+    await knownVersionSet(repo, now);
+    expect(repo.findAll).toHaveBeenCalledTimes(2);
+  });
+});
