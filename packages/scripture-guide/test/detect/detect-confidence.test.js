@@ -26,6 +26,11 @@ describe('passesDetectionBar', () => {
     ['JS-M', ' 1', true],
     ['AF', ' 1', true],
     ['First book of Ne', ' 1', true],
+    ['éx', ' 3', false],
+    ['Éx', ' 3', true],
+    ['Génesis', ' 1', true],
+    ['Мф', ' 5', true],
+    ['мф', ' 5', false],
     ['창', ' 3', true],
     ['創', '3', true],
   ])('%j %j → %s', (token, numbers, expected) => {
