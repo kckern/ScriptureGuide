@@ -67,8 +67,11 @@ export function parseApiPath(path, translations) {
   };
 }
 
+// The volume word after "random": none, or one of VOLUMES
 function volumeOf(word) {
-  return word && VOLUMES.includes(word) ? word : null;
+  if (!word) return null;
+  if (VOLUMES.includes(word)) return word;
+  throw new ApiError('unknown_volume', `There is no volume "${word}". Use one of ${VOLUMES.join(', ')}.`);
 }
 
 // /search/{translation?}/{volume?}/{page-n?}/{terms}: terms are the last segment

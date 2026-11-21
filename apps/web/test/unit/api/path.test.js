@@ -74,4 +74,11 @@ describe('parseApiPath: random', () => {
   test('bare', () => expect(parse('/v1/random')).toMatchObject({ kind: 'random', translations: [], volume: null }));
   test('with a translation', () => expect(parse('/v1/nrsv.kjv/random')).toMatchObject({ kind: 'random', translations: ['NRSV', 'KJV'] }));
   test('with a volume', () => expect(parse('/v1/random/bom')).toMatchObject({ kind: 'random', volume: 'bom' }));
+  test('an unknown volume is an error', () => {
+    for (const path of ['/v1/random/xx', '/v1/kjv/random/foo']) {
+      const e = errorOf(path);
+      expect(e).toBeInstanceOf(ApiError);
+      expect(e).toMatchObject({ code: 'unknown_volume', status: 404 });
+    }
+  });
 });
