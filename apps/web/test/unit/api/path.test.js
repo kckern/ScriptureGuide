@@ -53,6 +53,15 @@ describe('parseApiPath: errors', () => {
     expect(errorOf('/v01/john3.16')).toMatchObject({ code: 'unknown_version', message: 'There is no version "v01".' });
     expect(parse('/v01')).toMatchObject({ api: 1, kind: 'passage', versions: [], reference: 'v01' });
   });
+  test('a version named twice is listed once, in first-seen order', () => {
+    expect(parse('/v1/nrsv.kjv.NRSV/john3.16').versions).toEqual(['NRSV', 'KJV']);
+  });
+  test('more than ten versions is too large', () => {
+    const many = new Map(Array.from({ length: 11 }, (_, i) => [`v${i}x`, { id: `V${i}X`, name: 'x', lang: 'en' }]));
+    const ids = [...many.keys()];
+    expect(parseApiPath(`/v1/${ids.slice(0, 10).join('.')}/john3.16`, many).versions).toHaveLength(10);
+    expect(() => parseApiPath(`/v1/${ids.join('.')}/john3.16`, many)).toThrow(expect.objectContaining({ code: 'reference_too_large', status: 400 }));
+  });
   test('nothing to look up', () => {
     expect(errorOf('/v1').code).toBe('unparseable_reference');
   });

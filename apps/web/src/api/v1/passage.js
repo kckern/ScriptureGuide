@@ -6,6 +6,7 @@ import { Reference } from '../../domain/entities/Reference.js';
 import { defaultVersions } from '../../domain/rules/defaultVersions.js';
 import { plainText } from '../../domain/rules/legacyText.js';
 import { slugifyRef } from '../../domain/rules/legacyReference.js';
+import { REQUEST_LIMITS } from '../../domain/rules/requestBudget.js';
 import { ApiError } from './errors.js';
 import { diagnoseMiss } from './diagnose.js';
 import { copyrightFor } from './copyright.js';
@@ -27,6 +28,13 @@ async function pieces(query, { refs, repo }) {
   const whole = await refs.resolve(query);
   if (whole.isEmpty) throw await diagnoseMiss(query, repo);
   const labels = whole.normalized.split(';').map(s => s.trim()).filter(Boolean);
+  // The same limits as the site's pages (RequestBudget)
+  if (labels.length > REQUEST_LIMITS.pieces) {
+    throw new ApiError('reference_too_large', `The reference has ${labels.length} pieces. Ask for ${REQUEST_LIMITS.pieces} or fewer.`);
+  }
+  if (whole.verseIds.length > REQUEST_LIMITS.verses) {
+    throw new ApiError('reference_too_large', `The reference has ${whole.verseIds.length} verses. Ask for ${REQUEST_LIMITS.verses} or fewer.`);
+  }
   if (labels.length < 2) return [{ label: whole.normalized, ids: whole.verseIds }];
   const out = [];
   let book = '';

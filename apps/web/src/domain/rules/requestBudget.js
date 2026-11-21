@@ -2,8 +2,11 @@
 // and LegacyBlockService share them), verses listed, and database queries for the PHP blocks.
 // Past a limit the rest reads as not found, so a long junk URL costs a bounded amount of work.
 // memo() caches lookups (chapter maxima) for the request.
+// The default limits; the v1 API (src/api/v1/passage.js) uses the same ones.
+export const REQUEST_LIMITS = Object.freeze({ pieces: 100, verses: 5000, queries: 500 });
+
 export class RequestBudget {
-  constructor({ pieces = 100, verses = 5000, queries = 500 } = {}) {
+  constructor({ pieces = REQUEST_LIMITS.pieces, verses = REQUEST_LIMITS.verses, queries = REQUEST_LIMITS.queries } = {}) {
     this.pieces = pieces;
     this.verses = verses;
     this.queries = queries;

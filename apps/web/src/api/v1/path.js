@@ -21,15 +21,22 @@ function storedId(id, versions) {
   return versions.get(id.toLowerCase())?.id ?? null;
 }
 
-// "nrsv.kjv*lds" → ['NRSV', 'KJV'] in stored case; the "*format" part is layout only
+export const MAX_VERSIONS = 10;
+
+// "nrsv.kjv*lds" → ['NRSV', 'KJV'] in stored case; the "*format" part is layout only.
+// A version named twice is listed once.
 function versionList(spec, versions) {
   const ids = spec.split('.').map(piece => piece.split('*')[0]).filter(Boolean);
   if (!ids.length) throw new ApiError('unknown_version', `"${spec}" names no version.`);
-  return ids.map(id => {
-    const stored = storedId(id, versions);
-    if (!stored) throw new ApiError('unknown_version', `There is no version "${id}".`);
-    return stored;
-  });
+  const stored = [...new Set(ids.map(id => {
+    const found = storedId(id, versions);
+    if (!found) throw new ApiError('unknown_version', `There is no version "${id}".`);
+    return found;
+  }))];
+  if (stored.length > MAX_VERSIONS) {
+    throw new ApiError('reference_too_large', `Too many versions: ${stored.length}. Ask for ${MAX_VERSIONS} or fewer.`);
+  }
+  return stored;
 }
 
 export function parseApiPath(path, versions) {

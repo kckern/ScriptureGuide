@@ -102,6 +102,22 @@ describe('buildPassage', () => {
     await expect(build({ reference: 'john3.16-17', versions: ['LDS'] })).rejects.toMatchObject({ code: 'not_in_version' });
   });
 
+  test('more than 100 pieces is too large, before any piece is looked up', async () => {
+    const looked = [];
+    const many = { resolve: async q => {
+      looked.push(q);
+      return new Reference({ query: q, normalized: Array.from({ length: 101 }, (_, i) => `John 3:${i + 1}`).join('; '), verseIds: [26137] });
+    } };
+    await expect(build({ reference: 'many', versions: ['NRSV'] }, { refs: many })).rejects.toMatchObject({ code: 'reference_too_large', status: 400 });
+    expect(looked).toEqual(['many']);
+  });
+
+  test('more than 5000 verses is too large', async () => {
+    const ids = Array.from({ length: 5001 }, (_, i) => i + 1);
+    const big = { resolve: async q => new Reference({ query: q, normalized: 'Genesis 1-Exodus 2', verseIds: ids }) };
+    await expect(build({ reference: 'big', versions: ['NRSV'] }, { refs: big })).rejects.toMatchObject({ code: 'reference_too_large' });
+  });
+
   test('a reference that finds nothing is diagnosed', async () => {
     await expect(build({ reference: 'xyz9.9', versions: [] })).rejects.toMatchObject({ code: 'unknown_book' });
   });

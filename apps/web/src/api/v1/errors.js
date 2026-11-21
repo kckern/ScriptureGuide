@@ -4,6 +4,7 @@ export const STATUS = Object.freeze({
   empty_query: 400,
   parallel_not_supported: 400,
   search_not_supported: 400,
+  reference_too_large: 400,
   unknown_book: 404,
   chapter_out_of_range: 404,
   verse_out_of_range: 404,
