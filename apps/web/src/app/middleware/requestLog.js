@@ -11,7 +11,8 @@
 import { writeLine } from '../log.js';
 import { clientIp } from '../clientIp.js';
 
-const SKIP = new Set(['/health', '/healthz']);
+// Not logged: health checks and the Clicky analytics script and beacon (clickyProxy.js)
+const SKIP = new Set(['/health', '/healthz', '/cd7dba44d5.js', '/e9b1e2e71a']);
 
 export function requestLog({ write = writeLine } = {}) {
   return function requestLogMiddleware(req, res, next) {

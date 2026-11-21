@@ -116,6 +116,11 @@ function activateCopyButtons() {
 <script src="/js/prefsPanel.js<%= av %>"></script>
 <script src="/js/columns.js<%= av %>"></script>
 <script src="/js/copySelection.js<%= av %>"></script>
+<%# Clicky analytics, production only (res.locals.clickyId); the script and its hits go through
+    this origin (middleware/clickyProxy.js). In <head>, outside #container and body. -%>
+<% if (typeof clickyId !== 'undefined' && clickyId) { %>
+<script async data-id="<%= clickyId %>" src="/cd7dba44d5.js"></script>
+<% } %>
 </head>
 <body class="<%- typeof browserClass !== 'undefined' ? browserClass : '' %>">
 

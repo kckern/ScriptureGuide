@@ -13,6 +13,7 @@ import { requestLog } from './middleware/requestLog.js';
 import { responseHeaders } from './middleware/headers.js';
 import { apiRouter } from '../api/v1/router.js';
 import { htmlAccess } from './middleware/htmlAccess.js';
+import { clickyProxy, CLICKY_SITE_ID } from './middleware/clickyProxy.js';
 import { createAccess } from './access/access.js';
 import { TRUST_PROXY } from './trustProxy.js';
 import { commit } from './buildInfo.js';
@@ -47,7 +48,14 @@ export function versionNames(database = db, log = logError) {
 // log: one JSON line per request on stdout (off in tests by default).
 // access: the access check (src/app/access), one instance shared by the API and the website
 // pages so both count against the same buckets; tests can pass their own.
-export function createApp({ log = config.env !== 'test', access = createAccess({ mode: config.accessMode }) } = {}) {
+// clicky: the Clicky analytics proxy (middleware/clickyProxy.js); analytics: whether pages carry
+// the Clicky tag (production only).
+export function createApp({
+  log = config.env !== 'test',
+  access = createAccess({ mode: config.accessMode }),
+  clicky = clickyProxy(),
+  analytics = config.env === 'production'
+} = {}) {
   const app = express();
 
   // req.ip is the visitor behind Cloudflare, the ALB and nginx-proxy-manager
@@ -61,6 +69,10 @@ export function createApp({ log = config.env !== 'test', access = createAccess({
 
   // Compression
   app.use(compression());
+
+  // Clicky analytics script and beacon, on every host: ahead of the body parsers so a beacon
+  // POST is relayed unparsed, and ahead of the API and site routes
+  app.use(clicky);
 
   // Body parsing
   app.use(express.json());
@@ -84,6 +96,7 @@ export function createApp({ log = config.env !== 'test', access = createAccess({
   // Asset URLs carry the build's commit (layouts/main.ejs), so a deploy reaches cached browsers at once
   app.use((req, res, next) => {
     res.locals.assetVersion = commit();
+    res.locals.clickyId = analytics ? CLICKY_SITE_ID : null;
     next();
   });
 
