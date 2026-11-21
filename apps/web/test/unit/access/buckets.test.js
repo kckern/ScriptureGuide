@@ -48,4 +48,13 @@ describe('TokenBuckets', () => {
     // back at 60 s: no time has passed since the newest reading, so no refill
     expect(b.take('a', p, 60_000)).toMatchObject({ ok: true, remaining: 0 });
   });
+  test('firstOver marks only the first refusal until the caller is allowed again', () => {
+    const b = new TokenBuckets();
+    const p = { limit: 1, windowMs: 60_000 };
+    expect(b.take('a', p, 0).firstOver).toBe(false);
+    expect(b.take('a', p, 0).firstOver).toBe(true);
+    expect(b.take('a', p, 0).firstOver).toBe(false);
+    expect(b.take('a', p, 60_000)).toMatchObject({ ok: true, firstOver: false });
+    expect(b.take('a', p, 60_000).firstOver).toBe(true);
+  });
 });
