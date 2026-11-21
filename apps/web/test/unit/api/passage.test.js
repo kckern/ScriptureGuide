@@ -39,6 +39,12 @@ const REFS = {
   '26137-26139,28145': ['John 3:16-18; Romans 8:28', [26137, 26138, 26139, 28145]],
   'John 3:16-18': ['John 3:16-18', [26137]],
   'Romans 8:28': ['Romans 8:28', [28145]],
+  // A piece whose start can't be found
+  'john3.16-17,zz': ['John 3:16-17; Zz 1:1', [26137, 26138, 26140]],
+  // Pieces that overlap
+  'john3.15-17,16': ['John 3:15-17; 3:16', [26136, 26137, 26138, 26137]],
+  'John 3:15-17': ['John 3:15-17', [26136, 26137, 26138]],
+  'John 3:16': ['John 3:16', [26137]],
 };
 const refs = {
   resolve: async q => {
@@ -96,6 +102,18 @@ describe('buildPassage', () => {
     const data = await build({ reference: '26137-26139,28145', versions: ['NRSV'], options: ['ids'] });
     expect(data.reference.map(r => r.label)).toEqual(['John 3:16-18', 'Romans 8:28']);
     expect(data.passages.map(p => p.verses.map(v => v.id))).toEqual([[26137, 26138, 26139], [28145]]);
+  });
+
+  test('a piece whose start can\'t be found is dropped; its ids stay with the piece before', async () => {
+    const data = await build({ reference: 'john3.16-17,zz', versions: ['NRSV'], options: ['ids'] });
+    expect(data.reference.map(r => r.label)).toEqual(['John 3:16-17']);
+    expect(data.passages.flatMap(p => p.verses.map(v => v.id))).toEqual([26137, 26138, 26140]);
+  });
+
+  test('overlapping pieces each keep their own verses', async () => {
+    const data = await build({ reference: 'john3.15-17,16', versions: ['NRSV'], options: ['ids'] });
+    expect(data.reference.map(r => r.label)).toEqual(['John 3:15-17', 'John 3:16']);
+    expect(data.passages.map(p => p.verses.map(v => v.id))).toEqual([[26136, 26137, 26138], [26137]]);
   });
 
   test('ids option loads no text', async () => {

@@ -27,7 +27,9 @@ export function versionInfo(id, versions) {
 // A piece without a book name takes the book before it. The ids come from the whole
 // reference, split where each piece's first verse appears, so together the pieces hold
 // exactly the whole reference's ids in order. Looking a piece up by name is only used to
-// find where it starts; a piece whose start can't be found joins the piece before it.
+// find where it starts: the next piece is searched for after the previous piece's length,
+// so overlapping pieces ("John 3:16-18; 3:17") split right. A piece whose start can't be
+// found is dropped; its ids, if any, stay in the piece before it.
 const tooManyPieces = n => new ApiError('reference_too_large', `The reference has ${n} pieces. Ask for ${REQUEST_LIMITS.pieces} or fewer.`);
 const tooManyVerses = n => new ApiError('reference_too_large', `The reference has ${n} verses. Ask for ${REQUEST_LIMITS.verses} or fewer.`);
 
@@ -57,14 +59,17 @@ async function pieces(query, { refs, repo }) {
   if (labels.length < 2) return [{ label: whole.normalized, ids }];
   const found = [];
   let book = '';
-  for (const [i, piece] of labels.entries()) {
+  for (const piece of labels) {
     const label = /[a-z]/i.test(piece) ? piece : `${book} ${piece}`;
     book = new Reference({ normalized: label }).book;
-    const from = found.length ? found[found.length - 1].start : -1;
-    const ref = i === 0 ? null : await refs.resolve(label);
-    const start = i === 0 ? 0 : (ref.isEmpty ? -1 : ids.indexOf(ref.verseIds[0], from + 1));
-    if (start > from) found.push({ label, start });
-    else found[found.length - 1].label += `; ${label}`;
+    const ref = await refs.resolve(label);
+    const length = Math.max(ref.verseIds.length, 1);
+    const prev = found[found.length - 1];
+    if (!prev) { found.push({ label, start: 0, length }); continue; }
+    if (ref.isEmpty) continue;
+    let start = ids.indexOf(ref.verseIds[0], prev.start + prev.length);
+    if (start < 0) start = ids.indexOf(ref.verseIds[0], prev.start + 1);
+    if (start > prev.start) found.push({ label, start, length });
   }
   return found.map((p, k) => ({ label: p.label, ids: ids.slice(p.start, found[k + 1]?.start ?? ids.length) }));
 }
