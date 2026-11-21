@@ -90,8 +90,8 @@ Options come right after the API version, before the versions.
       "label": "John 3:16-17",
       "book": "John",
       "slug": "john.3.16-17",
-      "start": { "chapter": 3, "verse": 16 },
-      "end": { "chapter": 3, "verse": 17 }
+      "start": { "book": "John", "chapter": 3, "verse": 16 },
+      "end": { "book": "John", "chapter": 3, "verse": 17 }
     }
   ],
   "passages": [
@@ -114,7 +114,7 @@ Options come right after the API version, before the versions.
 |---|---|
 | `query` | The reference as written in the URL |
 | `versions` | The versions in the response, in path order. When no version was asked for, this is the default version that was picked |
-| `reference` | One entry per `;` piece, in order. `slug` is the piece in the website's URL form |
+| `reference` | One entry per `;` piece, in order. `book` is the book the piece starts in, and `start` and `end` each name their own book, so a range across books (`mal4.5-matt1.2`) ends in Matthew. `slug` is the piece in the website's URL form |
 | `passages` | Runs of verses. A new passage starts where a section heading starts and where the reference jumps (a new piece, or a gap) |
 | `passages[].headings` | The section heading in force at the start of the passage, per version id. `null` when there is none |
 | `passages[].verses[].id` | The verse id. Verse ids are the same in every version |

@@ -116,7 +116,7 @@ Every CLI command is one GET to `https://api.scripture.guide/v1/...`. Options co
   ],
   "reference": [
     { "label": "John 3:16", "book": "John", "slug": "john.3.16",
-      "start": { "chapter": 3, "verse": 16 }, "end": { "chapter": 3, "verse": 16 } }
+      "start": { "book": "John", "chapter": 3, "verse": 16 }, "end": { "book": "John", "chapter": 3, "verse": 16 } }
   ],
   "passages": [
     { "headings": { "NRSV": "Nicodemus Visits Jesus", "KJV": null },
@@ -133,6 +133,7 @@ Every CLI command is one GET to `https://api.scripture.guide/v1/...`. Options co
 
 - `query` is the reference as written in the URL.
 - `versions`, `reference` and `passages` are always arrays, even for one item.
+- `start` and `end` each name their book: a range across books (`mal4.5-matt1.2`) starts in Malachi and ends in Matthew.
 - `texts` and `headings` are keyed by version id. A version that lacks a verse has `null` for it.
 - A new passage starts at each heading or where the reference jumps.
 - With `ids`, verses have no `texts` and passages have no `headings`.

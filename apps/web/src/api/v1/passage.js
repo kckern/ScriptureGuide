@@ -103,8 +103,9 @@ function referenceEntry(label, rows) {
     label,
     book: first.book_title,
     slug: passageSlug(label, first.book_title_short, last.book_title_short),
-    start: { chapter: first.chapter, verse: first.verse },
-    end: { chapter: last.chapter, verse: last.verse },
+    // Each end names its own book: a range can cross books ("Malachi 4:5 - Matthew 1:2")
+    start: { book: first.book_title, chapter: first.chapter, verse: first.verse },
+    end: { book: last.book_title, chapter: last.chapter, verse: last.verse },
   };
 }
 

@@ -80,8 +80,8 @@ Options can be combined (`/v1/html/ids/...` is valid but pointless; the response
     "label": "John 3:16–18",
     "book": "John",
     "slug": "john.3.16-18",
-    "start": { "chapter": 3, "verse": 16 },
-    "end": { "chapter": 3, "verse": 18 }
+    "start": { "book": "John", "chapter": 3, "verse": 16 },
+    "end": { "book": "John", "chapter": 3, "verse": 18 }
   },
   "passages": [
     {

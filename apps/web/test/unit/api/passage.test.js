@@ -61,7 +61,7 @@ describe('buildPassage', () => {
       api: 'v1',
       query: 'john3.16-17',
       versions: [{ id: 'NRSV', name: 'New Revised Standard Version', language: 'en', copyright: null }],
-      reference: [{ label: 'John 3:16-17', book: 'John', slug: 'john.3.16-17', start: { chapter: 3, verse: 16 }, end: { chapter: 3, verse: 17 } }],
+      reference: [{ label: 'John 3:16-17', book: 'John', slug: 'john.3.16-17', start: { book: 'John', chapter: 3, verse: 16 }, end: { book: 'John', chapter: 3, verse: 17 } }],
       parallels: [],
       links: { web: 'https://scripture.guide/nrsv/john.3.16-17' },
     });
@@ -245,6 +245,7 @@ describe('passageSlug', () => {
     const one = { resolve: async q => new Reference({ query: q, normalized: 'Malachi 4:5 - Matthew 1:2', verseIds: [23144, 23146, 23147] }) };
     const data = await build({ reference: 'mal4.5-matt1.2', versions: ['KJV'] }, { repo: r, refs: one });
     expect(data.reference[0].slug).toBe('mal.4.5-matt.1.2');
+    expect(data.reference[0]).toMatchObject({ book: 'Malachi', start: { book: 'Malachi', chapter: 4, verse: 5 }, end: { book: 'Matthew', chapter: 1, verse: 2 } });
     expect(data.links.web).toBe('https://scripture.guide/kjv/mal.4.5-matt.1.2');
   });
   test('without a short title, the label as a slug', () => {
