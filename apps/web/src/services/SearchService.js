@@ -21,6 +21,8 @@ const FIRST_PAGE = 5000;
 const SCAN_CHUNK = 100000;
 // Requery ranges (OT, NT, BoM, D&C+PGP) for LDS and KJV when the first query is too broad
 export const BOOK_RANGES = [[1, 23145], [23146, 31102], [31103, 37706], [37707, 41995]];
+// requeryForced adds the ids past the standard works, where JST, the Qur'an and other versions are
+const PAST_STANDARD_WORKS = [41996, 2147483647];
 const BOC = [89431, 90772];
 const DC1835 = [90773, 91462];
 
@@ -217,7 +219,8 @@ export class SearchService {
     if (results.length > REQUERY_OVER) {
       const firstPass = results;
       results = [];
-      for (const [from, to] of BOOK_RANGES) {
+      const requeryRanges = requeryVersions === versions ? [...BOOK_RANGES, PAST_STANDARD_WORKS] : BOOK_RANGES;
+      for (const [from, to] of requeryRanges) {
         // A requery range outside [min, max] finds only hits that are dropped below
         if (to < min || from > max) continue;
         const span = range ? [Math.max(from, min), Math.min(to, max)] : [from, to];

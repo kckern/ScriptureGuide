@@ -209,6 +209,21 @@ describe('SearchService with Sphinx', () => {
     // only ranges that overlap the one asked for are searched
     for (const [, opts] of sphinx.search.mock.calls) expect(opts.range).toEqual([23146, 31102]);
   });
+  test('a forced version past the standard works (JST, the Qur\'an) requeries its own verses too', async () => {
+    const many = Array.from({ length: 301 }, (_, i) => ({ verse_id: 50000 + i, version: 'WEB' }));
+    const sphinx = { search: vi.fn(async (q, { range }) => (range ? (range[0] > 41995 ? many : []) : many)) };
+    const repo = { ...fakeRepo(), texts: vi.fn(async pairs => pairs.map(p => ({ ...p, text: 'faith' }))) };
+    const r = await new SearchService(repo, sphinx).search('faith', { forcedVersion: 'WEB', requeryForced: true });
+    expect(sphinx.search.mock.calls.at(-1)[1].range).toEqual([41996, 2147483647]);
+    expect(r.count).toBe(301);
+  });
+  test('the site requeries the standard works only', async () => {
+    const many = Array.from({ length: 301 }, (_, i) => ({ verse_id: 50000 + i, version: 'WEB' }));
+    const sphinx = { search: vi.fn(async () => many) };
+    const repo = { ...fakeRepo(), texts: vi.fn(async pairs => pairs.map(p => ({ ...p, text: 'faith' }))) };
+    await new SearchService(repo, sphinx).search('faith', { forcedVersion: 'WEB' });
+    expect(sphinx.search).toHaveBeenCalledTimes(5);
+  });
   test('a forced volume still requeries LDS/KJV when asked to keep the forced version', async () => {
     const many = Array.from({ length: 301 }, (_, i) => ({ verse_id: 28679 + i, version: 'WEB' }));
     const sphinx = { search: vi.fn(async (q, { range }) => (range ? [] : many)) };
