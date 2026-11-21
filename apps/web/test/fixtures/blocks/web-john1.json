@@ -1,0 +1,107 @@
+{
+ "name": "web-john1",
+ "about": "John 1:1-9: §¶ section start, then verses that continue one paragraph",
+ "version": "WEB",
+ "source": "sg-full",
+ "rows": [
+  {
+   "verse_id": 26046,
+   "version": "WEB",
+   "chapter": 1,
+   "verse": 1,
+   "book_title": "John",
+   "text": "§¶In the beginning was the Word, and the Word was with God, and the Word was God.",
+   "format": "prose",
+   "p": "¶",
+   "s": "§"
+  },
+  {
+   "verse_id": 26047,
+   "version": "WEB",
+   "chapter": 1,
+   "verse": 2,
+   "book_title": "John",
+   "text": "The same was in the beginning with God.",
+   "format": "prose",
+   "p": "",
+   "s": ""
+  },
+  {
+   "verse_id": 26048,
+   "version": "WEB",
+   "chapter": 1,
+   "verse": 3,
+   "book_title": "John",
+   "text": "All things were made through him. Without him was not anything made that has been made.",
+   "format": "prose",
+   "p": "",
+   "s": ""
+  },
+  {
+   "verse_id": 26049,
+   "version": "WEB",
+   "chapter": 1,
+   "verse": 4,
+   "book_title": "John",
+   "text": "In him was life, and the life was the light of men.",
+   "format": "prose",
+   "p": "",
+   "s": ""
+  },
+  {
+   "verse_id": 26050,
+   "version": "WEB",
+   "chapter": 1,
+   "verse": 5,
+   "book_title": "John",
+   "text": "The light shines in the darkness, and the darkness hasn’t overcome  it.",
+   "format": "prose",
+   "p": "",
+   "s": ""
+  },
+  {
+   "verse_id": 26051,
+   "version": "WEB",
+   "chapter": 1,
+   "verse": 6,
+   "book_title": "John",
+   "text": "There came a man, sent from God, whose name was John.",
+   "format": "prose",
+   "p": "",
+   "s": ""
+  },
+  {
+   "verse_id": 26052,
+   "version": "WEB",
+   "chapter": 1,
+   "verse": 7,
+   "book_title": "John",
+   "text": "The same came as a witness, that he might testify about the light, that all might believe through him.",
+   "format": "prose",
+   "p": "",
+   "s": ""
+  },
+  {
+   "verse_id": 26053,
+   "version": "WEB",
+   "chapter": 1,
+   "verse": 8,
+   "book_title": "John",
+   "text": "He was not the light, but was sent that he might testify about the light.",
+   "format": "prose",
+   "p": "",
+   "s": ""
+  },
+  {
+   "verse_id": 26054,
+   "version": "WEB",
+   "chapter": 1,
+   "verse": 9,
+   "book_title": "John",
+   "text": "The true light that enlightens everyone was coming into the world.",
+   "format": "prose",
+   "p": "",
+   "s": ""
+  }
+ ]
+}

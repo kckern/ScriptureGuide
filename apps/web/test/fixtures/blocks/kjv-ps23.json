@@ -1,0 +1,74 @@
+{
+ "name": "kjv-ps23",
+ "about": "Psalm 23: one ¶ paragraph per verse",
+ "version": "KJV",
+ "source": "sg-full",
+ "rows": [
+  {
+   "verse_id": 14237,
+   "version": "KJV",
+   "chapter": 23,
+   "verse": 1,
+   "book_title": "Psalms",
+   "text": "¶The Lord is my shepherd; I shall not want.",
+   "format": "prose",
+   "p": "¶",
+   "s": ""
+  },
+  {
+   "verse_id": 14238,
+   "version": "KJV",
+   "chapter": 23,
+   "verse": 2,
+   "book_title": "Psalms",
+   "text": "¶He maketh me to lie down in green pastures: he leadeth me beside the still waters.",
+   "format": "prose",
+   "p": "¶",
+   "s": ""
+  },
+  {
+   "verse_id": 14239,
+   "version": "KJV",
+   "chapter": 23,
+   "verse": 3,
+   "book_title": "Psalms",
+   "text": "¶He restoreth my soul: he leadeth me in the paths of righteousness for his name’s sake.",
+   "format": "prose",
+   "p": "¶",
+   "s": ""
+  },
+  {
+   "verse_id": 14240,
+   "version": "KJV",
+   "chapter": 23,
+   "verse": 4,
+   "book_title": "Psalms",
+   "text": "¶Yea, though I walk through the valley of the shadow of death, I will fear no evil: for thou art with me; thy rod and thy staff they comfort me.",
+   "format": "prose",
+   "p": "¶",
+   "s": ""
+  },
+  {
+   "verse_id": 14241,
+   "version": "KJV",
+   "chapter": 23,
+   "verse": 5,
+   "book_title": "Psalms",
+   "text": "¶Thou preparest a table before me in the presence of mine enemies: thou anointest my head with oil; my cup runneth over.",
+   "format": "prose",
+   "p": "¶",
+   "s": ""
+  },
+  {
+   "verse_id": 14242,
+   "version": "KJV",
+   "chapter": 23,
+   "verse": 6,
+   "book_title": "Psalms",
+   "text": "¶Surely goodness and mercy shall follow me all the days of my life: and I will dwell in the house of the Lord for ever.",
+   "format": "prose",
+   "p": "¶",
+   "s": ""
+  }
+ ]
+}

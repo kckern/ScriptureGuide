@@ -1,0 +1,52 @@
+{
+ "name": "linebreak",
+ "about": "Like ABWRKS: ¶◤ line-break paragraphs, _ after the marker, ¶▼ inside the verse, / at a verse end and \\",
+ "version": "HANDMADE",
+ "source": "hand-made",
+ "rows": [
+  {
+   "verse_id": 1,
+   "version": "HANDMADE",
+   "chapter": 1,
+   "verse": 1,
+   "book_title": "Handmade",
+   "text": "¶◤_And the keeper said unto him: ¶▼Will ye pay me /That the gate may open /And the cart go by?",
+   "format": "prose",
+   "p": "¶",
+   "s": ""
+  },
+  {
+   "verse_id": 2,
+   "version": "HANDMADE",
+   "chapter": 1,
+   "verse": 2,
+   "book_title": "Handmade",
+   "text": "¶◤_And he paid the keeper.",
+   "format": "prose",
+   "p": "¶",
+   "s": ""
+  },
+  {
+   "verse_id": 3,
+   "version": "HANDMADE",
+   "chapter": 1,
+   "verse": 3,
+   "book_title": "Handmade",
+   "text": "¶_The cart went on over the hill /",
+   "format": "poetry",
+   "p": "¶",
+   "s": ""
+  },
+  {
+   "verse_id": 4,
+   "version": "HANDMADE",
+   "chapter": 1,
+   "verse": 4,
+   "book_title": "Handmade",
+   "text": "Down into the valley. / \\And the sun went down.",
+   "format": "poetry",
+   "p": "",
+   "s": ""
+  }
+ ]
+}

@@ -1,0 +1,63 @@
+{
+ "name": "web-ps103",
+ "about": "Psalm 103:1-5: a superscription without §, ¶▼ poetry, /_ indented lines",
+ "version": "WEB",
+ "source": "sg-full",
+ "rows": [
+  {
+   "verse_id": 15551,
+   "version": "WEB",
+   "chapter": 103,
+   "verse": 1,
+   "book_title": "Psalms",
+   "text": "By David.¶▼Praise Yahweh, my soul!/_All that is within me, praise his holy name!",
+   "format": "prose",
+   "p": "¶",
+   "s": ""
+  },
+  {
+   "verse_id": 15552,
+   "version": "WEB",
+   "chapter": 103,
+   "verse": 2,
+   "book_title": "Psalms",
+   "text": "/Praise Yahweh, my soul,/_and don’t forget all his benefits;",
+   "format": "poetry",
+   "p": "",
+   "s": ""
+  },
+  {
+   "verse_id": 15553,
+   "version": "WEB",
+   "chapter": 103,
+   "verse": 3,
+   "book_title": "Psalms",
+   "text": "/who forgives all your sins;/_who heals all your diseases;",
+   "format": "poetry",
+   "p": "",
+   "s": ""
+  },
+  {
+   "verse_id": 15554,
+   "version": "WEB",
+   "chapter": 103,
+   "verse": 4,
+   "book_title": "Psalms",
+   "text": "/who redeems your life from destruction;/_who crowns you with loving kindness and tender mercies;",
+   "format": "poetry",
+   "p": "",
+   "s": ""
+  },
+  {
+   "verse_id": 15555,
+   "version": "WEB",
+   "chapter": 103,
+   "verse": 5,
+   "book_title": "Psalms",
+   "text": "/who satisfies your desire with good things,/_so that your youth is renewed like the eagle’s.",
+   "format": "poetry",
+   "p": "",
+   "s": ""
+  }
+ ]
+}

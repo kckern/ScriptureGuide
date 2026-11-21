@@ -1,0 +1,41 @@
+{
+ "name": "printer",
+ "about": "Like the printer's manuscript: ~~struck~~ text, || line ends, 《》 insertions",
+ "version": "HANDMADE",
+ "source": "hand-made",
+ "rows": [
+  {
+   "verse_id": 1,
+   "version": "HANDMADE",
+   "chapter": 1,
+   "verse": 1,
+   "book_title": "Handmade",
+   "text": "I the miller haveing ~~bin~~||been born by the river therefore I learned some||what of the wheel & the 《grinding of the》 stones in my||days ",
+   "format": "prose",
+   "p": "",
+   "s": ""
+  },
+  {
+   "verse_id": 2,
+   "version": "HANDMADE",
+   "chapter": 1,
+   "verse": 2,
+   "book_title": "Handmade",
+   "text": "yea||I kept the mill ~~of~~ or ~~《the》~~ the 《old》 mill of my father ",
+   "format": "prose",
+   "p": "",
+   "s": ""
+  },
+  {
+   "verse_id": 3,
+   "version": "HANDMADE",
+   "chapter": 1,
+   "verse": 3,
+   "book_title": "Handmade",
+   "text": "& when I had||~~said~~ 《spake》 these words~~ I went",
+   "format": "prose",
+   "p": "",
+   "s": ""
+  }
+ ]
+}

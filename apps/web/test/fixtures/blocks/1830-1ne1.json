@@ -1,0 +1,30 @@
+{
+ "name": "1830-1ne1",
+ "about": "1 Nephi 1:1-2: §¶ and ｟｠ small caps",
+ "version": "1830",
+ "source": "sg-full",
+ "rows": [
+  {
+   "verse_id": 31103,
+   "version": "1830",
+   "chapter": 1,
+   "verse": 1,
+   "book_title": "1 Nephi",
+   "text": "§¶｟I, Nephi｠, having been born of goodly parents, therefore I was taught somewhat in all the learning of my father; and having seen many afflictions in the course of my days—nevertheless, having been highly favored of the Lord in all my days; yea, having had a great knowledge of the goodness and the mysteries of God, therefore I make a record of my proceedings in my days;",
+   "format": "prose",
+   "p": "¶",
+   "s": "§"
+  },
+  {
+   "verse_id": 31104,
+   "version": "1830",
+   "chapter": 1,
+   "verse": 2,
+   "book_title": "1 Nephi",
+   "text": "yea, I make a record in the language of my father, which consists of the learning of the Jews and the language of the Egyptians.",
+   "format": "prose",
+   "p": "",
+   "s": ""
+  }
+ ]
+}

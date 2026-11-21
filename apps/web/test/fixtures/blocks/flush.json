@@ -1,0 +1,52 @@
+{
+ "name": "flush",
+ "about": "Like KRSEB, SEBOM, REBOM: §¶◄ and ¶◄ flush paragraphs, ¶▼◄ flush poetry",
+ "version": "HANDMADE",
+ "source": "hand-made",
+ "rows": [
+  {
+   "verse_id": 1,
+   "version": "HANDMADE",
+   "chapter": 1,
+   "verse": 1,
+   "book_title": "Handmade",
+   "text": "§¶◄The river ran past the mill, and the miller watched it.",
+   "format": "prose",
+   "p": "¶",
+   "s": "§"
+  },
+  {
+   "verse_id": 2,
+   "version": "HANDMADE",
+   "chapter": 1,
+   "verse": 2,
+   "book_title": "Handmade",
+   "text": "He counted the boats as they went by.",
+   "format": "prose",
+   "p": "",
+   "s": ""
+  },
+  {
+   "verse_id": 3,
+   "version": "HANDMADE",
+   "chapter": 1,
+   "verse": 3,
+   "book_title": "Handmade",
+   "text": "¶◄In the spring the water rose over the bank.",
+   "format": "prose",
+   "p": "¶",
+   "s": ""
+  },
+  {
+   "verse_id": 4,
+   "version": "HANDMADE",
+   "chapter": 1,
+   "verse": 4,
+   "book_title": "Handmade",
+   "text": "¶▼◄Sing of the river,/_sing of the mill.",
+   "format": "prose",
+   "p": "¶",
+   "s": ""
+  }
+ ]
+}

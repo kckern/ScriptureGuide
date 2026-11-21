@@ -1,0 +1,63 @@
+{
+ "name": "compound",
+ "about": "Like 2HRBOM: verses merged into the one before (\"*\" rows) and an all-filler row",
+ "version": "HANDMADE",
+ "source": "hand-made",
+ "rows": [
+  {
+   "verse_id": 1,
+   "version": "HANDMADE",
+   "chapter": 1,
+   "verse": 1,
+   "book_title": "Handmade",
+   "text": "¶The farmers came to the mill with their grain and waited for the flour.",
+   "format": "prose",
+   "p": "¶",
+   "s": ""
+  },
+  {
+   "verse_id": 2,
+   "version": "HANDMADE",
+   "chapter": 1,
+   "verse": 2,
+   "book_title": "Handmade",
+   "text": "*",
+   "format": "prose",
+   "p": "",
+   "s": ""
+  },
+  {
+   "verse_id": 3,
+   "version": "HANDMADE",
+   "chapter": 1,
+   "verse": 3,
+   "book_title": "Handmade",
+   "text": "¶They paid the miller and went home.",
+   "format": "prose",
+   "p": "¶",
+   "s": ""
+  },
+  {
+   "verse_id": 4,
+   "version": "HANDMADE",
+   "chapter": 1,
+   "verse": 4,
+   "book_title": "Handmade",
+   "text": " / ",
+   "format": "prose",
+   "p": "",
+   "s": ""
+  },
+  {
+   "verse_id": 5,
+   "version": "HANDMADE",
+   "chapter": 1,
+   "verse": 5,
+   "book_title": "Handmade",
+   "text": "The road was long.",
+   "format": "prose",
+   "p": "",
+   "s": ""
+  }
+ ]
+}

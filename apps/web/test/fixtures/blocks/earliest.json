@@ -1,0 +1,41 @@
+{
+ "name": "earliest",
+ "about": "Like the Earliest Text: sense lines, §¶ and ¶ starting sense blocks",
+ "version": "HANDMADE",
+ "source": "hand-made",
+ "rows": [
+  {
+   "verse_id": 1,
+   "version": "HANDMADE",
+   "chapter": 1,
+   "verse": 1,
+   "book_title": "Handmade",
+   "text": "§¶I the miller having been born by the river,/therefore I learned somewhat of the wheel./And having seen many floods in my days,/I make a record of the mill.",
+   "format": "sense",
+   "p": "¶",
+   "s": "§"
+  },
+  {
+   "verse_id": 2,
+   "version": "HANDMADE",
+   "chapter": 1,
+   "verse": 2,
+   "book_title": "Handmade",
+   "text": "/Yea, I make a record in the words of my father.",
+   "format": "sense",
+   "p": "",
+   "s": ""
+  },
+  {
+   "verse_id": 3,
+   "version": "HANDMADE",
+   "chapter": 1,
+   "verse": 3,
+   "book_title": "Handmade",
+   "text": "¶For it came to pass in the first year/of the new wheel/—my father having kept the mill all his days—/that the river rose.",
+   "format": "sense",
+   "p": "¶",
+   "s": ""
+  }
+ ]
+}

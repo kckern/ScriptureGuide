@@ -1,0 +1,30 @@
+{
+ "name": "notes",
+ "about": "Like SEBOM and KRSEB: ｢n｣ note marks, 「」 bold, ⦅⦆ names, nested marks",
+ "version": "HANDMADE",
+ "source": "hand-made",
+ "rows": [
+  {
+   "verse_id": 1,
+   "version": "HANDMADE",
+   "chapter": 1,
+   "verse": 1,
+   "book_title": "Handmade",
+   "text": "§¶◄The baker ⦅Tomas｢12｣⦆ rose early｢13｣ and lit the oven.",
+   "format": "prose",
+   "p": "¶",
+   "s": "§"
+  },
+  {
+   "verse_id": 2,
+   "version": "HANDMADE",
+   "chapter": 1,
+   "verse": 2,
+   "book_title": "Handmade",
+   "text": "He said, 「Bread for 「⦅the town⦆」 before the sun」.｢14｣",
+   "format": "prose",
+   "p": "",
+   "s": ""
+  }
+ ]
+}

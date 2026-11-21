@@ -1,0 +1,41 @@
+{
+ "name": "web-lev10",
+ "about": "Leviticus 10:2-4: ¶▼ poetry and ¶► prose again inside one verse",
+ "version": "WEB",
+ "source": "sg-full",
+ "rows": [
+  {
+   "verse_id": 2980,
+   "version": "WEB",
+   "chapter": 10,
+   "verse": 2,
+   "book_title": "Leviticus",
+   "text": "Fire came out from before Yahweh, and devoured them, and they died before Yahweh.",
+   "format": "prose",
+   "p": "",
+   "s": ""
+  },
+  {
+   "verse_id": 2981,
+   "version": "WEB",
+   "chapter": 10,
+   "verse": 3,
+   "book_title": "Leviticus",
+   "text": "¶Then Moses said to Aaron, “This is what Yahweh spoke of, saying,¶▼‘I will show myself holy to those who come near me,/_and before all the people I will be glorified.’”¶►Aaron held his peace.",
+   "format": "prose",
+   "p": "¶",
+   "s": ""
+  },
+  {
+   "verse_id": 2982,
+   "version": "WEB",
+   "chapter": 10,
+   "verse": 4,
+   "book_title": "Leviticus",
+   "text": "Moses called Mishael and Elzaphan, the sons of Uzziel the uncle of Aaron, and said to them, “Draw near, carry your brothers from before the sanctuary out of the camp.”",
+   "format": "prose",
+   "p": "",
+   "s": ""
+  }
+ ]
+}

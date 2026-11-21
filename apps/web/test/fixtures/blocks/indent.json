@@ -1,0 +1,63 @@
+{
+ "name": "indent",
+ "about": "Like REBOM and ABWRKS: ¶↪ an indented block after a lead-in, and the indent format",
+ "version": "HANDMADE",
+ "source": "hand-made",
+ "rows": [
+  {
+   "verse_id": 1,
+   "version": "HANDMADE",
+   "chapter": 1,
+   "verse": 1,
+   "book_title": "Handmade",
+   "text": "Yea, the miller said:¶↪Hear me, for the wheel is old and the stones are worn.",
+   "format": "prose",
+   "p": "¶",
+   "s": ""
+  },
+  {
+   "verse_id": 2,
+   "version": "HANDMADE",
+   "chapter": 1,
+   "verse": 2,
+   "book_title": "Handmade",
+   "text": "The grain will not keep through the winter.",
+   "format": "prose",
+   "p": "",
+   "s": ""
+  },
+  {
+   "verse_id": 3,
+   "version": "HANDMADE",
+   "chapter": 1,
+   "verse": 3,
+   "book_title": "Handmade",
+   "text": "¶〔A letter came to the miller from the town.〕",
+   "format": "indent",
+   "p": "¶",
+   "s": ""
+  },
+  {
+   "verse_id": 4,
+   "version": "HANDMADE",
+   "chapter": 1,
+   "verse": 4,
+   "book_title": "Handmade",
+   "text": "〔It asked for flour before the frost.〕",
+   "format": "indent",
+   "p": "",
+   "s": ""
+  },
+  {
+   "verse_id": 5,
+   "version": "HANDMADE",
+   "chapter": 1,
+   "verse": 5,
+   "book_title": "Handmade",
+   "text": "¶And the miller answered the letter.",
+   "format": "prose",
+   "p": "¶",
+   "s": ""
+  }
+ ]
+}

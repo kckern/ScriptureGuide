@@ -1,0 +1,30 @@
+{
+ "name": "marks",
+ "about": "Like NWT84, ABWRKS: {} small, 〔〕 italic, nested {｟｠}, an unbalanced mark",
+ "version": "HANDMADE",
+ "source": "hand-made",
+ "rows": [
+  {
+   "verse_id": 1,
+   "version": "HANDMADE",
+   "chapter": 1,
+   "verse": 1,
+   "book_title": "Handmade",
+   "text": "¶The {｟Keeper｠} of the bridge said, 〔Pass over.〕",
+   "format": "prose",
+   "p": "¶",
+   "s": ""
+  },
+  {
+   "verse_id": 2,
+   "version": "HANDMADE",
+   "chapter": 1,
+   "verse": 2,
+   "book_title": "Handmade",
+   "text": "And they passed {over the bridge.)",
+   "format": "prose",
+   "p": "",
+   "s": ""
+  }
+ ]
+}

@@ -1,0 +1,30 @@
+{
+ "name": "heads",
+ "about": "Like NRSV and ANCHOR: a label before §, ▲ verse heads, §¶ mid-verse",
+ "version": "HANDMADE",
+ "source": "hand-made",
+ "rows": [
+  {
+   "verse_id": 1,
+   "version": "HANDMADE",
+   "chapter": 1,
+   "verse": 1,
+   "book_title": "Handmade",
+   "text": "｟Part｠ ｟Two｠(Songs 1–3)§A song of the mill.¶▼The wheel turns,/_the water falls.",
+   "format": "prose",
+   "p": "¶",
+   "s": "§"
+  },
+  {
+   "verse_id": 2,
+   "version": "HANDMADE",
+   "chapter": 1,
+   "verse": 2,
+   "book_title": "Handmade",
+   "text": "/The stones grind§¶▲Then the miller rested.",
+   "format": "poetry",
+   "p": "¶",
+   "s": "§"
+  }
+ ]
+}
