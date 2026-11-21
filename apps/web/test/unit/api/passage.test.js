@@ -104,10 +104,18 @@ describe('buildPassage', () => {
     expect(data.passages[0].verses.map(v => v.id)).toEqual([26137, 26138]);
   });
 
-  test('a heading inside the passage starts a new passage, once even when it has several rows', async () => {
-    const starts = fakeRepo({ headingStarts: async () => [{ verse_id: 26138, text: 'A' }, { verse_id: 26138, text: 'B' }] });
+  test('a heading inside the passage starts a new passage with that heading, once even when it has several rows', async () => {
+    const asked = [];
+    const starts = fakeRepo({
+      // Rows come in seq order; the last one for a verse is the heading next to the text
+      headingStarts: async (_ids, version) => (version === 'NRSV' ? [{ verse_id: 26138, text: 'Wider' }, { verse_id: 26138, text: 'Narrower' }] : []),
+      headingAt: async (id, _book, version) => { asked.push([id, version]); return version === 'NRSV' ? 'Nicodemus Visits Jesus' : null; },
+    });
     const data = await build({ reference: 'john3.16-17', versions: ['NRSV', 'KJV'] }, { repo: starts });
     expect(data.passages.map(p => p.verses.map(v => v.id))).toEqual([[26137], [26138]]);
+    expect(data.passages.map(p => p.headings)).toEqual([{ NRSV: 'Nicodemus Visits Jesus', KJV: null }, { NRSV: 'Narrower', KJV: null }]);
+    // headingAt only where no heading starts: not for NRSV at 26138
+    expect(asked).toEqual([[26137, 'NRSV'], [26137, 'KJV'], [26138, 'KJV']]);
   });
 
   test('parallels name the passages that stand in for these verses, one per run of verses', async () => {

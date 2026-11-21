@@ -132,8 +132,19 @@ export async function buildPassage({ reference, versions: requested, options = [
   }
 
   const rows = new Map((await repo.indexRows(allIds)).map(r => [Number(r.verse_id), r]));
+  // Headings that start inside the passage, per version: verse id → text. Rows come in seq
+  // order, so the last one for a verse wins (the narrower heading, as in headingAt).
+  const startsAt = {};
   const starts = new Set();
-  if (!idsOnly) for (const t of versions) for (const h of await repo.headingStarts(allIds, t)) starts.add(Number(h.verse_id));
+  if (!idsOnly) {
+    for (const t of versions) {
+      startsAt[t] = new Map();
+      for (const h of await repo.headingStarts(allIds, t)) {
+        startsAt[t].set(Number(h.verse_id), h.text);
+        starts.add(Number(h.verse_id));
+      }
+    }
+  }
 
   const passages = [];
   for (const part of parts) {
@@ -147,7 +158,11 @@ export async function buildPassage({ reference, versions: requested, options = [
       const passage = {};
       if (!idsOnly) {
         passage.headings = {};
-        for (const t of versions) passage.headings[t] = await repo.headingAt(run[0], rows.get(run[0])?.book_id, t);
+        for (const t of versions) {
+          passage.headings[t] = startsAt[t].has(run[0])
+            ? startsAt[t].get(run[0])
+            : await repo.headingAt(run[0], rows.get(run[0])?.book_id, t);
+        }
       }
       passage.verses = verses;
       if (options.includes('html') && !idsOnly) {
