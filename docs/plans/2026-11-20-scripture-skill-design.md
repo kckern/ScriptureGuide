@@ -98,8 +98,7 @@ scripture versions [-l LANG] [-f text|json]
 
 | CLI | URL |
 |---|---|
-| `get john3.16` | `https://txt.scripture.guide/john3.16` |
-| `get john3.16 -f md` | `https://md.scripture.guide/john3.16` |
+| `get john3.16` | `A/john3.16` |
 | `get john3.16 -V nrsv,kjv -f json` | `A/nrsv.kjv/john3.16` |
 | `get john3.16 --ids -f json` | `A/ids/john3.16` |
 | `get john3.16 --html -f json` | `A/html/john3.16` |
@@ -108,7 +107,7 @@ scripture versions [-l LANG] [-f text|json]
 | `random -V nrsv --volume bom` | `A/nrsv/random/bom` |
 | `versions [-l ko]` | `A/versions` (filtered on the client) |
 
-Text mode for `search`, `parallel` and `versions` fetches the JSON and formats it on the client, because the simple hosts don't support those commands. On a 4xx the client reads `error.message` and `error.suggestion` from the JSON when it can, and otherwise prints the one-line body from a simple host.
+The CLI calls only `api.` and formats text and Markdown on the client, so it has one host, one error shape, and `SCRIPTURE_GUIDE_BASE` can point it at a local server. The `txt.` and `md.` hosts appear in Quick use, for curl. On a 4xx the client reads `error.message` and `error.suggestion` from the JSON when it can, and otherwise prints the one-line body from a simple host.
 
 Response shapes are trimmed copies of the v1 design examples (passage, several versions, parallel, search, error), with the rule that every field is always present with the same type. SKILL.md is checked against the shipped API before release.
 
