@@ -342,6 +342,7 @@ The simple hosts use the same status and code in their own format: `json.` retur
 | `not_in_version` | 404 | None of the versions asked for has text for the reference (`/v1/nrsv/dc4.1`: "NRSV has no text for Doctrine and Covenants 4:1.") |
 | `unsupported_api_version` | 404 | `v2` or a later API version (`/v2/john3.16`) |
 | `service_unavailable` | 503 | The database is not answering. Retry after the `Retry-After` header (30 seconds) |
+| `internal_error` | 500 | Something went wrong on the server. Not cached; report it if it repeats |
 
 ## Limits
 

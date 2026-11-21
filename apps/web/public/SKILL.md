@@ -187,7 +187,7 @@ Results are in canon order, 50 a page. `highlights` are `[start, end]` offsets i
 
 ### Errors
 
-Errors have a 4xx status (or 503, below) and this body:
+Errors have a 4xx status (or 500/503, below) and this body:
 
 ```json
 { "api": "v1", "error": { "code": "verse_out_of_range", "message": "Jonah 3 has 10 verses.", "suggestion": "Jonah 3:10" } }
@@ -211,6 +211,7 @@ Errors have a 4xx status (or 503, below) and this body:
 | `search_not_supported` | 400 | Search works on `api.` only |
 | `versions_not_supported` | 400 | The version list is on `api.` only |
 | `service_unavailable` | 503 | The database is not answering. Wait for `Retry-After` (30 seconds) and retry once |
+| `internal_error` | 500 | A server bug. Don't retry in a loop; report it if it repeats |
 
 Apart from `suggestion`, every field is always present with the same type. The options change that on purpose: `ids` removes `texts` and `headings`, and `html` adds `html`.
 
