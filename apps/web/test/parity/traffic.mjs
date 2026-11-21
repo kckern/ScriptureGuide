@@ -27,10 +27,10 @@ const PROBE = new RegExp([
 ].join('|'), 'i');
 
 // Formats run.mjs can compare (see canonical() there). Others are counted and skipped.
-const COMPARABLE = new Set(['html', 'meta', 'raw', 'latex', 'xml', 'notes',
+const COMPARABLE = new Set(['html', 'meta', 'latex', 'xml', 'notes',
   'passage', 'versionselect', 'vbox']);
 // Hosts and path shortcuts the v1 API serves (src/api/v1/router.js): no PHP output to compare
-const V1_HOSTS = new Set(['api', 'json', 'yml', 'yaml', 'md', 'markdown', 'txt', 'plain']);
+const V1_HOSTS = new Set(['api', 'json', 'yml', 'yaml', 'md', 'markdown', 'txt', 'plain', 'raw']);
 const V1_SHORTCUT = /^\/(api|json)(\/|$)/i;
 // AJAX endpoints served on the main host; each is its own harness format.
 const AJAX = { '/passage': 'passage', '/versionselect': 'versionselect', '/vbox': 'vbox' };

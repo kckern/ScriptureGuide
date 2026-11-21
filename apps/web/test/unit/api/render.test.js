@@ -1,14 +1,14 @@
 import { describe, test, expect } from 'vitest';
 import yaml from 'js-yaml';
-import { simpleData, renderSimple, renderError } from '../../../src/api/v1/render.js';
+import { simpleData, renderSimple, renderError, renderUsage, CONTENT_TYPES } from '../../../src/api/v1/render.js';
 import { ApiError } from '../../../src/api/v1/errors.js';
 
 const data = {
   versions: [{ id: 'NRSV', name: 'NRSV', language: 'en', copyright: null }, { id: 'KJV', name: 'KJV', language: 'en', copyright: null }],
   reference: [{ label: 'John 3:16-17' }],
   passages: [{ headings: {}, verses: [
-    { id: 1, chapter: 3, verse: 16, texts: { NRSV: 'For God so loved.', KJV: 'For God so loved,' } },
-    { id: 2, chapter: 3, verse: 17, texts: { NRSV: 'Indeed.', KJV: null } },
+    { id: 1, book: 'John', chapter: 3, verse: 16, texts: { NRSV: 'For God so loved.', KJV: 'For God so loved,' } },
+    { id: 2, book: 'John', chapter: 3, verse: 17, texts: { NRSV: 'Indeed.', KJV: null } },
   ] }],
 };
 const one = { ...data, versions: [data.versions[0]] };
@@ -66,4 +66,30 @@ describe('renderError', () => {
   test('api carries the API version', () => expect(JSON.parse(renderError('api', e)).api).toBe('v1'));
   test('yaml', () => expect(yaml.load(renderError('yaml', e))).toEqual({ error: e.toJSON() }));
   test('text', () => expect(renderError('text', e)).toBe('Jonah 3 has 10 verses.\n'));
+  test('raw is the json error', () => expect(renderError('raw', e)).toBe(renderError('json', e)));
+});
+
+describe('renderSimple raw', () => {
+  // A passage built with stored: true carries each version's stored row per verse
+  const row = (text, format = 'prose', p = '', s = '') => ({ text, format, p, s });
+  const stored = { ...data, passages: [{ headings: {}, verses: [
+    { ...data.passages[0].verses[0], stored: { NRSV: row('§¶“For God so loved.', 'prose', '¶', '§'), KJV: row('For God so loved,') } },
+    { ...data.passages[0].verses[1], stored: { NRSV: row('Indeed./', 'poetry'), KJV: null } },
+  ] }] };
+  test('the stored rows, markers kept, by version then verse', () => expect(renderSimple('raw', stored)).toBe(JSON.stringify([
+    { id: 1, version: 'NRSV', book: 'John', chapter: 3, verse: 16, format: 'prose', p: '¶', s: '§', text: '§¶“For God so loved.' },
+    { id: 2, version: 'NRSV', book: 'John', chapter: 3, verse: 17, format: 'poetry', p: '', s: '', text: 'Indeed./' },
+    { id: 1, version: 'KJV', book: 'John', chapter: 3, verse: 16, format: 'prose', p: '', s: '', text: 'For God so loved,' },
+  ])));
+  test('a version with none of the verses adds no rows', () => {
+    const more = { ...stored, versions: withEmpty.versions };
+    expect(renderSimple('raw', more)).toBe(renderSimple('raw', stored));
+  });
+});
+
+describe('raw content type and usage', () => {
+  test('content type', () => expect(CONTENT_TYPES.raw).toBe('application/json; charset=utf-8'));
+  test('usage', () => {
+    expect(JSON.parse(renderUsage('raw', 'raw'))).toEqual({ usage: 'https://raw.scripture.guide/<version>/<reference>', example: 'https://raw.scripture.guide/nrsv/john3.16' });
+  });
 });

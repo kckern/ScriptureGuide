@@ -9,8 +9,8 @@ const REFS = [
   'esv/rom.8.28-39', 'kjv/gen.1.1-5',
 ];
 
-// api., json., plain. and markdown. are the v1 API now (src/api/v1), with no PHP to compare
-const PER_REF_FORMATS = ['html', 'meta', 'raw', 'latex'];
+// api., json., plain., markdown. and raw. are the v1 API now (src/api/v1), with no PHP to compare
+const PER_REF_FORMATS = ['html', 'meta', 'latex'];
 
 const EXTRA = [
   ['html', '/search/faith.hope.charity'],
@@ -49,7 +49,6 @@ const EXTRA = [
   ['html', '/john.3.16;mal.4.5-matt.1.2'],
   ['meta', '/john.3.16;gen.50.26-ex.1.2'],
   ['html', '/john.3.16;gen.50.26-ex.1.2'],
-  ['raw', '/john.3.16;mal.4.5-matt.1.2'],
   ['latex', '/john.3.16;mal.4.5-matt.1.2'],
   // A bare piece after a cross-book range keeps the book before the range (John 3)
   ['html', '/john.3.16;mal.4.5-matt.1.2;3'],
@@ -59,25 +58,20 @@ const EXTRA = [
   ['meta', '/gen.50.26-ex.1.2;3.4'],
   ['html', '/acts.28.31-rom.1.1;16.1'],
   ['html', '/gen.50.26-ex.1.2;3.4'],
-  ['raw', '/acts.28.31-rom.1.1;16.1'],
   ['latex', '/acts.28.31-rom.1.1;16.1'],
   // A JST piece after another piece (the package dropped it)
   ['html', '/john.3.16;jst.john.3.16'],
   ['meta', '/john.3.16;jst.john.3.16'],
-  ['raw', '/john.3.16;jst.john.3.16'],
   ['html', '/john.3;jst.john.3'],
   ['meta', '/john.3;jst.john.3'],
-  ['raw', '/john.3;jst.john.3'],
   // Pieces after a JST piece: its book carries on ("JST John 18"), a named piece repeats its book
   ['meta', '/john.3.16;jst.john.3.16;18'],
-  ['raw', '/john.3.16;jst.john.3.16;18'],
   ['meta', '/jst.john.3.16;18'],
   ['meta', '/john.3.16;jst.john.3.16;john.1.1'],
   // latex prints each block in its own version; live dropped JST verses (decision 2026-10-23)
   ['latex', '/jst.john.3.16'],
   ['latex', '/jst.john.3.16;18'],
   ['latex', '/jst.john.3.16;john.3.16'],
-  ['raw', '/jst.john.3.16'],
   ['passage', '/passage?ref=Malachi+4%3A6&version=KJV&hversion=KJV&options%5Bstart%5D=23144&options%5Bend%5D=23147&searchterm='],
 ];
 
@@ -106,6 +100,8 @@ export const corpus = [
 ];
 
 // Where each format lives on the live site, and the Host header the Node app should see.
+// No corpus request is raw now (raw. is the v1 API); run.mjs still reads live's raw. for the
+// staleSectionHeading and singleHeadingDrop checks.
 const SUBDOMAIN = { meta: 'meta', raw: 'raw', latex: 'latex', xml: 'xml', notes: 'notes' };
 
 export function hostFor(format) {

@@ -86,6 +86,7 @@ describe('classify and formatOf', () => {
     ['v1 json host', 'json.scripture.guide', '/john.3.16', 'v1 api'],
     ['v1 text host', 'plain.scripture.guide', '/john.3.16', 'v1 api'],
     ['v1 markdown host', 'markdown.scripture.guide', '/john.3.16', 'v1 api'],
+    ['v1 raw host', 'raw.scripture.guide', '/john.3.16', 'v1 api'],
     ['v1 api shortcut', 'scripture.guide', '/api/john.3.16', 'v1 api'],
     ['v1 json shortcut', 'scripture.guide', '/JSON/john.3.16', 'v1 api'],
   ])('%s → skip "%s"', (_, host, path, reason) => {

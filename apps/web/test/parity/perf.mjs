@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // Response times of the Node app against the live PHP site, request by request.
 //
-//   NODE_BASE=http://127.0.0.1:3101 node test/parity/perf.mjs [--corpus traffic] [--format meta,raw] [--only john]
+//   NODE_BASE=http://127.0.0.1:3101 node test/parity/perf.mjs [--corpus traffic] [--format meta,latex] [--only john]
 //     [--runs 5] [--max-live 200] [--refresh-live] [--json out.json]
 //
 // Each URL gets one warm-up and --runs timed sequential requests on each side (time to the last

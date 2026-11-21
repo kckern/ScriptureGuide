@@ -50,6 +50,15 @@ export class ApiRepository {
     );
   }
 
+  // One version's stored rows for verse ids, as kept: text with its markers, format, p, s
+  async storedVerses(ids, version) {
+    if (!ids.length) return [];
+    return this.db.query(
+      'SELECT verse_id, text, format, p, s FROM scripture_verses WHERE version = ? AND verse_id IN (?) ORDER BY verse_id',
+      [version, ids]
+    );
+  }
+
   // Section headings that start at one of the verse ids
   async headingStarts(ids, version) {
     if (!ids.length) return [];

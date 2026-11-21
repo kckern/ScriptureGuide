@@ -1,5 +1,5 @@
-// Bodies for each host: api (full v1 JSON), and the simple formats json, yaml, markdown and
-// text built from the same passage object. Content types live in CONTENT_TYPES.
+// Bodies for each host: api (full v1 JSON), and the simple formats json, yaml, markdown,
+// text and raw built from the same passage object (raw from its stored rows). Content types live in CONTENT_TYPES.
 import yaml from 'js-yaml';
 
 // lineWidth -1: verse text stays on one line instead of folding at 80 columns.
@@ -12,7 +12,19 @@ export const CONTENT_TYPES = Object.freeze({
   yaml: 'application/yaml; charset=utf-8',
   markdown: 'text/markdown; charset=utf-8',
   text: 'text/plain; charset=utf-8',
+  raw: 'application/json; charset=utf-8',
 });
+
+// raw: the stored rows (scripture_verses), one per version per verse the version has, by
+// version then verse. The text keeps every stored marker (¶ § / _ ▼ ► ◄ …), and format, p and
+// s are the stored columns. Needs a passage built with stored: true (verse.stored).
+function rawRows(data) {
+  const verses = data.passages.flatMap(p => p.verses);
+  return data.versions.flatMap(t => verses.filter(v => v.stored?.[t.id] != null).map(v => {
+    const row = v.stored[t.id];
+    return { id: v.id, version: t.id, book: v.book, chapter: v.chapter, verse: v.verse, format: row.format, p: row.p, s: row.s, text: row.text };
+  }));
+}
 
 function forVersion(data, t) {
   const verses = data.passages.flatMap(p => p.verses)
@@ -43,6 +55,7 @@ export function renderSimple(kind, data) {
   switch (kind) {
     case 'json': return JSON.stringify(simpleData(data));
     case 'yaml': return dumpYaml(simpleData(data));
+    case 'raw': return JSON.stringify(rawRows(data));
     case 'markdown':
       return blocks.map(b => `> ${b.text}\n>\n> — ${b.reference} (${b.version})\n`).join('\n');
     case 'text':
@@ -55,7 +68,8 @@ export function renderError(kind, err) {
   const error = err.toJSON();
   switch (kind) {
     case 'api': return JSON.stringify({ api: 'v1', error });
-    case 'json': return JSON.stringify({ error });
+    case 'json':
+    case 'raw': return JSON.stringify({ error });
     case 'yaml': return dumpYaml({ error });
     default: return `${err.message}\n`;
   }
@@ -67,7 +81,8 @@ export function renderUsage(kind, host) {
   const usage = `https://${host}.scripture.guide/<version>/<reference>`;
   const example = `https://${host}.scripture.guide/nrsv/john3.16`;
   switch (kind) {
-    case 'json': return JSON.stringify({ usage, example });
+    case 'json':
+    case 'raw': return JSON.stringify({ usage, example });
     case 'yaml': return dumpYaml({ usage, example });
     case 'markdown': return `Usage: \`${usage}\`, e.g. <${example}>\n`;
     case 'text': return `Usage: ${usage}, e.g. ${example}\n`;

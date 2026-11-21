@@ -17,6 +17,7 @@ The API is free and needs no account. Every URL below works in a browser.
 ```sh
 curl https://txt.scripture.guide/john3.16                  # verse text only
 curl https://md.scripture.guide/nrsv/john3.16-18           # Markdown quote with citation
+curl https://raw.scripture.guide/nrsv/john3.16             # stored rows, markers kept (JSON)
 curl https://api.scripture.guide/v1/nrsv.kjv/john3.16      # full JSON, two versions side by side
 curl https://api.scripture.guide/v1/search/nrsv/loved+the+world
 curl https://api.scripture.guide/v1/random/bom             # a random Book of Mormon verse
@@ -25,7 +26,7 @@ curl https://api.scripture.guide/v1/versions               # every version id, n
 
 A path is `/{version}/{reference}`, the same as on the website. Leave out the version to get the site's default. References are written the way the site accepts them: `john3.16`, `john3.16-18`, `John 3:16`, `1ne3.7`, `dc4`, and several pieces joined with `;` (`john3.16;rom8.28`). Encode spaces as `%20`.
 
-Hosts: `api.` is the full JSON API (everything below). `json.`, `yml.` (or `yaml.`), `md.` (or `markdown.`) and `txt.` (or `plain.`) return one passage in a small fixed format, and take no options; search, parallel and the version list are on `api.` only. `https://scripture.guide/api/...` is the same as `https://api.scripture.guide/...`. `https://api.scripture.guide/` returns a short index with links to this file, the version list and an example.
+Hosts: `api.` is the full JSON API (everything below). `json.`, `yml.` (or `yaml.`), `md.` (or `markdown.`) and `txt.` (or `plain.`) return one passage in a small fixed format, and take no options. `raw.` takes the same paths and returns the stored rows as a JSON array, one per version per verse: `{ "id", "version", "book", "chapter", "verse", "format", "p", "s", "text" }`, where `text` keeps the database's markup (`¶`, `§`, `/`, `▼` and others) and `format` is `prose`, `poetry`, `indent` or `sense`. Use `api.` for clean text; search, parallel and the version list are on `api.` only. `https://scripture.guide/api/...` is the same as `https://api.scripture.guide/...`. `https://api.scripture.guide/` returns a short index with links to this file, the version list and an example.
 
 ## Authentication
 
@@ -122,7 +123,7 @@ Every CLI command is one GET to `https://api.scripture.guide/v1/...`. Options co
   "passages": [
     { "headings": { "NRSV": "Nicodemus Visits Jesus", "KJV": null },
       "verses": [
-        { "id": 26137, "chapter": 3, "verse": 16,
+        { "id": 26137, "book": "John", "chapter": 3, "verse": 16,
           "texts": { "NRSV": "“For God so loved the world that he gave his only Son, …",
                      "KJV": "For God so loved the world, that he gave his only begotten Son, …" } }
       ] }
@@ -135,6 +136,7 @@ Every CLI command is one GET to `https://api.scripture.guide/v1/...`. Options co
 - `query` is the reference as written in the URL.
 - `versions`, `reference` and `passages` are always arrays, even for one item.
 - `start` and `end` each name their book: a range across books (`mal4.5-matt1.2`) starts in Malachi and ends in Matthew.
+- Each verse names its `book`, so a range across books names each verse's own book.
 - `texts` and `headings` are keyed by version id. A version that lacks a verse has `null` for it.
 - A new passage starts at each heading or where the reference jumps.
 - With `ids`, verses have no `texts` and passages have no `headings`.

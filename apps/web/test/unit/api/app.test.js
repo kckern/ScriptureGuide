@@ -13,7 +13,8 @@ vi.mock('../../../src/data/db/connection.js', () => ({
         return [{ id: 'NRSV', title: 'NRSV', title_long: 'New Revised Standard Version', lang: 'en' }];
       }
       if (/FROM scripture_verses WHERE version = \?/.test(sql) && params[0] === 'NRSV') {
-        return [{ verse_id: 26137, text: 'For God so loved the world.' }];
+        // The stored text keeps its markers; the v1 text is cleaned (plainText)
+        return [{ verse_id: 26137, text: '§¶For God so loved the world.', format: 'prose', p: '¶', s: '§' }];
       }
       if (/FROM lds_scriptures_verses v JOIN lds_scriptures_books/.test(sql)) {
         return [{ verse_id: 26137, book_id: 43, chapter: 3, verse: 16, book_title: 'John', book_title_short: 'John' }];
@@ -77,6 +78,28 @@ describe('v1 through createApp', () => {
     const res = await get('scripture.guide', '/api/v1/nrsv/john3.16');
     expect(res.status).toBe(200);
     expect(res.body.passages[0].verses[0].texts.NRSV).toBe('For God so loved the world.');
+  });
+
+  test('raw. dumps the stored row, markers kept; the api text is cleaned', async () => {
+    const raw = await get('raw.scripture.guide', '/nrsv/john3.16');
+    expect(raw.status).toBe(200);
+    expect(raw.headers['content-type']).toBe('application/json; charset=utf-8');
+    expect(raw.headers['x-api-version']).toBe('1');
+    expect(raw.body).toEqual([{ id: 26137, version: 'NRSV', book: 'John', chapter: 3, verse: 16, format: 'prose', p: '¶', s: '§', text: '§¶For God so loved the world.' }]);
+    const api = await get('api.scripture.guide', '/v1/nrsv/john3.16');
+    expect(api.body.passages[0].verses[0]).toEqual({ id: 26137, book: 'John', chapter: 3, verse: 16, texts: { NRSV: 'For God so loved the world.' } });
+  });
+
+  test('xml. stays on the legacy presenter', async () => {
+    const res = await get('xml.scripture.guide', '/nrsv/john.3.16');
+    expect(res.headers['x-api-version']).toBeUndefined();
+  });
+
+  test('the main host /xml/ and /raw/ prefixes keep the legacy formats', async () => {
+    for (const path of ['/xml/john.3.16', '/raw/john.3.16']) {
+      const res = await get('scripture.guide', path);
+      expect(res.headers['x-api-version'], path).toBeUndefined();
+    }
   });
 
   test('json. /health reaches the site route', async () => {
@@ -167,9 +190,9 @@ describe('one access check shared by the API and the website', () => {
 describe('request log lines for the API', () => {
   test('format is the host\'s body kind, and caller and tier are set', async () => {
     const logged = createApp({ log: true, access: createAccess({ mode: 'observe' }) });
-    for (const host of ['api', 'json', 'yml', 'md', 'txt']) await request(logged).get('/nrsv/john3.16').set('Host', `${host}.scripture.guide`);
+    for (const host of ['api', 'json', 'yml', 'md', 'txt', 'raw']) await request(logged).get('/nrsv/john3.16').set('Host', `${host}.scripture.guide`);
     const requests = lines.filter(l => l.msg === 'request' && l.path === '/nrsv/john3.16');
-    expect(requests.map(l => l.format)).toEqual(['api', 'json', 'yaml', 'markdown', 'text']);
+    expect(requests.map(l => l.format)).toEqual(['api', 'json', 'yaml', 'markdown', 'text', 'raw']);
     expect(requests.every(l => l.tier === 'anonymous' && /^ip6?:/.test(l.caller))).toBe(true);
   });
 });

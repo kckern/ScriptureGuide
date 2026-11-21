@@ -17,7 +17,7 @@ MYSQL_HOST=127.0.0.1 MYSQL_PORT=3310 MYSQL_USER=root MYSQL_PASSWORD=dev MYSQL_DA
   PORT=3101 node src/app.js
 
 # 3. Compare
-npm run parity -- [--format meta,raw] [--only john] [--refresh] [--verbose]
+npm run parity -- [--format meta,latex] [--only john] [--refresh] [--verbose]
 ```
 
 ## How it compares

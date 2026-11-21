@@ -136,7 +136,9 @@ async function chooseVersions(requested, ids, repo) {
   return { versions: ['LDS'], fallback: true };
 }
 
-export async function buildPassage({ reference, versions: requested, options = [] }, { repo = apiRepository, refs = referenceService } = {}) {
+// stored: also keep each version's stored row per verse (verse.stored, for raw.); never set
+// from a request path.
+export async function buildPassage({ reference, versions: requested, options = [], stored = false }, { repo = apiRepository, refs = referenceService } = {}) {
   const names = await repo.versions();
   const parts = await pieces(reference, { refs, repo });
   const allIds = parts.flatMap(p => p.ids);
@@ -145,9 +147,12 @@ export async function buildPassage({ reference, versions: requested, options = [
 
   // Text per version, keyed by verse id (none with the ids option)
   const texts = {};
+  const storedRows = {};
   if (!idsOnly) {
     for (const t of versions) {
-      texts[t] = new Map((await repo.verses(allIds, t)).map(r => [Number(r.verse_id), plainText(r.text)]));
+      const found = stored ? await repo.storedVerses(allIds, t) : await repo.verses(allIds, t);
+      texts[t] = new Map(found.map(r => [Number(r.verse_id), plainText(r.text)]));
+      if (stored) storedRows[t] = new Map(found.map(r => [Number(r.verse_id), { text: r.text, format: r.format, p: r.p, s: r.s }]));
     }
   }
   if (!idsOnly && versions.every(t => texts[t].size === 0)) {
@@ -179,8 +184,10 @@ export async function buildPassage({ reference, versions: requested, options = [
     for (const run of runs(part.ids, starts)) {
       const verses = run.map(id => {
         const r = rows.get(id);
-        const verse = { id, chapter: r?.chapter ?? null, verse: r?.verse ?? null };
+        // book is the verse's own: a range can cross books
+        const verse = { id, book: r?.book_title ?? null, chapter: r?.chapter ?? null, verse: r?.verse ?? null };
         if (!idsOnly) verse.texts = Object.fromEntries(versions.map(t => [t, texts[t].get(id) ?? null]));
+        if (!idsOnly && stored) verse.stored = Object.fromEntries(versions.map(t => [t, storedRows[t].get(id) ?? null]));
         return verse;
       });
       const passage = {};

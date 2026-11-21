@@ -4,6 +4,9 @@
 // output format; q holds an optional version spec and a reference (or search terms).
 
 // Subdomains (and path shortcuts) that select an output format. Anything else renders HTML.
+// The /<format>/ path prefixes (NODE_PATH_FORMATS) are looked up here too. raw., plain. and
+// markdown. are answered by the v1 router (src/api/v1/router.js) before the site's routes, so
+// for those subdomains the entries here only serve the /raw/, /plain/ and /markdown/ prefixes.
 const SUBDOMAIN_FORMATS = Object.freeze({
   meta: 'meta',
   raw: 'raw',

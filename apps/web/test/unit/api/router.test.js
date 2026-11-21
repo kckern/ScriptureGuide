@@ -9,7 +9,7 @@ const passage = {
   api: 'v1', query: 'john3.16',
   versions: [{ id: 'NRSV', name: 'NRSV', language: 'en', copyright: null }],
   reference: [{ label: 'John 3:16' }],
-  passages: [{ headings: { NRSV: null }, verses: [{ id: 26137, chapter: 3, verse: 16, texts: { NRSV: 'For God so loved the world.' } }] }],
+  passages: [{ headings: { NRSV: null }, verses: [{ id: 26137, book: 'John', chapter: 3, verse: 16, texts: { NRSV: 'For God so loved the world.' } }] }],
   parallels: [], links: {},
 };
 const seen = [];
@@ -21,6 +21,8 @@ const deps = {
     if (req.reference === 'jon3.16') throw new ApiError('verse_out_of_range', 'Jonah 3 has 10 verses.', 'Jonah 3:10');
     if (req.reference === 'boom') throw Object.assign(new Error('database down'), { code: 'PROTOCOL_CONNECTION_LOST', fatal: true });
     if (req.reference === 'bug') throw new TypeError('x is undefined');
+    // raw. asks for the stored rows
+    if (req.stored) return { ...passage, passages: [{ ...passage.passages[0], verses: [{ ...passage.passages[0].verses[0], stored: { NRSV: { text: '§¶For God so loved the world.', format: 'prose', p: '¶', s: '§' } } }] }] };
     return passage;
   },
   buildParallel: async () => ({ api: 'v1', rows: [] }),
@@ -42,6 +44,11 @@ describe('hostKind', () => {
     expect(hostKind('txt', '/john3.16')).toEqual({ kind: 'text', path: '/john3.16' });
     expect(hostKind('plain', '/john3.16').kind).toBe('text');
     expect(hostKind('yml', '/x').kind).toBe('yaml');
+    expect(hostKind('raw', '/x')).toEqual({ kind: 'raw', path: '/x' });
+    // xml. stays on the site's legacy presenter, and so do the main host's /xml/ and /raw/ prefixes
+    expect(hostKind('xml', '/x')).toBeNull();
+    expect(hostKind('www', '/xml/john3.16')).toBeNull();
+    expect(hostKind('www', '/raw/john3.16')).toBeNull();
     expect(hostKind('www', '/api/john3.16')).toEqual({ kind: 'api', path: '/john3.16' });
     expect(hostKind('www', '/john3.16')).toBeNull();
   });
@@ -94,6 +101,44 @@ describe('apiRouter', () => {
     expect((await get('json.scripture.guide', '/search/love')).body.error.code).toBe('search_not_supported');
     expect((await get('json.scripture.guide', '/versions')).body.error.code).toBe('versions_not_supported');
     expect((await get('json.scripture.guide', '/kjv/isa2~lds/2ne12')).body.error.code).toBe('parallel_not_supported');
+  });
+  test('raw. dumps the stored rows', async () => {
+    const raw = await get('raw.scripture.guide', '/nrsv/john3.16');
+    expect(raw.status).toBe(200);
+    expect(raw.headers['content-type']).toBe('application/json; charset=utf-8');
+    expect(raw.headers['x-api-version']).toBe('1');
+    expect(raw.headers['cache-control']).toBe('public, max-age=86400, s-maxage=604800, stale-while-revalidate=86400');
+    expect(raw.text).toBe('[{"id":26137,"version":"NRSV","book":"John","chapter":3,"verse":16,"format":"prose","p":"¶","s":"§","text":"§¶For God so loved the world."}]');
+    expect(seen.at(-1)).toMatchObject({ reference: 'john3.16', versions: ['NRSV'], options: [], stored: true });
+  });
+  test('only raw. asks for the stored rows, and it gets no options', async () => {
+    await get('raw.scripture.guide', '/ids/nrsv/john3.16');
+    expect(seen.at(-1)).toMatchObject({ options: [], stored: true });
+    await get('api.scripture.guide', '/v1/nrsv/john3.16');
+    expect(seen.at(-1).stored).toBeUndefined();
+    await get('json.scripture.guide', '/nrsv/john3.16');
+    expect(seen.at(-1).stored).toBeUndefined();
+  });
+  test('raw. errors are json', async () => {
+    const raw = await get('raw.scripture.guide', '/jon3.16');
+    expect(raw.status).toBe(404);
+    expect(raw.headers['cache-control']).toBe('public, max-age=300');
+    expect(raw.body).toEqual({ error: { code: 'verse_out_of_range', message: 'Jonah 3 has 10 verses.', suggestion: 'Jonah 3:10' } });
+  });
+  test('raw. refuses search, parallel and the version list', async () => {
+    for (const [path, code] of [['/search/love', 'search_not_supported'], ['/versions', 'versions_not_supported'], ['/kjv/isa2~lds/2ne12', 'parallel_not_supported']]) {
+      const raw = await get('raw.scripture.guide', path);
+      expect(raw.status).toBe(400);
+      expect(raw.body.error.code).toBe(code);
+    }
+  });
+  test('xml. falls through to the site', async () => {
+    expect((await get('xml.scripture.guide', '/nrsv/john3.16')).status).toBe(418);
+    expect((await get('xml.scripture.guide', '/')).status).toBe(418);
+  });
+  test('the main host /xml/ and /raw/ prefixes fall through to the site', async () => {
+    expect((await get('scripture.guide', '/xml/john.3.16')).status).toBe(418);
+    expect((await get('scripture.guide', '/raw/john.3.16')).status).toBe(418);
   });
   test('other hosts and service paths fall through', async () => {
     expect((await get('scripture.guide', '/john3.16')).status).toBe(418);
@@ -182,6 +227,9 @@ describe('apiRouter', () => {
     const md = await get('md.scripture.guide', '/');
     expect(md.headers['content-type']).toMatch(/text\/markdown/);
     expect(md.text).toBe('Usage: `https://md.scripture.guide/<version>/<reference>`, e.g. <https://md.scripture.guide/nrsv/john3.16>\n');
+    const raw = await get('raw.scripture.guide', '/');
+    expect(raw.headers['content-type']).toBe('application/json; charset=utf-8');
+    expect(raw.body).toEqual({ usage: 'https://raw.scripture.guide/<version>/<reference>', example: 'https://raw.scripture.guide/nrsv/john3.16' });
   });
 });
 
@@ -219,6 +267,9 @@ describe('apiRouter access check', () => {
     expect(txt.text).toBe('Too many requests. Slow down, or use an API key.\n');
     expect(txt.headers['retry-after']).toBe('7');
     expect(txt.headers['cache-control']).toBe('no-store');
+    const raw = await request(a).get('/nrsv/john3.16').set('Host', 'raw.scripture.guide');
+    expect(raw.status).toBe(429);
+    expect(raw.body).toEqual({ error: { code: 'rate_limited', message: 'Too many requests. Slow down, or use an API key.' } });
   });
 
   test('the index and usage hints are counted too', async () => {

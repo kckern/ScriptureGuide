@@ -1,4 +1,5 @@
-// raw.scripture.guide: inc_raw.php → scriptures::renderRaw. Source verse markup keyed by verse_id,
+// The main host's /raw/ path prefix (raw.scripture.guide is the v1 raw host now, src/api/v1).
+// inc_raw.php → scriptures::renderRaw. Source verse markup keyed by verse_id,
 // sent as text/plain but encoded as json_encode(PRETTY_PRINT) without NUMERIC_CHECK (ids stay strings).
 // The version is the first one named in the path, else LDS (no range default). ?red_letter[] had no
 // effect on the PHP site (scriptutil::loadWords returned [] before querying), so it is ignored.

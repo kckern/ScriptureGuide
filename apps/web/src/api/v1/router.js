@@ -18,6 +18,7 @@ import config from '../../config/index.js';
 // Subdomain → body kind (render.js)
 const HOSTS = Object.freeze({
   api: 'api', json: 'json', yml: 'yaml', yaml: 'yaml', md: 'markdown', markdown: 'markdown', txt: 'text', plain: 'text',
+  raw: 'raw',
 });
 const SHORTCUTS = Object.freeze({ api: 'api', json: 'json' });
 // Service paths every host answers through the site's routes
@@ -80,7 +81,7 @@ export function apiRouter(overrides = {}) {
     const target = hostKind(req.subdomain, req.path);
     if (!target || PASS.has(req.path)) return next();
     const { kind } = target;
-    // The request log's format field: api, json, yaml, markdown or text
+    // The request log's format field: api, json, yaml, markdown, text or raw
     req.outputFormat = kind;
     // Every request served here is counted, the index and usage hints too. A failing check is
     // logged and the request goes on as allowed.
@@ -115,8 +116,11 @@ export function apiRouter(overrides = {}) {
           reference = String(await deps.pickRandomVerse(parsed));
           cache = CACHE_NONE;
         }
-        // The simple hosts take no options
-        data = await deps.buildPassage({ reference, versions: parsed.versions, options: kind === 'api' ? parsed.options : [] });
+        // The simple hosts take no options. raw. dumps the stored rows (stored is never read
+        // from the path, so the api's answer does not change)
+        const request = { reference, versions: parsed.versions, options: kind === 'api' ? parsed.options : [] };
+        if (kind === 'raw') request.stored = true;
+        data = await deps.buildPassage(request);
       }
       const body = kind === 'api' ? JSON.stringify(data) : renderSimple(kind, data);
       reply(body, cache);
