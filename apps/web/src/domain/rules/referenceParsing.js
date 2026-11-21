@@ -4,6 +4,10 @@
 // lds_scriptures_books by the caller.
 
 // "26137", "1-3", "1;5-6" → verse ids, or null when the string is not numeric
+// Past this many ids in total the text is not read as a verse id list, so a long URL can't
+// build a huge array.
+export const MAX_VERSE_ID_LIST = 100000;
+
 export function parseVerseIdList(ref) {
   const s = String(ref || '').replace(/\s+/g, '');
   if (!s || !/^[\d;,-]+$/.test(s) || !/\d/.test(s)) return null;
@@ -12,6 +16,7 @@ export function parseVerseIdList(ref) {
     const [a, b] = segment.split('-').filter(Boolean).map(Number);
     const end = b ?? a;
     if (!Number.isFinite(a) || end < a || end - a > 50000) return null;
+    if (ids.length + (end - a + 1) > MAX_VERSE_ID_LIST) return null;
     for (let i = a; i <= end; i++) ids.push(i);
   }
   return ids.length ? ids : null;

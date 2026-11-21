@@ -9,6 +9,11 @@ describe('parseVerseIdList', () => {
     expect(parseVerseIdList('john 3')).toBeNull();
     expect(parseVerseIdList('')).toBeNull();
   });
+  test('a list past 100 000 ids in total is not a verse id list', () => {
+    expect(parseVerseIdList('1-50000;50001-100000')).toHaveLength(100000);
+    expect(parseVerseIdList('1-50000;50001-100001')).toBeNull();
+    expect(parseVerseIdList(Array(5).fill('1-30000').join(';'))).toBeNull();
+  });
 });
 
 describe('splitBookReference', () => {
