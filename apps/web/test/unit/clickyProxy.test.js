@@ -283,7 +283,7 @@ describe('through createApp', () => {
 });
 
 describe('the page tag', () => {
-  const TAG = `<script async data-id="${CLICKY_SITE_ID}" src="/cd7dba44d5.js"></script>`;
+  const TAG = `<script async data-id="${CLICKY_SITE_ID}" src="//static.getclicky.com/js"></script>`;
 
   test('the site id is the public one', () => {
     expect(CLICKY_SITE_ID).toBe('100988820');

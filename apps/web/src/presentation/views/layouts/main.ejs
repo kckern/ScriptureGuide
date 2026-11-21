@@ -116,10 +116,12 @@ function activateCopyButtons() {
 <script src="/js/prefsPanel.js<%= av %>"></script>
 <script src="/js/columns.js<%= av %>"></script>
 <script src="/js/copySelection.js<%= av %>"></script>
-<%# Clicky analytics, production only (res.locals.clickyId); the script and its hits go through
-    this origin (middleware/clickyProxy.js). In <head>, outside #container and body. -%>
+<%# Clicky analytics, production only (res.locals.clickyId). Clicky's standard tag: their firewall
+    answers 403 to beacons relayed from our server (Express or nginx), so the same-origin proxy
+    (middleware/clickyProxy.js, src="/cd7dba44d5.js") stays unused until Clicky allows it.
+    In <head>, outside #container and body. -%>
 <% if (typeof clickyId !== 'undefined' && clickyId) { %>
-<script async data-id="<%= clickyId %>" src="/cd7dba44d5.js"></script>
+<script async data-id="<%= clickyId %>" src="//static.getclicky.com/js"></script>
 <% } %>
 </head>
 <body class="<%- typeof browserClass !== 'undefined' ? browserClass : '' %>">
