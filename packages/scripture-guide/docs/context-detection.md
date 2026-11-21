@@ -10,6 +10,15 @@ Traditional reference detection only finds explicit references like "John 3:16".
 - **Chapter:verse patterns**: "3:16" when a book is established in context
 - **Implied references**: References that rely on a previously mentioned book
 
+## Lookup is lenient, detection is strict
+
+`lookupReference` reads what it is given as generously as it can: `lookupReference('l3')` is
+Luke 3, because whoever passed the string already meant a reference. `detectReferences` and
+`findReferences` decide which parts of someone else's text are references, so they ask for more
+evidence when a match is thin. A chapter-only match ("Lk 21", "Luke 3") needs a book of four or
+more letters, or two or three starting with a capital; "L3" and "lu 3" are labels. With a verse
+the bar is lower: "L 3:16" is detected. Scripts without letter case are not affected.
+
 ## Enabling Context Detection
 
 Context detection is **enabled by default**. You can control it via options:
