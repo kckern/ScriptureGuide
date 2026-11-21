@@ -10,6 +10,8 @@ import { formatReference, slugifyRef, versionImg } from '../domain/rules/legacyR
 
 export const REQUERY_OVER = 300;
 const TOP = 5000;
+// Hits per requery range
+const RANGE_LIMIT = 5000;
 // Candidate rows per fallback query. Without a (version, verse_id) index each page of a range
 // query reads every row of its versions again, so those pages are large; the first query over all
 // versions stops after REQUERY_OVER hits, so its pages are small.
@@ -184,14 +186,18 @@ export class SearchService {
     return out.slice(0, limit);
   }
 
-  async search(rawQuery, { forcedVersion = null } = {}) {
+  // requeryForced (the v1 API): a broad search in a forced version requeries that version by
+  // volume, instead of LDS/KJV as the site does
+  async search(rawQuery, { forcedVersion = null, requeryForced = false } = {}) {
     const query = String(rawQuery).replace(/\./g, ' ');
     let min = 0, max = 999999999;
     const budget = this.budget(); // one budget for all of this search's fallback queries
 
     let versions;
+    let requeryVersions = ['LDS', 'KJV'];
     if (forcedVersion) {
       versions = await this.repo.searchableVersions([forcedVersion]);
+      if (versions.length && requeryForced) requeryVersions = versions;
       if (!versions.length) {
         versions = await this.repo.volumeVersions(forcedVersion);
         const r = volumeRange(forcedVersion);
@@ -202,11 +208,15 @@ export class SearchService {
     }
 
     let results = await this.hits(query, versions, { stopAfter: REQUERY_OVER, budget });
+    // capped: a limit (RANGE_LIMIT hits in a requery range, TOP verses) left matching verses out
+    let capped = false;
     if (results.length > REQUERY_OVER) {
       const firstPass = results;
       results = [];
       for (const range of BOOK_RANGES) {
-        results.push(...await this.hits(query, ['LDS', 'KJV'], { range, limit: 5000, budget }));
+        const hits = await this.hits(query, requeryVersions, { range, limit: RANGE_LIMIT, budget });
+        if (hits.length >= RANGE_LIMIT) capped = true;
+        results.push(...hits);
       }
       // The fallback ran out of budget before the requeries found anything: show the first pass
       if (!results.length && budget.truncated) results = firstPass;
@@ -221,7 +231,7 @@ export class SearchService {
       groups.get(verse_id).set(version, verse_id);
       allVersions.add(version);
     }
-    if (groups.size > TOP) groups = new Map([...groups].slice(0, TOP));
+    if (groups.size > TOP) { groups = new Map([...groups].slice(0, TOP)); capped = true; }
     groups = new Map([...groups].sort((a, b) => a[0] - b[0]));
 
     // Book of Commandments / 1835 D&C hits fold into the verse they stand in for
@@ -297,7 +307,7 @@ export class SearchService {
       };
     });
 
-    return { query, count: groups.size, vols: [...vols.values()], rows, truncated: budget.truncated };
+    return { query, count: groups.size, vols: [...vols.values()], rows, truncated: budget.truncated, capped };
   }
 
   // referenceFromVerseIds([id], 'book_title_short') for each id

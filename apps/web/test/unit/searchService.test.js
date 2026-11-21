@@ -176,6 +176,28 @@ describe('SearchService with Sphinx', () => {
     expect(r.count).toBe(1);
     expect(r.rows[0].version).toBe('LDS');
   });
+  test('requeries the forced version instead of LDS/KJV when asked (the v1 API)', async () => {
+    const many = Array.from({ length: 301 }, (_, i) => ({ verse_id: 28679 + i, version: 'WEB' }));
+    const sphinx = { search: vi.fn(async (q, { range }) => (range ? (range[0] === 23146 ? [{ verse_id: 28679, version: 'WEB' }] : []) : many)) };
+    const r = await new SearchService(fakeRepo(), sphinx).search('faith', { forcedVersion: 'WEB', requeryForced: true });
+    expect(sphinx.search.mock.calls[1][1]).toMatchObject({ versions: ['WEB'], range: [1, 23145] });
+    expect(r.rows.map(row => row.version)).toEqual(['WEB']);
+  });
+  test('capped: a requery range that fills its limit leaves verses out', async () => {
+    const many = Array.from({ length: 301 }, (_, i) => ({ verse_id: 28679, version: `V${i}` }));
+    const full = Array.from({ length: 5000 }, () => ({ verse_id: 28679, version: 'LDS' }));
+    const sphinx = { search: vi.fn(async (q, { range }) => (range ? (range[0] === 23146 ? full : []) : many)) };
+    expect((await new SearchService(fakeRepo(), sphinx).search('faith')).capped).toBe(true);
+    const fewer = { search: vi.fn(async (q, { range }) => (range ? (range[0] === 23146 ? full.slice(1) : []) : many)) };
+    expect((await new SearchService(fakeRepo(), fewer).search('faith')).capped).toBe(false);
+  });
+  test('a forced volume still requeries LDS/KJV when asked to keep the forced version', async () => {
+    const many = Array.from({ length: 301 }, (_, i) => ({ verse_id: 28679 + i, version: 'WEB' }));
+    const sphinx = { search: vi.fn(async (q, { range }) => (range ? [] : many)) };
+    const repo = { ...fakeRepo(), volumeVersions: vi.fn(async () => ['LDS', 'WEB']) };
+    await new SearchService(repo, sphinx).search('faith', { forcedVersion: 'nt', requeryForced: true });
+    expect(sphinx.search.mock.calls[1][1]).toMatchObject({ versions: ['LDS', 'KJV'] });
+  });
 });
 
 describe('helpers', () => {
