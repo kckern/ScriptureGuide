@@ -1,7 +1,7 @@
 import { describe, it, test, expect } from 'vitest';
 import {
   splitRuns,
-  formatReference, referenceFromRows, slugifyRef, versionImg, isConsecutive,
+  formatReference, referenceFromRows, slugifyRef, slugBook, versionImg, isConsecutive,
 } from '../../src/domain/rules/legacyReference.js';
 
 // Synthetic book table: Genesis (book 1) chapters 1–3 with 31, 25, 24 verses, verse ids from 1;
@@ -127,5 +127,11 @@ describe('splitRuns (a passage that skips chapters)', () => {
   test('one consecutive run: null (the caller keeps its own format)', () => {
     expect(splitRuns([row(10, 3, 36), row(11, 4, 1)])).toBeNull();
     expect(splitRuns([row(1, 3, 16), row(3, 3, 18)])).toBeNull();
+  });
+});
+
+describe('slugBook', () => {
+  test('a short title as the site writes it in URLs', () => {
+    expect(['Gen.', 'D&C', '1 Ne.', 'JST John', 'Song.'].map(slugBook)).toEqual(['gen', 'd&c', '1.ne', 'jst.john', 'song']);
   });
 });

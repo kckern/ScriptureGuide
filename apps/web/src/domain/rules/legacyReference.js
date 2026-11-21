@@ -11,6 +11,9 @@ export function slugifyRef(ref) {
     .replace(/–/g, '-');
 }
 
+// A book's short title as a slug: "Gen." → "gen", "D&C" → "d&c", "1 Ne." → "1.ne"
+export const slugBook = title => String(title || '').toLowerCase().replace(/\./g, '').replace(/\s+/g, '.');
+
 // scriptutil::getBook: the leading non-digit run, or the previous block's book.
 export function getBook(ref, lastBook) {
   const t = ref.trim();

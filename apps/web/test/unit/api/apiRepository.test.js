@@ -25,3 +25,11 @@ describe('ApiRepository.randomVerseId', () => {
     expect(await new ApiRepository(db).randomVerseId({ range: [1, 10], version: 'X' })).toBeNull();
   });
 });
+
+describe('ApiRepository.indexRows', () => {
+  test('selects the short title, which slugs are built from', async () => {
+    const db = { query: vi.fn(async () => []) };
+    await new ApiRepository(db).indexRows([26137]);
+    expect(db.query.mock.calls[0][0]).toContain('b.book_title_short');
+  });
+});

@@ -5,7 +5,8 @@ import apiRepository from '../../data/repositories/ApiRepository.js';
 import { Reference } from '../../domain/entities/Reference.js';
 import { defaultVersions } from '../../domain/rules/defaultVersions.js';
 import { plainText } from '../../domain/rules/legacyText.js';
-import { slugifyRef } from '../../domain/rules/legacyReference.js';
+import { slugifyRef, slugBook } from '../../domain/rules/legacyReference.js';
+import { formatReference } from '../../domain/rules/referenceParsing.js';
 import { REQUEST_LIMITS } from '../../domain/rules/requestBudget.js';
 import { ApiError } from './errors.js';
 import { diagnoseMiss } from './diagnose.js';
@@ -54,13 +55,23 @@ async function pieces(query, { refs, repo }) {
   return found.map((p, k) => ({ label: p.label, ids: ids.slice(p.start, found[k + 1]?.start ?? ids.length) }));
 }
 
+// The site's URL form for one piece: the book's short title, then chapter and verses
+// ("Solomon's Song 2:1" → "song.2.1", "Genesis 1:1-2:3" → "gen.1-2.3", as
+// ScriptureLookupService writes them). Without a short title, the whole label as a slug.
+export function passageSlug(label, shortTitle) {
+  const tail = String(label).match(/\s(\d+(?::\d+)?(?:[-–]\d+(?::\d+)?)?)$/)?.[1];
+  if (!shortTitle || !tail) return slugifyRef(label);
+  const fromVerseOne = tail.match(/^(\d+):1[-–](\d+):(\d+)$/);
+  return `${slugBook(shortTitle)}.${fromVerseOne ? `${fromVerseOne[1]}-${fromVerseOne[2]}.${fromVerseOne[3]}` : slugifyRef(tail)}`;
+}
+
 function referenceEntry(label, rows) {
   const first = rows[0];
   const last = rows[rows.length - 1];
   return {
     label,
     book: first.book_title,
-    slug: slugifyRef(label),
+    slug: passageSlug(label, first.book_title_short),
     start: { chapter: first.chapter, verse: first.verse },
     end: { chapter: last.chapter, verse: last.verse },
   };
@@ -75,6 +86,22 @@ function runs(ids, headingStarts) {
     else out[out.length - 1].push(id);
   }
   return out;
+}
+
+// The passages scripture_references links to these verses: one entry per run of consecutive
+// verses in one book ("JST John 3:16-18"), labelled from the index rows.
+async function parallelsFor(ids, repo) {
+  const sources = await repo.parallelSources(ids);
+  const groups = [];
+  for (const row of await repo.indexRows(sources)) {
+    const last = groups[groups.length - 1]?.at(-1);
+    if (last && Number(row.verse_id) === Number(last.verse_id) + 1 && row.book_id === last.book_id) groups[groups.length - 1].push(row);
+    else groups.push([row]);
+  }
+  return groups.map(rows => {
+    const reference = formatReference(rows[0].book_title, rows, false);
+    return { reference, slug: passageSlug(reference, rows[0].book_title_short) };
+  });
 }
 
 // The versions to use: the requested ones, or the first default (by verse range) with text
@@ -130,13 +157,8 @@ export async function buildPassage({ reference, versions: requested, options = [
     }
   }
 
-  const parallels = [];
-  for (const id of await repo.parallelSources(allIds)) {
-    const ref = await refs.resolve(String(id));
-    if (!ref.isEmpty) parallels.push({ reference: ref.normalized, slug: slugifyRef(ref.normalized) });
-  }
-
-  const slug = parts.map(p => slugifyRef(p.label)).join(';');
+  const parallels = await parallelsFor(allIds, repo);
+  const slug = parts.map(p => passageSlug(p.label, rows.get(p.ids[0])?.book_title_short)).join(';');
   const prefix = requested.length ? `${requested.map(t => t.toLowerCase()).join('.')}/` : '';
   return {
     api: 'v1',

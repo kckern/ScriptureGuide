@@ -1,5 +1,5 @@
 import { describe, test, expect } from 'vitest';
-import { buildPassage } from '../../../src/api/v1/passage.js';
+import { buildPassage, passageSlug } from '../../../src/api/v1/passage.js';
 import { Reference } from '../../../src/domain/entities/Reference.js';
 
 // John 3:15-19 (ids 26136-26140), NRSV and KJV. NRSV has a heading at 3:1 (26122).
@@ -11,9 +11,18 @@ const TEXT = {
 // The shape of ApiRepository.versions(): lower-case id → { id, name, lang }
 const NAMES = new Map([['nrsv', { id: 'NRSV', name: 'New Revised Standard Version', lang: 'en' }], ['kjv', { id: 'KJV', name: 'King James Version', lang: 'en' }], ['lds', { id: 'LDS', name: 'LDS', lang: 'en' }]]);
 
+// Index rows: John 3:15-19, Romans 8:28, JST John 3:16-18
+const john = (id, verse) => ({ verse_id: id, book_id: 43, chapter: 3, verse, book_title: 'John', book_title_short: 'John' });
+const ROWS = {
+  ...Object.fromEntries(Object.entries(INDEX).map(([id, verse]) => [id, john(Number(id), verse)])),
+  28145: { verse_id: 28145, book_id: 45, chapter: 8, verse: 28, book_title: 'Romans', book_title_short: 'Rom.' },
+  60250: { verse_id: 60250, book_id: 131, chapter: 3, verse: 16, book_title: 'JST John', book_title_short: 'JST John' },
+  60251: { verse_id: 60251, book_id: 131, chapter: 3, verse: 17, book_title: 'JST John', book_title_short: 'JST John' },
+  60252: { verse_id: 60252, book_id: 131, chapter: 3, verse: 18, book_title: 'JST John', book_title_short: 'JST John' },
+};
 const fakeRepo = (extra = {}) => ({
   versions: async () => NAMES,
-  indexRows: async ids => ids.map(id => ({ verse_id: id, book_id: 43, chapter: 3, verse: INDEX[id], book_title: 'John' })),
+  indexRows: async ids => ids.map(id => ROWS[id]).filter(Boolean),
   verses: async (ids, version) => ids.filter(id => TEXT[version]?.[id]).map(id => ({ verse_id: id, text: TEXT[version][id] })),
   headingStarts: async () => [],
   headingAt: async (_id, _book, version) => (version === 'NRSV' ? 'Nicodemus Visits Jesus' : null),
@@ -26,7 +35,6 @@ const REFS = {
   'John 3:16-17': ['John 3:16-17', [26137, 26138]],
   'john3.16-17,19': ['John 3:16-17; 3:19', [26137, 26138, 26140]],
   'John 3:19': ['John 3:19', [26140]],
-  60250: ['JST John 3:16', [60250]],
   // Verse ids; looked up again by name, the first piece would come back short
   '26137-26139,28145': ['John 3:16-18; Romans 8:28', [26137, 26138, 26139, 28145]],
   'John 3:16-18': ['John 3:16-18', [26137]],
@@ -102,10 +110,19 @@ describe('buildPassage', () => {
     expect(data.passages.map(p => p.verses.map(v => v.id))).toEqual([[26137], [26138]]);
   });
 
-  test('parallels name the passages that stand in for these verses', async () => {
-    const linked = fakeRepo({ parallelSources: async () => [60250] });
+  test('parallels name the passages that stand in for these verses, one per run of verses', async () => {
+    const linked = fakeRepo({ parallelSources: async () => [28145, 60250, 60251, 60252] });
     const data = await build({ reference: 'john3.16-17', versions: ['NRSV'] }, { repo: linked });
-    expect(data.parallels).toEqual([{ reference: 'JST John 3:16', slug: 'jst.john.3.16' }]);
+    expect(data.parallels).toEqual([
+      { reference: 'Romans 8:28', slug: 'rom.8.28' },
+      { reference: 'JST John 3:16-18', slug: 'jst.john.3.16-18' },
+    ]);
+  });
+
+  test('slugs and the web link use the short title', async () => {
+    const data = await build({ reference: '26137-26139,28145', versions: ['NRSV'] });
+    expect(data.reference.map(r => r.slug)).toEqual(['john.3.16-18', 'rom.8.28']);
+    expect(data.links.web).toBe('https://scripture.guide/nrsv/john.3.16-18;rom.8.28');
   });
 
   test('no version asked for: the default version for the verses, and no version in the link', async () => {
@@ -136,5 +153,23 @@ describe('buildPassage', () => {
 
   test('a reference that finds nothing is diagnosed', async () => {
     await expect(build({ reference: 'xyz9.9', versions: [] })).rejects.toMatchObject({ code: 'unknown_book' });
+  });
+});
+
+describe('passageSlug', () => {
+  test('book from the short title, then chapter and verses', () => {
+    expect(passageSlug("Solomon's Song 2:1", 'Song.')).toBe('song.2.1');
+    expect(passageSlug('1 Nephi 3:7', '1 Ne.')).toBe('1.ne.3.7');
+    expect(passageSlug('Doctrine and Covenants 76:22', 'D&C')).toBe('d&c.76.22');
+    expect(passageSlug('JST John 3:16-18', 'JST John')).toBe('jst.john.3.16-18');
+    expect(passageSlug('Doctrine and Covenants 4', 'D&C')).toBe('d&c.4');
+    expect(passageSlug('Genesis 1-2', 'Gen.')).toBe('gen.1-2');
+  });
+  test('a range across chapters, as the site writes it', () => {
+    expect(passageSlug('Genesis 1:1-2:3', 'Gen.')).toBe('gen.1-2.3');
+    expect(passageSlug('Genesis 1:5-2:3', 'Gen.')).toBe('gen.1.5-2.3');
+  });
+  test('without a short title, the label as a slug', () => {
+    expect(passageSlug('Lectures on Faith 1:1', null)).toBe('lectures.on.faith.1.1');
   });
 });

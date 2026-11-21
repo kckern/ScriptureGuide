@@ -7,7 +7,7 @@ import { Reference } from '../domain/entities/Reference.js';
 import VerseSerializer from '../presentation/serializers/VerseSerializer.js';
 import { defaultVersions, versionOrder } from '../domain/rules/defaultVersions.js';
 import { applyFormatOverride } from '../domain/rules/formatOverride.js';
-import { getBook, slugifyRef, splitRuns } from '../domain/rules/legacyReference.js';
+import { getBook, slugifyRef, slugBook, splitRuns } from '../domain/rules/legacyReference.js';
 import { numericVerseIds, cleanReference } from '../domain/rules/cleanReference.js';
 import { parseVerseIdList } from '../domain/rules/referenceParsing.js';
 import { isCompoundLine } from '../domain/rules/legacyText.js';
@@ -31,9 +31,6 @@ export function chapterRuns(rows) {
   }
   return runs;
 }
-
-// A book's short title as a slug: "Gen." → "gen", "D&C" → "d&c", "1 Ne." → "1.ne"
-const slugBook = title => String(title || '').toLowerCase().replace(/\./g, '').replace(/\s+/g, '.');
 
 export class ScriptureLookupService {
   constructor(refService, verseRepo, headingRepo) {

@@ -27,7 +27,7 @@ export class ApiRepository {
   async indexRows(ids) {
     if (!ids.length) return [];
     return this.db.query(
-      `SELECT v.verse_id, v.book_id, v.chapter, v.verse, b.book_title
+      `SELECT v.verse_id, v.book_id, v.chapter, v.verse, b.book_title, b.book_title_short
        FROM lds_scriptures_verses v JOIN lds_scriptures_books b ON b.book_id = v.book_id
        WHERE v.verse_id IN (?) ORDER BY v.verse_id`,
       [ids]
