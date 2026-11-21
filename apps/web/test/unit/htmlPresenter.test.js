@@ -183,11 +183,23 @@ describe('HtmlPresenter api alternate link', () => {
     expect(present(john316({ versionSpec: 'kjv,nrsv', version: 'KJV' }))).toBe('https://api.scripture.guide/v1/kjv/john.3.16');
     expect(present(john316({ versionSpec: 'hbrs', version: 'LDS' }))).toBe('https://api.scripture.guide/v1/lds/john.3.16');
   });
+  test('a page showing several versions names each, in order, once', () => {
+    const result = john316({ versionSpec: 'kjv.nrsv', version: 'KJV' });
+    result.verses.push(new Verse({ id: 26137, chapter: 3, verseNum: 16, text: 'For God so loved the world.', version: 'NRSV' }),
+      new Verse({ id: 26138, chapter: 3, verseNum: 17, text: 'Indeed, God did not send.', version: 'NRSV' }));
+    expect(present(result)).toBe('https://api.scripture.guide/v1/kjv.nrsv/john.3.16');
+    const partly = john316({ versionSpec: 'kjv.nrsv', version: 'KJV' });
+    partly.verses.push(new Verse({ id: 26138, chapter: 3, verseNum: 17, text: 'x', version: 'INDEX' }));
+    expect(present(partly)).toBe('https://api.scripture.guide/v1/kjv/john.3.16');
+  });
   test('no link without verses, for a not-found page, or for text only in the verse index', () => {
     expect(present(john316({ verses: false }))).toBeNull();
     expect(present(john316({ normalized: '' }))).toBeNull();
     expect(present(john316({ slug: '' }))).toBeNull();
     expect(present(john316({ versionSpec: 'nrsv', version: 'INDEX' }))).toBeNull();
+    const unversioned = john316({ versionSpec: 'nrsv' });
+    unversioned.verses[0].version = undefined;
+    expect(present(unversioned)).toBeNull();
   });
   test('the layout writes the link, escaped, only when there is one', async () => {
     const render = locals => ejs.renderFile(LAYOUT, { body: '<div id="container"></div>', config: {}, ...locals });

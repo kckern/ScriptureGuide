@@ -52,17 +52,17 @@ export function ogImageUrl(host, pagePath) {
 }
 
 // The page's text from the v1 API, for <link rel="alternate" type="application/json">. With a
-// version in the URL it names the version the page shows: the site reads separators and
-// version words the API does not ("/kjv,nrsv/", "/hbrs/" falls back to LDS). Without one it
-// names none, and the API picks the same default by verse range. null for a page without
-// verses, a not-found page (no normalized reference) or text only from the verse index.
+// version in the URL it names the versions the page shows, in order ("kjv.nrsv"): the site
+// reads separators and version words the API does not ("/kjv,nrsv/", "/hbrs/" falls back to
+// LDS). Without one it names none, and the API picks the same default by verse range. null for
+// a page without verses, a not-found page (no normalized reference) or text only from the
+// verse index.
 export function apiAlternateUrl(result, data) {
   const slug = data?.canonicalRefSlug;
   if (!slug || !result.verses?.length || !result.reference?.normalized) return null;
   if (!result.config?.versionSpec) return `https://api.scripture.guide/v1/${slug}`;
-  const version = result.config.version;
-  if (!version || version === 'INDEX') return null;
-  return `https://api.scripture.guide/v1/${version.toLowerCase()}/${slug}`;
+  const shown = [...new Set(result.verses.map(v => v.version).filter(v => v && v !== 'INDEX').map(v => v.toLowerCase()))];
+  return shown.length ? `https://api.scripture.guide/v1/${shown.join('.')}/${slug}` : null;
 }
 
 export class HtmlPresenter {
