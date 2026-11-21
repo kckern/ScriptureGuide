@@ -238,9 +238,15 @@ export class ParallelService {
     const parsed = this.refs.parse(ref);
     if (!parsed.isEmpty) return parsed.verseIds.map(Number);
     const slug = ScriptureLookupService.parseSlug(ref);
-    if (!slug) return [];
-    const r = await this.verses.findBySlug(slug.bookSlug, slug.chapter, slug.verseStart, slug.verseEnd);
-    return r ? r.verseIds.map(Number) : [];
+    if (slug) {
+      const r = await this.verses.findBySlug(slug.bookSlug, slug.chapter, slug.verseStart, slug.verseEnd);
+      if (r) return r.verseIds.map(Number);
+    }
+    // The verse index reads JST books ("jst.john.3.16") and collections the package doesn't
+    // know. A bare number stays unread: on the left side it names an edition ("1835~kjv/john.1").
+    if (/^[\d\s;,-]+$/.test(ref)) return [];
+    const resolved = await this.refs.resolve(ref);
+    return resolved.isEmpty ? [] : resolved.verseIds.map(Number);
   }
 
   // renderArray: verse_id → { version, verse_id, ref, text, compound }

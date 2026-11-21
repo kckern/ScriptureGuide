@@ -123,3 +123,29 @@ describe('ParallelService.build', () => {
     expect(page.title).toBe('Alpha 2:1 ~ Alpha 2:1');
   });
 });
+
+describe('ParallelService.verseIds', () => {
+  const refs = {
+    parse: s => new Reference({ query: s, normalized: s, verseIds: { 'john.3.16': [26137] }[s] || [] }),
+    resolve: vi.fn(async s => new Reference({ query: s, normalized: s, verseIds: { 'jst.john.3.16': [68942], 'jst.gen.1': [42600, 42601], 1835: [1835] }[s] || [] })),
+  };
+  const verses = { findBySlug: vi.fn(async slug => (slug === 'alp' ? { verseIds: [10] } : null)) };
+  const svc = new ParallelService({ refs, verses, repo: {} });
+
+  test('a reference the package reads stays as it was', async () => {
+    expect(await svc.verseIds('john.3.16')).toEqual([26137]);
+    expect(refs.resolve).not.toHaveBeenCalled();
+  });
+  test('JST references fall back to the verse index', async () => {
+    expect(await svc.verseIds('jst.john.3.16')).toEqual([68942]);
+    expect(await svc.verseIds('jst.gen.1')).toEqual([42600, 42601]);
+  });
+  test('a bare number is not read as a verse id: "1835~kjv/john.1" is an edition', async () => {
+    refs.resolve.mockClear();
+    expect(await svc.verseIds('1835')).toEqual([]);
+    expect(refs.resolve).not.toHaveBeenCalled();
+  });
+  test('nothing found anywhere', async () => {
+    expect(await svc.verseIds('zzz')).toEqual([]);
+  });
+});
