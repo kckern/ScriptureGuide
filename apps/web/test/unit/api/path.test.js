@@ -2,8 +2,9 @@ import { describe, test, expect } from 'vitest';
 import { parseApiPath } from '../../../src/api/v1/path.js';
 import { ApiError } from '../../../src/api/v1/errors.js';
 
-const KNOWN = new Set(['nrsv', 'kjv', 'lds', 'jst', '1830']);
-const parse = path => parseApiPath(path, id => KNOWN.has(id.toLowerCase()));
+// The shape ApiRepository.translations() returns: lower-case id → { id, name }
+const KNOWN = new Map(['NRSV', 'KJV', 'LDS', 'JST', '1830', 'printer'].map(id => [id.toLowerCase(), { id, name: id }]));
+const parse = path => parseApiPath(path, KNOWN);
 const errorOf = path => { try { parse(path); } catch (e) { return e; } return null; };
 
 describe('parseApiPath: passages', () => {
@@ -18,6 +19,10 @@ describe('parseApiPath: passages', () => {
   });
   test('options come before the translation', () => {
     expect(parse('/v1/html/ids/kjv/john3.16')).toMatchObject({ options: ['html', 'ids'], translations: ['KJV'] });
+  });
+  test('ids come back in their stored case', () => {
+    expect(parse('/v1/PRINTER.Nrsv/1ne1.1').translations).toEqual(['printer', 'NRSV']);
+    expect(parse('/v1/search/Printer/love').translation).toBe('printer');
   });
   test('several translations; the *format suffix is ignored', () => {
     expect(parse('/v1/nrsv.kjv*lds/john3.16').translations).toEqual(['NRSV', 'KJV']);
