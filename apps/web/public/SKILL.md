@@ -40,7 +40,7 @@ The API is open today. A key may be required later. Set it up now so that a futu
 SCRIPTURE_GUIDE_API_KEY=sg_xxxxxxxx
 ```
 
-The API ignores the header for now.
+Keys are not issued yet, and until they are the API ignores the header. Once keys are live, a key raises your rate limit (see Rate limits).
 
 ## Set up /scripture (optional, recommended)
 
@@ -83,6 +83,7 @@ Rules:
 - `--volume` limits `search` and `random` to the Old Testament, New Testament, Book of Mormon, Doctrine and Covenants or Pearl of Great Price.
 - `-l, --language` filters `versions` by ISO 639-1 code (`en`, `ko`, `hi`).
 - Exit codes: `0` ok, `1` the API returned an error (message and suggestion on stderr), `2` bad arguments, `3` network error.
+- On a `429` the CLI waits `Retry-After` seconds and retries once; a second `429` exits `1` with the message.
 - `SCRIPTURE_GUIDE_BASE` overrides `https://api.scripture.guide`, for testing or a self-hosted copy.
 
 ## API mapping
@@ -210,6 +211,7 @@ Errors have a 4xx status (or 500/503, below) and this body:
 | `parallel_not_supported` | 400 | Parallel works on `api.` only |
 | `search_not_supported` | 400 | Search works on `api.` only |
 | `versions_not_supported` | 400 | The version list is on `api.` only |
+| `rate_limited` | 429 | Too many requests. Wait for `Retry-After` (seconds) and retry once; the reference CLI does this. Don't retry in a loop |
 | `service_unavailable` | 503 | The database is not answering. Wait for `Retry-After` (30 seconds) and retry once |
 | `internal_error` | 500 | A server bug. Don't retry in a loop; report it if it repeats |
 
@@ -220,6 +222,12 @@ Apart from `suggestion`, every field is always present with the same type. The o
 - At most 100 reference pieces, counted as the `;`-separated pieces you write. A `,` verse list inside a piece (`ps119.1,3,5`) is still one piece.
 - At most 5,000 verses and 10 versions per request.
 - Larger requests return `reference_too_large`. Split them.
+
+### Rate limits
+
+- Requests are counted per caller: by IP address without a key, by key with one. A caller over the limit gets `429` `rate_limited` with `Retry-After`, the seconds to wait before the next request. Wait that long and retry once.
+- The `RateLimit-Policy` and `RateLimit` headers appear only on answers that are not cached (a `429`, a 5xx error, `random`): a cached answer goes to every caller, so it can't carry one caller's numbers. `RateLimit-Policy: "anonymous";q=60;w=60` is the limit (60 requests in a 60-second window); `RateLimit: "anonymous";r=12;t=30` is what is left (12 requests) and `t`, the seconds until the limit is fully reset. `Retry-After` is the shorter wait, until the next request is allowed.
+- An API key (`SCRIPTURE_GUIDE_API_KEY`, sent as `Authorization: Bearer …`) raises the limit once keys are live.
 
 ## Core samples
 
@@ -334,9 +342,9 @@ Save as `scripture`, `chmod +x`, and put it on your `PATH`.
 ```python
 #!/usr/bin/env python3
 """scripture: a small client for the scripture.guide v1 API (https://scripture.guide/SKILL.md)."""
-import argparse, json, os, sys, urllib.error, urllib.parse, urllib.request
+import argparse, json, os, sys, time, urllib.error, urllib.parse, urllib.request
 
-__version__ = "1.0.0"
+__version__ = "1.1.0"
 BASE = os.environ.get("SCRIPTURE_GUIDE_BASE", "https://api.scripture.guide").rstrip("/")
 KEY = os.environ.get("SCRIPTURE_GUIDE_API_KEY")
 VOLUMES = ["ot", "nt", "bom", "dc", "pgp"]
@@ -350,22 +358,33 @@ def seg(text, safe=".:;,-"):
     return urllib.parse.quote(text, safe=safe)
 
 
+def retry_after(value):
+    try:
+        return min(max(int(value), 0), 60)
+    except (TypeError, ValueError):
+        return 1
+
+
 def call(*parts):
     url = "/".join([BASE, "v1", *[p for p in parts if p]])
-    req = urllib.request.Request(url, headers={"User-Agent": f"scripture-cli/{__version__}"})
-    if KEY:
-        req.add_header("Authorization", f"Bearer {KEY}")
-    try:
-        with urllib.request.urlopen(req, timeout=20) as res:
-            return json.load(res)
-    except urllib.error.HTTPError as e:
-        body = e.read().decode("utf-8", "replace")
+    for attempt in (1, 2):
+        req = urllib.request.Request(url, headers={"User-Agent": f"scripture-cli/{__version__}"})
+        if KEY:
+            req.add_header("Authorization", f"Bearer {KEY}")
         try:
-            err = json.loads(body)["error"]
-            msg = err["message"] + (f" Try: {err['suggestion']}" if err.get("suggestion") else "")
-        except (ValueError, KeyError, TypeError):
-            msg = f"HTTP {e.code}: {body.strip()[:200]}"
-        raise ApiError(msg)
+            with urllib.request.urlopen(req, timeout=20) as res:
+                return json.load(res)
+        except urllib.error.HTTPError as e:
+            body = e.read().decode("utf-8", "replace")
+            if e.code == 429 and attempt == 1:  # rate_limited: wait as told, then retry once
+                time.sleep(retry_after(e.headers.get("Retry-After")))
+                continue
+            try:
+                err = json.loads(body)["error"]
+                msg = err["message"] + (f" Try: {err['suggestion']}" if err.get("suggestion") else "")
+            except (ValueError, KeyError, TypeError):
+                msg = f"HTTP {e.code}: {body.strip()[:200]}"
+            raise ApiError(msg)
 
 
 def label(refs):
