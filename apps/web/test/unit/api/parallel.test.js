@@ -1,4 +1,4 @@
-import { describe, test, expect } from 'vitest';
+import { describe, test, expect, vi } from 'vitest';
 import { buildParallel } from '../../../src/api/v1/parallel.js';
 
 const page = {
@@ -12,7 +12,7 @@ const page = {
 };
 const deps = {
   parallel: { build: async () => page },
-  repo: { versions: async () => new Map([['kjv', { id: 'KJV', name: 'King James Version', lang: 'en' }], ['lds', { id: 'LDS', name: 'LDS', lang: 'en' }]]) },
+  repo: { versions: async () => new Map([['kjv', { id: 'KJV', name: 'King James Version', lang: 'en' }], ['lds', { id: 'LDS', name: 'LDS', lang: 'en' }], ['nrsv', { id: 'NRSV', name: 'NRSV', lang: 'en' }], ['1830', { id: '1830', name: '1830', lang: 'en' }]]) },
 };
 
 describe('buildParallel', () => {
@@ -42,5 +42,22 @@ describe('buildParallel', () => {
     const oneSided = { ...page, rver: '', rightheader: '', fullslug: 'kjv/john.3.16~' };
     await expect(buildParallel('kjv/john.3.16~jst.john.3.16', { ...deps, parallel: { build: async () => oneSided } }))
       .rejects.toMatchObject({ code: 'unparseable_reference', message: expect.stringContaining('"jst.john.3.16"') });
+  });
+  test('an unknown version on either side', async () => {
+    const build = vi.fn(async () => page);
+    await expect(buildParallel('xyz/isa2~lds/2ne12', { ...deps, parallel: { build } })).rejects.toMatchObject({ code: 'unknown_version', status: 404 });
+    await expect(buildParallel('kjv/isa2~xyz/2ne12', { ...deps, parallel: { build } })).rejects.toMatchObject({ code: 'unknown_version' });
+    expect(build).not.toHaveBeenCalled();
+  });
+  test('a version without the verses: ParallelService fell back to the default version', async () => {
+    // NRSV has no Book of Mormon, so the right side came back in LDS
+    await expect(buildParallel('kjv/isa2~nrsv/2ne12', deps)).rejects.toMatchObject({ code: 'not_in_version', status: 404, message: expect.stringContaining('NRSV') });
+    // an edition on the left ("1830~kjv/john.1") is a version too
+    const john = { ...page, lver: 'LDS', rver: 'KJV' };
+    await expect(buildParallel('1830~kjv/john.1', { ...deps, parallel: { build: async () => john } })).rejects.toMatchObject({ code: 'not_in_version', message: expect.stringContaining('1830') });
+  });
+  test('the stored version id in any case is the version asked for', async () => {
+    const data = await buildParallel('KJV/isa2~LDS/2ne12', deps);
+    expect(data.left.version.id).toBe('KJV');
   });
 });
