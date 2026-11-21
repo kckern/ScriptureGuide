@@ -22,9 +22,10 @@ export async function buildSearch({ terms, version, volume, page }, { search = s
     ? { forcedVersion: version, range: volumeRange(volume), requeryForced: true }
     : { forcedVersion: version ?? volume ?? null, requeryForced: true };
   // match() finds every hit; only the page asked for is read and highlighted
+  // Picks come in canon order by their verse (pick.key): a Book of Commandments or 1835 D&C hit
+  // (ids 89431+) sits with the D&C verse it stands for, so don't sort by verse_id
   const result = await search.match(terms, opts);
-  const picks = [...result.picks];
-  picks.sort((a, b) => a.verse_id - b.verse_id);
+  const picks = result.picks;
 
   const total = picks.length;
   const start = (page - 1) * PER_PAGE;

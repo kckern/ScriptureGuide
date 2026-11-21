@@ -4,25 +4,30 @@ import { buildSearch, PER_PAGE } from '../../../src/api/v1/search.js';
 // A SearchService whose match() finds these rows and whose hydrate() returns them
 function fake(rows, { truncated = false, capped = false } = {}) {
   return {
-    match: vi.fn(async q => ({ query: q, count: rows.length, picks: rows.map(r => ({ key: r.verse_id, version: r.version, verse_id: r.verse_id, row: r })), truncated, capped })),
+    match: vi.fn(async q => ({ query: q, count: rows.length, picks: rows.map(r => ({ key: r.key ?? r.verse_id, version: r.version, verse_id: r.verse_id, row: r })), truncated, capped })),
     hydrate: vi.fn(async (q, picks) => picks.map(p => p.row)),
   };
 }
 const row = (id, version = 'NRSV') => ({ verse_id: id, version, ref: `Ref ${id}`, refShort: `Ref ${id}`, text: 'God so loved the world', highlighted: "God so <span class='searchterm'>loved</span> the world" });
 
 describe('buildSearch', () => {
-  test('canon order, offsets, paging', async () => {
-    const rows = Array.from({ length: PER_PAGE + 5 }, (_, i) => row(30000 - i));
+  test('offsets and paging', async () => {
+    const rows = Array.from({ length: PER_PAGE + 5 }, (_, i) => row(1000 + i));
     const search = fake(rows, { truncated: false });
     const data = await buildSearch({ terms: 'loved', version: 'NRSV', volume: null, page: 2 }, { search });
     expect(search.match).toHaveBeenCalledWith('loved', { forcedVersion: 'NRSV', requeryForced: true });
     expect(data).toMatchObject({ api: 'v1', query: 'loved', scope: { version: 'NRSV', volume: null }, total: PER_PAGE + 5, truncated: false, page: 2, per_page: PER_PAGE });
     expect(data.results).toHaveLength(5);
-    expect(data.results[0].id).toBeLessThan(data.results[1].id);
-    expect(data.results[0]).toEqual({ id: 29996, reference: 'Ref 29996', slug: 'ref.29996', version: 'NRSV', text: 'God so loved the world', highlights: [[7, 12]] });
+    expect(data.results[0]).toEqual({ id: 1050, reference: 'Ref 1050', slug: 'ref.1050', version: 'NRSV', text: 'God so loved the world', highlights: [[7, 12]] });
     expect(data.links.next).toBeNull();
     // only the page asked for is read
     expect(search.hydrate.mock.calls[0][1]).toHaveLength(5);
+  });
+  test('canon order is SearchService\'s: a Book of Commandments verse stays with the D&C verse it stands for', async () => {
+    const boc = { ...row(89500, '1833'), key: 37800 };
+    const search = fake([row(37750, 'LDS'), boc, row(38000, 'LDS')]);
+    const data = await buildSearch({ terms: 'x', version: null, volume: null, page: 1 }, { search });
+    expect(data.results.map(r => r.id)).toEqual([37750, 89500, 38000]);
   });
   test('version and volume: SearchService searches the volume\'s range in that version', async () => {
     const search = fake([row(26137)], { truncated: false });
