@@ -112,7 +112,7 @@ describe('ParallelService.build', () => {
     expect(page.rows[0]).toMatchObject({
       id: 10,
       className: 'diffrow sig quote',
-      left: { verseId: 10, ref: 'Alpha 2:1', slug: 'alp.2.1', text: '  The word that came.' },
+      left: { verseId: 10, ref: 'Alpha 2:1', slug: 'alpha.2.1', text: '  The word that came.' },
       right: { verseId: 500, ref: 'Beta 12:1', text: '  The word that came:' },
     });
   });
@@ -167,10 +167,12 @@ describe('alignRows: one reference in two versions', () => {
       spans: { left: spans({ 2: [2, 3] }), right: spans({ 2: [2, 3, 4] }) },
     });
     expect(plain(rows)).toEqual([
-      { key: 1, left: [1], right: [1] },
-      { key: 2, left: [2, 4], right: [2] },
-      { key: 5, left: [5], right: [5] },
+      { key: 0, left: [1], right: [1] },
+      { key: 1, left: [2, 4], right: [2] },
+      { key: 2, left: [5], right: [5] },
     ]);
+    // a side of several cells names its last verse (the row's verse_id), as PHP's folded cells did
+    expect(rows[1].current).toEqual({ left: 4, right: 2 });
   });
 
   test('overlapping compounds chain into one row', () => {
@@ -179,15 +181,15 @@ describe('alignRows: one reference in two versions', () => {
       leftids: [1, 3], rightids: [1, 2, 4], references: none,
       spans: { left: spans({ 1: [1, 2], 3: [3, 4] }), right: spans({ 2: [2, 3] }) },
     });
-    expect(plain(rows)).toEqual([{ key: 1, left: [1, 3], right: [1, 2, 4] }]);
+    expect(plain(rows)).toEqual([{ key: 0, left: [1, 3], right: [1, 2, 4] }]);
   });
 
   test('a verse one side lacks keeps its own row', () => {
     const { rows } = alignRows({ leftids: [1, 2, 3], rightids: [1, 3], references: none, spans: { left: new Map(), right: new Map() } });
     expect(plain(rows)).toEqual([
-      { key: 1, left: [1], right: [1] },
-      { key: 2, left: [2], right: [] },
-      { key: 3, left: [3], right: [3] },
+      { key: 0, left: [1], right: [1] },
+      { key: 1, left: [2], right: [] },
+      { key: 2, left: [3], right: [3] },
     ]);
   });
 
@@ -224,20 +226,25 @@ describe('ParallelService.build: one reference in two versions with compound ver
 
   test('each row shows the same verses on both sides, every verse once', async () => {
     const page = await svc.build('aaa~bbb/gam.1');
+    // a cell over its own compound verses has the short label; cells folded together the medium one
     expect(page.rows.map(r => [r.left.ref, r.right.ref])).toEqual([
-      ['Gam. 1:1–3', 'Gam. 1:1–3'],
-      ['Gam. 1:4–5', 'Gam. 1:4–5'],
+      ['Gamma 1:1–3', 'Gamma 1:1–3'],
+      ['Gamma 1:4–5', 'Gam. 1:4–5'],
     ]);
     expect(page.rows.map(r => [r.left.text, r.right.text].map(t => t.replace(/\s+/g, ' ').trim()))).toEqual([
       ['One. Two.', 'Uno. Tres.'],
       ['Four. Five.', 'Cuatro.'],
     ]);
-    expect(page.rows.map(r => [r.left.slug, r.right.slug])).toEqual([['gam.1.1-3', 'gam.1.1-3'], ['gam.1.4-5', 'gam.1.4-5']]);
+    expect(page.rows.map(r => [r.left.slug, r.right.slug])).toEqual([['gamma.1.1-3', 'gamma.1.1-3'], ['gamma.1.4-5', 'gam.1.4-5']]);
   });
 
-  test('a one-verse cell links with the short slug, as compound cells do', async () => {
-    const page = await svc.build('aaa~aaa/gam.1.1');
-    expect(page.rows[0].left).toMatchObject({ ref: 'Gamma 1:1', slug: 'gam.1.1' });
+  test('a cell links by its own label, as PHP did', async () => {
+    const one = await svc.build('aaa~aaa/gam.1.1');
+    expect(one.rows[0].left).toMatchObject({ ref: 'Gamma 1:1', slug: 'gamma.1.1' });
+  });
+  test('rows by verse are numbered from 0, as PHP\'s side-by-side rows were (the row ids on the page)', async () => {
+    const page = await svc.build('aaa~bbb/gam.1');
+    expect(page.rows.map(r => r.id)).toEqual([0, 1]);
   });
 });
 

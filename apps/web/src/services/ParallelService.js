@@ -60,11 +60,13 @@ function alignByVerse(leftids, rightids, spans) {
   for (const c of cells) {
     if (!current || c.min > current.max) {
       current = { max: c.max, row: { left: null, right: null } };
-      rows.set(c.min, current.row);
+      rows.set(rows.size, current.row); // keys 0, 1, …: the page's row ids, as side by side
     }
     current.max = Math.max(current.max, c.max);
     (current.row[c.side] ||= new Map()).set(c.id, c.id);
   }
+  // A side with several cells in a row names its last verse, as PHP's folded cells did
+  for (const row of rows.values()) for (const m of [row.left, row.right]) if (m?.size > 1) m.atEnd = true;
   return rows;
 }
 
@@ -264,7 +266,7 @@ export function alignRows({ leftids, rightids, references, compounds = {}, lver,
   })).filter(r => r.left.length || r.right.length);
   const found = new Set();
   for (const r of out) for (const l of r.left) for (const rr of r.right) if (index2d.has(`${l}|${rr}`)) found.add(r.key);
-  return { rows: out, index2d, sigs, found, anymatches: found.size > 0, merged };
+  return { rows: out, index2d, sigs, found, anymatches: found.size > 0, merged, byVerse: !!rows.byVerse };
 }
 
 function setKey(map, key, value) {
@@ -424,9 +426,12 @@ export class ParallelService {
       let verseId;
       let leftText = '', rightText = '', leftRef, rightRef;
       for (const id of item.left) { verseId = id; leftText += ' ' + (bank.left.get(id)?.text ?? ''); }
-      leftRef = item.left.length === 1 ? (bank.left.get(verseId)?.ref ?? '') : ref2(covers('left', item.left), 'book_title_short');
+      // Several cells in one row: the short form, or in a row by verse the medium one, as PHP
+      // labelled a cell it folded verses into ("1 Nephi 1:1–3" beside "1 Ne. 1:1–3")
+      const multi = layout.byVerse ? 'book_title_med' : 'book_title_short';
+      leftRef = item.left.length === 1 ? (bank.left.get(verseId)?.ref ?? '') : ref2(covers('left', item.left), multi);
       for (const id of item.right) { verseId = id; rightText += ' ' + (bank.right.get(id)?.text ?? ''); }
-      rightRef = item.right.length === 1 ? (bank.right.get(verseId)?.ref ?? '') : ref2(covers('right', item.right), 'book_title_short');
+      rightRef = item.right.length === 1 ? (bank.right.get(verseId)?.ref ?? '') : ref2(covers('right', item.right), multi);
       for (const id of [...item.left, ...item.right]) if (layout.sigs.has(id)) sig = 'sig';
       let standinclass = '';
       for (const l of item.left) for (const r of item.right) {
@@ -434,13 +439,13 @@ export class ParallelService {
         standinclass = p ? (p.std.has(1) ? 'quote' : 'allusion') : 'sidebyside';
       }
       if (!layout.found.has(item.key) && layout.anymatches) standinclass = 'greyout';
-      // Links always use the short form ("1.ne.14.2-6"), whichever form the cell shows
-      const slug = (side, ids) => (ids.length ? slugifyRef(ref2(covers(side, ids), 'book_title_short')) : '');
+      // Links follow the cell's label, as PHP's did ("isaiah.2.1", "1.ne.1.1-3")
+      const slug = label => slugifyRef(label);
       return {
         id: item.key,
         className: `diffrow ${sig} ${standinclass}`,
-        left: { verseId: item.current.left ?? '', ref: leftRef || '', slug: slug('left', item.left), text: leftText, fax: fax.left.has(verseId) },
-        right: { verseId: item.current.right ?? '', ref: rightRef || '', slug: slug('right', item.right), text: rightText, fax: fax.right.has(verseId) },
+        left: { verseId: item.current.left ?? '', ref: leftRef || '', slug: slug(leftRef), text: leftText, fax: fax.left.has(verseId) },
+        right: { verseId: item.current.right ?? '', ref: rightRef || '', slug: slug(rightRef), text: rightText, fax: fax.right.has(verseId) },
       };
     });
 

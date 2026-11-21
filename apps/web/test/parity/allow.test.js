@@ -156,3 +156,26 @@ describe('allow.json: highlight spans for a query with leading or trailing punct
     expect(reason('/ignition', live, node)).toBeUndefined();
   });
 });
+
+describe('allow.json: parallels', () => {
+  const allow = JSON.parse(readFileSync(new URL('./allow.json', import.meta.url), 'utf8'));
+  test('same-reference parallels with a version that has compound verses (rows by verse)', () => {
+    for (const path of ['/2hrbom~lds/1.ne.1-20', '/lds~2hrbom/1.ne.1-20', '/ctbom~lds/1.ne.1-20', '/2hrbom/1.ne.1-5;7-19~lds/1.ne.1-20', '/lds/1.ne.1-20~2hrbom/1.ne.1-5;7-19']) {
+      expect(allowReason(allow, 'html', path, '')).toMatch(/by verse/);
+    }
+  });
+  test('not other parallels, nor a passage in such a version', () => {
+    for (const path of ['/isa.2~2ne.12', '/esv/rom.8~niv/rom.8', '/1830~msg/john1', '/2hrbom/2.ne.15', '/ctbom/1.ne.14']) {
+      expect(allowReason(allow, 'html', path, '')).toBeUndefined();
+    }
+  });
+  test('a live parallel with an empty-side link', () => {
+    expect(allowReason(allow, 'html', '/hbrs/isa.49~isa.9;11', '<a class="ref" href="/lds/"></a>')).toMatch(/empty/);
+    expect(allowReason(allow, 'html', '/2hrbom/~lds/1.ne.1-20', '<a class="ref" href="//"></a>')).toMatch(/empty/);
+    expect(allowReason(allow, 'html', '/isa.2~2ne.12', '<a class="ref" href="/lds/isaiah.2.1">')).toBeUndefined();
+    expect(allowReason(allow, 'html', '/john.3', '<a class="ref" href="/lds/"></a>')).toBeUndefined();
+  });
+  test('the filler passage /2hrbom/2.ne.16', () => {
+    expect(allowReason(allow, 'html', '/2hrbom/2.ne.16', '')).toMatch(/does not include/);
+  });
+});
