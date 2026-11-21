@@ -169,9 +169,11 @@ const lookupReference = function(query, optionsOrLanguage = {}, legacyConfig = n
     // Extract canon options, using effective canon as default
     const { convertTo, includeParallel } = lookupConfig;
     const canon = lookupConfig.canon || getEffectiveCanon();
+    // The most verses one range expands to (MAX_RANGE_SIZE unless the caller asks otherwise)
+    const limit = rangeLimit(lookupConfig.maxVerses);
 
     // Try lookup in the requested language (and canon versification)
-    const lookupResult = lookupInLanguage(query, effectiveLanguage, canon);
+    const lookupResult = lookupInLanguage(query, effectiveLanguage, canon, limit);
     const verse_ids = lookupResult.verse_ids;
     const errors = lookupResult.errors;
 
@@ -208,7 +210,7 @@ const lookupReference = function(query, optionsOrLanguage = {}, legacyConfig = n
 
     // If no results and multi-language lookup is allowed, try fallback languages
     if (!lookupConfig.noMulti) {
-        const fallbackResult = lookupWithLanguageFallback(query, effectiveLanguage, canon);
+        const fallbackResult = lookupWithLanguageFallback(query, effectiveLanguage, canon, limit);
         // If fallback also found no results and we have errors, include them
         if (fallbackResult.verse_ids.length === 0 && errors) {
             fallbackResult.error = errors.join('; ');
@@ -224,7 +226,12 @@ const lookupReference = function(query, optionsOrLanguage = {}, legacyConfig = n
     };
 }
 
-const lookupInLanguage = function(query, language, canon = null) {
+// maxVerses must be a positive finite integer; anything else means the default cap
+const rangeLimit = function(maxVerses) {
+    return Number.isInteger(maxVerses) && maxVerses > 0 ? maxVerses : MAX_RANGE_SIZE;
+}
+
+const lookupInLanguage = function(query, language, canon = null, limit = MAX_RANGE_SIZE) {
     const config = getLanguageConfig(language, canon);
 
     // Cleanup and process the reference
@@ -235,7 +242,7 @@ const lookupInLanguage = function(query, language, canon = null) {
     let verse_ids = [];
     let errors = [];
     for (let i in refs) {
-        const result = lookupSingleRef(refs[i], config);
+        const result = lookupSingleRef(refs[i], config, limit);
         if (result && result.error) {
             errors.push(result.error);
         } else if (Array.isArray(result)) {
@@ -264,14 +271,14 @@ const detectionLookup = function(language) {
     };
 }
 
-const lookupWithLanguageFallback = function(query, targetLanguage, canon = null) {
+const lookupWithLanguageFallback = function(query, targetLanguage, canon = null, limit = MAX_RANGE_SIZE) {
     // Define fallback order: English first (if not already tried), then all other languages
     const fallbackLanguages = targetLanguage !== 'en'
         ? ['en', ...Object.keys(raw_lang).filter(lang => lang !== 'en' && lang !== targetLanguage)]
         : Object.keys(raw_lang).filter(lang => lang !== targetLanguage);
 
     for (const lang of fallbackLanguages) {
-        const lookupResult = lookupInLanguage(query, lang, canon);
+        const lookupResult = lookupInLanguage(query, lang, canon, limit);
         const verse_ids = lookupResult.verse_ids;
         if (verse_ids?.length) {
             // Generate reference in the target language
@@ -292,10 +299,10 @@ const lookupWithLanguageFallback = function(query, targetLanguage, canon = null)
 }
 
 
-const lookupSingleRef = function(ref, config) {
+const lookupSingleRef = function(ref, config, limit = MAX_RANGE_SIZE) {
     const booksWithDashRegex = /^(joseph|조셉)/i; // TODO: get from config
     //todo: better handling of multi-book ranges for unicode
-    if (!booksWithDashRegex.test(ref) && ref.match(/[—-](\d\s)*[\D]/ig)) return lookupMultiBookRange(ref, config);
+    if (!booksWithDashRegex.test(ref) && ref.match(/[—-](\d\s)*[\D]/ig)) return lookupMultiBookRange(ref, config, limit);
     let book = getBook(ref, config);
     if (!book) {
         return {
@@ -304,7 +311,7 @@ const lookupSingleRef = function(ref, config) {
         };
     }
     let ranges = getRanges(ref, book);
-    let verse_ids = loadVerseIds(book, ranges, config);
+    let verse_ids = loadVerseIds(book, ranges, config, limit);
     return verse_ids;
 
 }
@@ -377,7 +384,7 @@ const generateReference = function(verse_ids, optionsOrLanguage = {}, legacyOpti
 }
 
 
-const lookupMultiBookRange = function(cleanRef, config) { //eg Matthew 15—Mark 2
+const lookupMultiBookRange = function(cleanRef, config, limit = MAX_RANGE_SIZE) { //eg Matthew 15—Mark 2
 
     let range = cleanRef.split(/[—-]/);
     if (!range[0].match(/[:]/)) {
@@ -402,7 +409,7 @@ const lookupMultiBookRange = function(cleanRef, config) { //eg Matthew 15—Mark
     let end = lookupSingleRef(range[1], config)[0];
     let all_verse_ids = [];
     for (let i = start; i <= end; i++) {
-        if (all_verse_ids.length >= MAX_RANGE_SIZE) break;
+        if (all_verse_ids.length >= limit) break;
         all_verse_ids.push(i);
     }
     return all_verse_ids;
@@ -651,13 +658,13 @@ const getRanges = function(ref) {
     };
     return ranges;
 }
-const loadVerseIds = function(book, ranges, config) {
+const loadVerseIds = function(book, ranges, config, limit = MAX_RANGE_SIZE) {
     let refIndex = loadRefIndex(config);
     let verseList = [];
 
     for (let i in ranges) {
         // Bounds check: stop if we've collected enough
-        if (verseList.length >= MAX_RANGE_SIZE) break;
+        if (verseList.length >= limit) break;
 
         let range = ranges[i];
         let matches = range.match(/(\d+): *([\dX]+)-*([\dX]*)/);
@@ -679,7 +686,7 @@ const loadVerseIds = function(book, ranges, config) {
         end = Math.max(start, Math.min(end, MAX_VERSE));
 
         for (let verse_num = start; verse_num <= end; verse_num++) {
-            if (verseList.length >= MAX_RANGE_SIZE) break;
+            if (verseList.length >= limit) break;
             if (refIndex[book]?.[chapter]?.[verse_num]) {
                 verseList.push(refIndex[book][chapter][verse_num]);
             }

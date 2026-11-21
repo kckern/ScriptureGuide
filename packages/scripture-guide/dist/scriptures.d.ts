@@ -27,12 +27,26 @@ export type DetectionCallback = (reference: string) => string;
 export type LanguageCode = 'en' | 'ko' | 'de' | 'fr' | 'swe' | 'ru' | 'jp' | 'vn' | 'tr' | 'sl' | 'eo' | null;
 
 /**
+ * Options for lookupReference
+ */
+export interface LookupOptions {
+  /** Language code. If not provided, uses setLanguage value or defaults to 'en' */
+  language?: LanguageCode;
+  /** Canon versification: 'lds', 'rlds', ... */
+  canon?: string;
+  /** If true, no fallback to other languages */
+  noMulti?: boolean;
+  /** The most verses one range expands to (default 1000); a longer range is cut there */
+  maxVerses?: number;
+}
+
+/**
  * Looks up a scripture reference and returns structured data
  * @param query - The scripture reference string to parse (e.g., "John 3:16")
- * @param language - Optional language code. If not provided, uses setLanguage value or defaults to 'en'
+ * @param options - A language code, or LookupOptions. If no language is given, uses setLanguage value or defaults to 'en'
  * @returns Object containing the query, parsed reference, and verse IDs
  */
-export function lookupReference(query: string, language?: LanguageCode): LookupResult;
+export function lookupReference(query: string, options?: LanguageCode | LookupOptions): LookupResult;
 
 /**
  * Generates a human-readable scripture reference from verse IDs

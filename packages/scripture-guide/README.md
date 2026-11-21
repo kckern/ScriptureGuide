@@ -61,6 +61,7 @@ lookupReference('1 Nephi 3:7', { language: 'en', canon: 'lds' });
 | `options` | string \| object | If string, treated as language code |
 | `options.language` | string | Language code |
 | `options.canon` | string | Canon: `'lds'`, `'rlds'`, etc. |
+| `options.maxVerses` | number | The most verses one range expands to (default 1000). A longer range is cut there |
 
 > **Backward Compatibility:** The old 3-parameter signature `lookupReference(query, language, config)` is deprecated but still supported.
 

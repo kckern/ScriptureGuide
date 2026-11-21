@@ -36,6 +36,7 @@ lookupReference(query: string, language?: string, config?: LookupConfig): Lookup
 | Property | Type | Default | Description |
 |----------|------|---------|-------------|
 | `noMulti` | `boolean` | `false` | If `true`, disables multi-language fallback lookup |
+| `maxVerses` | `number` | `1000` | The most verses one range (one `;` piece) expands to. A longer range is cut there |
 
 ### Returns
 
@@ -352,6 +353,7 @@ interface LookupResult {
 
 interface LookupConfig {
   noMulti?: boolean;
+  maxVerses?: number;
 }
 
 interface DetectOptions {
