@@ -634,6 +634,9 @@ ul.tabs > li {
 	background: rgba(90, 70, 54, .07);
 	color: #5a4636;
 	cursor: pointer;
+	/* A tab is a control: a double click or drag across it selects nothing */
+	-webkit-user-select: none;
+	user-select: none;
 }
 /* The count comes first in the markup; show it after the label, smaller and lighter. */
 ul.tabs > li span {
