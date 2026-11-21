@@ -23,7 +23,10 @@ export function versionInfo(id, versions) {
 }
 
 // The pieces of a reference ("John 3:16; 4:1; Romans 8:28"), each with its own verse ids.
-// A piece without a book name takes the book before it.
+// A piece without a book name takes the book before it. The ids come from the whole
+// reference, split where each piece's first verse appears, so together the pieces hold
+// exactly the whole reference's ids in order. Looking a piece up by name is only used to
+// find where it starts; a piece whose start can't be found joins the piece before it.
 async function pieces(query, { refs, repo }) {
   const whole = await refs.resolve(query);
   if (whole.isEmpty) throw await diagnoseMiss(query, repo);
@@ -35,17 +38,20 @@ async function pieces(query, { refs, repo }) {
   if (whole.verseIds.length > REQUEST_LIMITS.verses) {
     throw new ApiError('reference_too_large', `The reference has ${whole.verseIds.length} verses. Ask for ${REQUEST_LIMITS.verses} or fewer.`);
   }
-  if (labels.length < 2) return [{ label: whole.normalized, ids: whole.verseIds }];
-  const out = [];
+  const ids = whole.verseIds;
+  if (labels.length < 2) return [{ label: whole.normalized, ids }];
+  const found = [];
   let book = '';
-  for (const piece of labels) {
+  for (const [i, piece] of labels.entries()) {
     const label = /[a-z]/i.test(piece) ? piece : `${book} ${piece}`;
     book = new Reference({ normalized: label }).book;
-    const ref = await refs.resolve(label);
-    if (ref.isEmpty) throw await diagnoseMiss(label, repo);
-    out.push({ label, ids: ref.verseIds });
+    const from = found.length ? found[found.length - 1].start : -1;
+    const ref = i === 0 ? null : await refs.resolve(label);
+    const start = i === 0 ? 0 : (ref.isEmpty ? -1 : ids.indexOf(ref.verseIds[0], from + 1));
+    if (start > from) found.push({ label, start });
+    else found[found.length - 1].label += `; ${label}`;
   }
-  return out;
+  return found.map((p, k) => ({ label: p.label, ids: ids.slice(p.start, found[k + 1]?.start ?? ids.length) }));
 }
 
 function referenceEntry(label, rows) {
@@ -87,10 +93,12 @@ export async function buildPassage({ reference, versions: requested, options = [
   const versions = await chooseVersions(requested, allIds, repo);
   const idsOnly = options.includes('ids');
 
-  // Text per version, keyed by verse id
+  // Text per version, keyed by verse id (none with the ids option)
   const texts = {};
-  for (const t of versions) {
-    texts[t] = new Map((await repo.verses(allIds, t)).map(r => [Number(r.verse_id), plainText(r.text)]));
+  if (!idsOnly) {
+    for (const t of versions) {
+      texts[t] = new Map((await repo.verses(allIds, t)).map(r => [Number(r.verse_id), plainText(r.text)]));
+    }
   }
   if (!idsOnly && versions.every(t => texts[t].size === 0)) {
     throw new ApiError('not_in_version', `${versions.join(', ')} has no text for ${parts.map(p => p.label).join('; ')}.`);

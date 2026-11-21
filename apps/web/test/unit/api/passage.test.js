@@ -27,6 +27,10 @@ const REFS = {
   'john3.16-17,19': ['John 3:16-17; 3:19', [26137, 26138, 26140]],
   'John 3:19': ['John 3:19', [26140]],
   60250: ['JST John 3:16', [60250]],
+  // Verse ids; looked up again by name, the first piece would come back short
+  '26137-26139,28145': ['John 3:16-18; Romans 8:28', [26137, 26138, 26139, 28145]],
+  'John 3:16-18': ['John 3:16-18', [26137]],
+  'Romans 8:28': ['Romans 8:28', [28145]],
 };
 const refs = {
   resolve: async q => {
@@ -78,6 +82,18 @@ describe('buildPassage', () => {
     expect(data.reference.map(r => r.label)).toEqual(['John 3:16-17', 'John 3:19']);
     expect(data.passages.map(p => p.verses.map(v => v.id))).toEqual([[26137, 26138], [26140]]);
     expect(data.links.web).toBe('https://scripture.guide/nrsv/john.3.16-17;john.3.19');
+  });
+
+  test('pieces keep the verse ids of the whole reference', async () => {
+    const data = await build({ reference: '26137-26139,28145', versions: ['NRSV'], options: ['ids'] });
+    expect(data.reference.map(r => r.label)).toEqual(['John 3:16-18', 'Romans 8:28']);
+    expect(data.passages.map(p => p.verses.map(v => v.id))).toEqual([[26137, 26138, 26139], [28145]]);
+  });
+
+  test('ids option loads no text', async () => {
+    const noText = fakeRepo({ verses: async () => { throw new Error('text loaded'); } });
+    const data = await build({ reference: 'john3.16-17', versions: ['NRSV'], options: ['ids'] }, { repo: noText });
+    expect(data.passages[0].verses.map(v => v.id)).toEqual([26137, 26138]);
   });
 
   test('a heading inside the passage starts a new passage, once even when it has several rows', async () => {
