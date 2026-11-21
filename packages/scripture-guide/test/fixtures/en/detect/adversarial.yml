@@ -275,3 +275,38 @@ tests:
         expected_output: 'The discourse in [Lk 21] parallels [Mt 24].'
       contextAware_false:
         expected_output: 'The discourse in [Lk 21] parallels [Mt 24].'
+
+  - id: en-detect-adv-049
+    input: We moved to lu 3. 5 people came. Meet at l 3:30 in the book of L 3, by tile L 3, 4:5.
+    description: a sentence end is not a "." verse, a lowercase lone letter is not a book even with ":", "book of" is not evidence, and a later verse does not lift a weak first citation
+    tags: [negative, abbreviation, chapter-only]
+    context_variations:
+      contextAware_true:
+        expected_output: 'We moved to lu 3. 5 people came. Meet at l 3:30 in the book of L 3, by tile L 3, 4:5.'
+      contextAware_false:
+        expected_output: 'We moved to lu 3. 5 people came. Meet at l 3:30 in the book of L 3, by tile L 3, 4:5.'
+
+  - id: en-detect-adv-050
+    input: See 2 Jn 1, then 4 Ne 1 and JS-H 1; also Pss 120-134.
+    description: numbered, hyphenated and capitalized short books with a chapter only all link
+    tags: [abbreviation, chapter-only, numbered]
+    context_variations:
+      contextAware_true:
+        expected_output: 'See [2 Jn 1], then [4 Ne 1; JS-H 1; Pss 120-134].'
+        known_issue: >-
+          The merged span does not round-trip through lookup: in a list, a chapter-only
+          single-chapter book reads as verse 1 ("4 Ne 1; JS-H 1" looks up as 4 Nephi 1:1),
+          so the span re-parses to fewer verses than it was rendered with. Lookup, not the
+          detection bar; adv-051 checks the same forms unmerged.
+      contextAware_false:
+        expected_output: 'See [2 Jn 1], then [4 Ne 1 and JS-H 1; also Pss 120-134].'
+
+  - id: en-detect-adv-051
+    input: See 2 Jn 1 first, then 4 Ne 1 later, and JS-H 1 after that; also Pss 120-134.
+    description: numbered, hyphenated and capitalized short books with a chapter only link, unmerged
+    tags: [abbreviation, chapter-only, numbered]
+    context_variations:
+      contextAware_true:
+        expected_output: 'See [2 Jn 1] first, then [4 Ne 1] later, and [JS-H 1] after that; also [Pss 120-134].'
+      contextAware_false:
+        expected_output: 'See [2 Jn 1] first, then [4 Ne 1] later, and [JS-H 1] after that; also [Pss 120-134].'

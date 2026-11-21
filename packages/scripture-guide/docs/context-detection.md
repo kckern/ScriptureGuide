@@ -16,8 +16,12 @@ Traditional reference detection only finds explicit references like "John 3:16".
 Luke 3, because whoever passed the string already meant a reference. `detectReferences` and
 `findReferences` decide which parts of someone else's text are references, so they ask for more
 evidence when a match is thin. A chapter-only match ("Lk 21", "Luke 3") needs a book of four or
-more letters, or two or three starting with a capital; "L3" and "lu 3" are labels. With a verse
-the bar is lower: "L 3:16" is detected. Scripts without letter case are not affected.
+more letters, or two or three starting with a capital; "L3" and "lu 3" are labels. A "." verse
+("Lu 3.5") needs two letters. A single letter needs a capital and a ":" verse: "L 3:16" is
+detected, "l 3:30" and "L3.5" are not. A numbered book counts as two letters, so French "1 S 3,10"
+is detected; "book of" before a book adds nothing. Only the first number decides whether there is
+a verse: "L 3, 4:5" is still a lone letter with a chapter. Scripts without letter case are not
+affected.
 
 ## Enabling Context Detection
 

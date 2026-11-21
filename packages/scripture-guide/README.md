@@ -119,7 +119,7 @@ detectReferences('In John 3, Jesus explains (v. 16) that God loved the world.');
 // Detects 'John 3:16'
 ```
 
-Detection is stricter than lookup: `lookupReference('L3')` is Luke 3, but "L3" in running text is not linked (see [docs/context-detection.md](https://github.com/kckern/ScriptureGuide/blob/master/packages/scripture-guide/docs/context-detection.md)).
+Detection is stricter than lookup: `lookupReference('L3')` is Luke 3, but "L3" in running text is not linked: a single letter needs a capital and a ":" verse ("L 3:16"), and a numbered book ("1 S") counts as two letters (see [docs/context-detection.md](https://github.com/kckern/ScriptureGuide/blob/master/packages/scripture-guide/docs/context-detection.md)).
 
 **Parameters:**
 | Name | Type | Description |
