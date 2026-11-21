@@ -153,7 +153,9 @@ export async function buildPassage({ reference, versions: requested, options = [
     const ref = parts.map(p => p.label).join('; ');
     throw new ApiError('not_in_version', fallback
       ? `No text found for ${ref} in the default version (${versions[0]}).`
-      : `${versions.join(', ')} has no text for ${ref}.`);
+      : versions.length > 1
+        ? `None of ${versions.join(', ')} has text for ${ref}.`
+        : `${versions[0]} has no text for ${ref}.`);
   }
 
   const rows = new Map((await repo.indexRows(allIds)).map(r => [Number(r.verse_id), r]));

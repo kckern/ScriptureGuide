@@ -170,7 +170,9 @@ describe('buildPassage', () => {
   });
 
   test('a version with none of the verses', async () => {
-    await expect(build({ reference: 'john3.16-17', versions: ['LDS'] })).rejects.toMatchObject({ code: 'not_in_version' });
+    await expect(build({ reference: 'john3.16-17', versions: ['LDS'] })).rejects.toMatchObject({ code: 'not_in_version', message: 'LDS has no text for John 3:16-17.' });
+    const empty = fakeRepo({ verses: async () => [] });
+    await expect(build({ reference: 'john3.16-17', versions: ['NRSV', 'KJV'] }, { repo: empty })).rejects.toMatchObject({ message: 'None of NRSV, KJV has text for John 3:16-17.' });
   });
 
   test('more than 100 pieces is too large, before any piece is looked up', async () => {
