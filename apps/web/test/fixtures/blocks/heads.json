@@ -1,6 +1,6 @@
 {
  "name": "heads",
- "about": "Like NRSV and ANCHOR: a label before §, ▲ verse heads, §¶ mid-verse",
+ "about": "Like NRSV, NIV and ANCHOR: a label before §, §¶ mid-verse, ▲¶ verse heads, a verse of only ¶, two § in a row, a mark across lines",
  "version": "HANDMADE",
  "source": "hand-made",
  "rows": [
@@ -21,8 +21,41 @@
    "chapter": 1,
    "verse": 2,
    "book_title": "Handmade",
-   "text": "/The stones grind§¶▲Then the miller rested.",
+   "text": "/The stones grind.§¶Then the miller rested.",
    "format": "poetry",
+   "p": "¶",
+   "s": "§"
+  },
+  {
+   "verse_id": 3,
+   "version": "HANDMADE",
+   "chapter": 1,
+   "verse": 3,
+   "book_title": "Handmade",
+   "text": "▲¶See, the miller comes, /his cart behind him.",
+   "format": "poetry",
+   "p": "¶",
+   "s": ""
+  },
+  {
+   "verse_id": 4,
+   "version": "HANDMADE",
+   "chapter": 1,
+   "verse": 4,
+   "book_title": "Handmade",
+   "text": "¶",
+   "format": "prose",
+   "p": "¶",
+   "s": ""
+  },
+  {
+   "verse_id": 5,
+   "version": "HANDMADE",
+   "chapter": 1,
+   "verse": 5,
+   "book_title": "Handmade",
+   "text": "§Songs 4–6§A song of the river.¶▼The river 〔runs,/_and runs〕 on.",
+   "format": "prose",
    "p": "¶",
    "s": "§"
   }

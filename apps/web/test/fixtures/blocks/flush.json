@@ -1,6 +1,6 @@
 {
  "name": "flush",
- "about": "Like KRSEB, SEBOM, REBOM: §¶◄ and ¶◄ flush paragraphs, ¶▼◄ flush poetry",
+ "about": "Like KRSEB, SEBOM, REBOM: §¶◄ and ¶◄ flush paragraphs, ¶▼◄ a flush quotation in a prose verse",
  "version": "HANDMADE",
  "source": "hand-made",
  "rows": [
@@ -43,7 +43,7 @@
    "chapter": 1,
    "verse": 4,
    "book_title": "Handmade",
-   "text": "¶▼◄Sing of the river,/_sing of the mill.",
+   "text": "And the miller said: ¶▼◄Thus saith the river: I will turn the wheel.",
    "format": "prose",
    "p": "¶",
    "s": ""

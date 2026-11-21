@@ -26,17 +26,18 @@ const FROM_DATABASE = {
   'web-lev10': ['WEB', 2980, 2982, 'Leviticus 10:2-4: ¶▼ poetry and ¶► prose again inside one verse'],
   'kjv-ps23': ['KJV', 14237, 14242, 'Psalm 23: one ¶ paragraph per verse'],
   '1830-1ne1': ['1830', 31103, 31104, '1 Nephi 1:1-2: §¶ and ｟｠ small caps'],
+  'web-song1': ['WEB', 17542, 17543, 'Song of Songs 1:4-5: ► speaker labels outside a ¶ marker'],
   '1835-lines': ['1835', 90888, 90889, 'D&C 1835 section 5: / and /_ line breaks in prose, | as a space'],
 };
 
 // Hand-made rows: invented text, real marker layouts. verse_id and verse are made up too.
 const row = (verse_id, verse, text, format = 'prose', p = '', s = '') => ({ verse_id, version: 'HANDMADE', chapter: 1, verse, book_title: 'Handmade', text, format, p, s });
 const HAND_MADE = {
-  'flush': ['Like KRSEB, SEBOM, REBOM: §¶◄ and ¶◄ flush paragraphs, ¶▼◄ flush poetry', [
+  'flush': ['Like KRSEB, SEBOM, REBOM: §¶◄ and ¶◄ flush paragraphs, ¶▼◄ a flush quotation in a prose verse', [
     row(1, 1, '§¶◄The river ran past the mill, and the miller watched it.', 'prose', '¶', '§'),
     row(2, 2, 'He counted the boats as they went by.'),
     row(3, 3, '¶◄In the spring the water rose over the bank.', 'prose', '¶'),
-    row(4, 4, '¶▼◄Sing of the river,/_sing of the mill.', 'prose', '¶'),
+    row(4, 4, 'And the miller said: ¶▼◄Thus saith the river: I will turn the wheel.', 'prose', '¶'),
   ]],
   'indent': ['Like REBOM and ABWRKS: ¶↪ an indented block after a lead-in, and the indent format', [
     row(1, 1, 'Yea, the miller said:¶↪Hear me, for the wheel is old and the stones are worn.', 'prose', '¶'),
@@ -81,9 +82,12 @@ const HAND_MADE = {
     row(4, 4, ' / '),
     row(5, 5, 'The road was long.', 'prose'),
   ]],
-  'heads': ['Like NRSV and ANCHOR: a label before §, ▲ verse heads, §¶ mid-verse', [
+  'heads': ['Like NRSV, NIV and ANCHOR: a label before §, §¶ mid-verse, ▲¶ verse heads, a verse of only ¶, two § in a row, a mark across lines', [
     row(1, 1, '｟Part｠ ｟Two｠(Songs 1–3)§A song of the mill.¶▼The wheel turns,/_the water falls.', 'prose', '¶', '§'),
-    row(2, 2, '/The stones grind§¶▲Then the miller rested.', 'poetry', '¶', '§'),
+    row(2, 2, '/The stones grind.§¶Then the miller rested.', 'poetry', '¶', '§'),
+    row(3, 3, '▲¶See, the miller comes, /his cart behind him.', 'poetry', '¶'),
+    row(4, 4, '¶', 'prose', '¶'),
+    row(5, 5, '§Songs 4–6§A song of the river.¶▼The river 〔runs,/_and runs〕 on.', 'prose', '¶', '§'),
   ]],
 };
 

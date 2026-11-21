@@ -4,8 +4,9 @@
 // Rules:
 //   - ｢n｣ note marks are removed; noteFor(n) is called at each (notes.js, returns null for now)
 //   - "|" and "||" (manuscript line ends) and "\" read as a space, as in flattenText
-//   - nesting: the outer mark wins and the inner mark symbols are dropped ("{｟You｠}" is small);
-//     the same mark inside itself closes at its own pair
+//   - nesting: the outer mark wins and the inner mark symbols are dropped ("{｟You｠}" is small),
+//     except that struck text stays struck ("《my ~~name~~》"); the same mark inside itself
+//     closes at its own pair
 //   - a mark with no closing symbol is plain text, symbols and all
 //   - whitespace is collapsed, also across runs; neighbouring runs with one mark merge; empty
 //     runs are dropped. The ends are not trimmed: the block builder does that per piece.
@@ -35,6 +36,30 @@ function closeOf(s, i) {
   return -1;
 }
 
+// The outermost marks in s, in order: [{ start, end, width, mark, open, close }]. start is the
+// opening symbol's index, end the closing symbol's; width is the symbols' length (1, or 2 for ~~).
+// A symbol with no partner is not a mark.
+export function markSpans(s) {
+  const spans = [];
+  let i = 0;
+  while (i < s.length) {
+    const strike = s.startsWith('~~', i);
+    if (strike || BRACKETS[s[i]]) {
+      const end = closeOf(s, i);
+      if (end >= 0) {
+        const width = strike ? 2 : 1;
+        spans.push(strike
+          ? { start: i, end, width, mark: 'strike', open: '~~', close: '~~' }
+          : { start: i, end, width, mark: BRACKETS[s[i]][1], open: s[i], close: BRACKETS[s[i]][0] });
+        i = end + width;
+        continue;
+      }
+    }
+    i++;
+  }
+  return spans;
+}
+
 function tidy(raw) {
   const out = [];
   for (const run of raw) {
@@ -57,24 +82,16 @@ export function toRuns(text) {
     })
     .replace(/[|\\]+/g, ' ');
   const raw = [];
-  let plain = '';
-  let i = 0;
-  while (i < s.length) {
-    const strike = s.startsWith('~~', i);
-    if (strike || BRACKETS[s[i]]) {
-      const end = closeOf(s, i);
-      if (end >= 0) {
-        const width = strike ? 2 : 1;
-        if (plain) raw.push({ text: plain });
-        plain = '';
-        raw.push({ text: s.slice(i + width, end).replace(MARK_SYMBOLS, ''), mark: strike ? 'strike' : BRACKETS[s[i]][1] });
-        i = end + width;
-        continue;
-      }
-    }
-    plain += s[i];
-    i++;
+  let at = 0;
+  for (const span of markSpans(s)) {
+    if (span.start > at) raw.push({ text: s.slice(at, span.start) });
+    const inner = s.slice(span.start + span.width, span.end);
+    // Struck text stays struck inside another mark ("《my ~~name~~》")
+    const parts = span.mark === 'strike' ? [inner] : inner.split(/~~(.*?)~~/);
+    parts.forEach((text, k) => raw.push({ text: text.replace(MARK_SYMBOLS, ''), mark: k % 2 ? 'strike' : span.mark }));
+    at = span.end + span.width;
   }
+  const plain = s.slice(at);
   if (plain) raw.push({ text: plain });
   return tidy(raw);
 }

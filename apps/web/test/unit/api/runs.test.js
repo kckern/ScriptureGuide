@@ -1,11 +1,20 @@
 import { describe, test, expect, vi } from 'vitest';
 
 vi.mock('../../../src/api/v1/notes.js', () => ({ noteFor: vi.fn(() => null) }));
-const { toRuns, runsText } = await import('../../../src/api/v1/runs.js');
+const { toRuns, runsText, markSpans } = await import('../../../src/api/v1/runs.js');
 const { noteFor } = await import('../../../src/api/v1/notes.js');
 const { flattenText } = await import('../../../src/domain/rules/legacyText.js');
 
 const words = s => s.split(/\s+/).filter(Boolean);
+
+describe('markSpans', () => {
+  test('the outermost marks with their symbols; a symbol with no partner is not a mark', () => {
+    expect(markSpans('a {b ｟c｠} ~~d~~ 〔e')).toEqual([
+      { start: 2, end: 8, width: 1, mark: 'small', open: '{', close: '}' },
+      { start: 10, end: 13, width: 2, mark: 'strike', open: '~~', close: '~~' },
+    ]);
+  });
+});
 
 describe('toRuns', () => {
   test('plain text is one run', () => {
@@ -25,6 +34,8 @@ describe('toRuns', () => {
   test('nesting: the outer mark wins and the inner mark symbols are dropped', () => {
     expect(toRuns('The {｟Keeper｠} said')).toEqual([{ text: 'The ' }, { text: 'Keeper', mark: 'small' }, { text: ' said' }]);
     expect(toRuns('or ~~《the》~~ old')[1]).toEqual({ text: 'the', mark: 'strike' });
+    // Struck text stays struck inside another mark
+    expect(toRuns('for 《my ~~name~~》 name')).toEqual([{ text: 'for ' }, { text: 'my ', mark: 'sup' }, { text: 'name', mark: 'strike' }, { text: ' name' }]);
     // The same mark inside itself closes at its own pair
     expect(toRuns('「Bread for 「the town」 now」.')).toEqual([{ text: 'Bread for the town now', mark: 'strong' }, { text: '.' }]);
   });

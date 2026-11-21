@@ -1,0 +1,30 @@
+{
+ "name": "web-song1",
+ "about": "Song of Songs 1:4-5: ► speaker labels outside a ¶ marker",
+ "version": "WEB",
+ "source": "sg-full",
+ "rows": [
+  {
+   "verse_id": 17542,
+   "version": "WEB",
+   "chapter": 1,
+   "verse": 4,
+   "book_title": "Solomon's Song",
+   "text": "/Take me away with you./_Let us hurry./_The king has brought me into his rooms.►Friends¶▼We will be glad and rejoice in you./_We will praise your love more than wine!►Beloved¶They are right to love you.",
+   "format": "poetry",
+   "p": "¶",
+   "s": ""
+  },
+  {
+   "verse_id": 17543,
+   "version": "WEB",
+   "chapter": 1,
+   "verse": 5,
+   "book_title": "Solomon's Song",
+   "text": "/I am dark, but lovely,/_you daughters of Jerusalem,/_like Kedar’s tents,/_like Solomon’s curtains.",
+   "format": "poetry",
+   "p": "",
+   "s": ""
+  }
+ ]
+}
