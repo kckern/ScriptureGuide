@@ -4,6 +4,10 @@ Problems in the scripture database (production MySQL on `bom`; local copy `sg-fu
 
 ## Open
 
+### Ransom note table left in production
+- **What:** production and the 2026-10-20 backup both contain `RECOVER_YOUR_DATA_info`: one row, a bot ransom note asking for 0.01 BTC. It predates closing port 3306 on 2026-10-20.
+- **To do:** drop it (`DROP TABLE RECOVER_YOUR_DATA_info;`) once nothing else in it is needed; finish rotating database credentials (still pending as of 2026-10-20). Data missing since the attack (possibly HBRS below) may need restoring from an older backup.
+
 ### HBRS version is missing
 - **Seen at:** `scripture.guide/hbrs/isa.49~isa.9;11`, `scripture.guide/hbrs*mev/isa.56.9-58.14;65-66.17` (old bug reports).
 - **What:** `scripture_versions` has no `HBRS` row and `scripture_verses` has no `HBRS` text. Links that name it fall back to LDS.
