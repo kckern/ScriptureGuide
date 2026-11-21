@@ -8,7 +8,7 @@ const db = vi.hoisted(() => ({ fail: false }));
 vi.mock('../../../src/data/db/connection.js', () => ({
   default: {
     query: async (sql, params = []) => {
-      if (db.fail) throw new Error('connect ECONNREFUSED');
+      if (db.fail) throw Object.assign(new Error('connect ECONNREFUSED 127.0.0.1:3306'), { code: 'ECONNREFUSED', errno: -61 });
       if (/FROM scripture_versions/.test(sql)) {
         return [{ id: 'NRSV', title: 'NRSV', title_long: 'New Revised Standard Version', lang: 'en' }];
       }

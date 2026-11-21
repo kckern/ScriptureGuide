@@ -4,7 +4,7 @@ import { Router } from 'express';
 import { createHash } from 'crypto';
 import apiRepository from '../../data/repositories/ApiRepository.js';
 import { parseApiPath } from './path.js';
-import { ApiError } from './errors.js';
+import { ApiError, isDatabaseError } from './errors.js';
 import { buildPassage } from './passage.js';
 import { buildParallel } from './parallel.js';
 import { buildSearch } from './search.js';
@@ -97,13 +97,16 @@ export function apiRouter(deps = DEFAULTS) {
       send(req, res, kind, body, cache);
     } catch (caught) {
       let err = caught;
-      // Anything else (the database down, a bug) is logged and still answered in the v1 shape
+      // Anything else is logged and still answered in the v1 shape: a database failure as a 503
+      // to retry, anything else (a bug) as a 500
       if (!(err instanceof ApiError)) {
         (deps.logError ?? logError)(err, { where: 'api', method: req.method, path: req.originalUrl });
-        err = new ApiError('service_unavailable', 'The scripture database is not answering. Try again shortly.');
+        err = isDatabaseError(err)
+          ? new ApiError('service_unavailable', 'The scripture database is not answering. Try again shortly.')
+          : new ApiError('internal_error', 'Something went wrong on our side. It has been logged.');
       }
       res.status(err.status);
-      if (err.status >= 500) res.set('Retry-After', '30');
+      if (err.status === 503) res.set('Retry-After', '30');
       send(req, res, kind, renderError(kind, err), err.status >= 500 ? CACHE_NONE : CACHE_ERROR);
     }
   });

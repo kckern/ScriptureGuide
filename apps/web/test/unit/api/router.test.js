@@ -2,7 +2,7 @@ import { describe, test, expect } from 'vitest';
 import express from 'express';
 import request from 'supertest';
 import { apiRouter, hostKind } from '../../../src/api/v1/router.js';
-import { ApiError } from '../../../src/api/v1/errors.js';
+import { ApiError, isDatabaseError } from '../../../src/api/v1/errors.js';
 
 const passage = {
   api: 'v1', query: 'john3.16',
@@ -18,7 +18,8 @@ const deps = {
   buildPassage: async req => {
     seen.push(req);
     if (req.reference === 'jon3.16') throw new ApiError('verse_out_of_range', 'Jonah 3 has 10 verses.', 'Jonah 3:10');
-    if (req.reference === 'boom') throw new Error('database down');
+    if (req.reference === 'boom') throw Object.assign(new Error('database down'), { code: 'PROTOCOL_CONNECTION_LOST', fatal: true });
+    if (req.reference === 'bug') throw new TypeError('x is undefined');
     return passage;
   },
   buildParallel: async () => ({ api: 'v1', rows: [] }),
@@ -124,7 +125,15 @@ describe('apiRouter', () => {
     const json = await get('scripture.guide', '/json/nrsv/john3.16');
     expect(json.body.version).toBe('NRSV');
   });
-  test('other failures are logged and answered as a v1 503, never cached', async () => {
+  test('a bug is logged and answered as a v1 500, never cached, with no Retry-After', async () => {
+    const res = await get('api.scripture.guide', '/v1/bug');
+    expect(res.status).toBe(500);
+    expect(res.body).toEqual({ api: 'v1', error: { code: 'internal_error', message: 'Something went wrong on our side. It has been logged.' } });
+    expect(res.headers['cache-control']).toBe('no-store');
+    expect(res.headers['retry-after']).toBeUndefined();
+    expect(logged.at(-1)).toMatchObject({ err: { message: 'x is undefined' }, fields: { where: 'api', path: '/v1/bug' } });
+  });
+  test('database and driver errors are logged and answered as a v1 503, never cached', async () => {
     const res = await get('api.scripture.guide', '/v1/boom');
     expect(res.status).toBe(503);
     expect(res.body).toEqual({ api: 'v1', error: { code: 'service_unavailable', message: 'The scripture database is not answering. Try again shortly.' } });
@@ -135,6 +144,15 @@ describe('apiRouter', () => {
     const txt = await get('txt.scripture.guide', '/boom');
     expect(txt.status).toBe(503);
     expect(txt.text).toBe('The scripture database is not answering. Try again shortly.\n');
+  });
+  test('what counts as a database error', () => {
+    expect(isDatabaseError(Object.assign(new Error('x'), { code: 'ECONNREFUSED' }))).toBe(true);
+    expect(isDatabaseError(Object.assign(new Error('x'), { code: 'ER_NO_SUCH_TABLE', errno: 1146, sqlState: '42S02' }))).toBe(true);
+    expect(isDatabaseError(Object.assign(new Error('x'), { code: 'PROTOCOL_CONNECTION_LOST' }))).toBe(true);
+    expect(isDatabaseError(Object.assign(new Error('x'), { code: 'ETIMEDOUT' }))).toBe(true);
+    expect(isDatabaseError(new TypeError('x'))).toBe(false);
+    expect(isDatabaseError(Object.assign(new Error('x'), { code: 'ERR_INVALID_ARG_TYPE' }))).toBe(false);
+    expect(isDatabaseError(Object.assign(new Error('x'), { code: 'ENOENT', errno: -2 }))).toBe(false);
   });
   test('an error code with no status is a 500', () => {
     expect(new ApiError('no_such_code', 'x').status).toBe(500);
