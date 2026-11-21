@@ -97,8 +97,8 @@ export function createApp({
   app.use((req, res, next) => {
     res.locals.assetVersion = commit();
     res.locals.clickyId = analytics ? CLICKY_SITE_ID : null;
-    // ?clicky=proxy loads Clicky through the same-origin proxy, to test it from a real browser
-    res.locals.clickyProxy = req.query?.clicky === 'proxy';
+    // Clicky goes through the same-origin proxy; ?clicky=direct loads its standard script, for comparing
+    res.locals.clickyProxy = req.query?.clicky !== 'direct';
     next();
   });
 

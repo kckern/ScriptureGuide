@@ -283,7 +283,7 @@ describe('through createApp', () => {
 });
 
 describe('the page tag', () => {
-  const TAG = `<script async data-id="${CLICKY_SITE_ID}" src="//static.getclicky.com/js"></script>`;
+  const TAG = `<script async data-id="${CLICKY_SITE_ID}" src="/cd7dba44d5.js"></script>`;
 
   test('the site id is the public one', () => {
     expect(CLICKY_SITE_ID).toBe('100988820');
@@ -296,10 +296,10 @@ describe('the page tag', () => {
     expect(res.text.indexOf(TAG)).toBeLessThan(res.text.indexOf('</head>'));
   });
 
-  test('?clicky=proxy loads the script through the same-origin proxy (for testing it)', async () => {
-    const res = await request(createApp({ log: false, analytics: true })).get('/?clicky=proxy').set('Host', 'scripture.guide');
-    expect(res.text).toContain(`<script async data-id="${CLICKY_SITE_ID}" src="/cd7dba44d5.js"></script>`);
-    expect(res.text).not.toContain('static.getclicky.com');
+  test('?clicky=direct loads Clicky's standard script instead (for comparing)', async () => {
+    const res = await request(createApp({ log: false, analytics: true })).get('/?clicky=direct').set('Host', 'scripture.guide');
+    expect(res.text).toContain(`<script async data-id="${CLICKY_SITE_ID}" src="//static.getclicky.com/js"></script>`);
+    expect(res.text).not.toContain('cd7dba44d5');
   });
 
   test('is absent outside production', async () => {
