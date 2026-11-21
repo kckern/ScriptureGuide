@@ -1,5 +1,11 @@
 # scripture-guide-chrome-extension
 
+## 2.2.3
+
+### Patch Changes
+
+- e1b16d0: Fewer false links: labels like "L3" or "lu 3" are no longer badged as scripture, while "L 3:16", "Lk 21" and "Luke 3" still are.
+
 ## 2.2.2
 
 ### Patch Changes
