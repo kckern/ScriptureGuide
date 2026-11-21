@@ -11,6 +11,9 @@ export class ApiRepository {
   constructor(database = db) {
     this.db = database;
     this.versionCache = null;
+    // `${version}|${min}|${max}` → count of verses (a promise); the data doesn't change while
+    // the process runs, and the keys are few (a version and a volume)
+    this.countCache = new Map();
   }
 
   // Map of lower-case id → { id, name, lang }, in priority order. lang is the stored value
@@ -92,11 +95,15 @@ export class ApiRepository {
 
   // A uniformly random verse id in [min, max] that the version has text for, or null
   async randomVerseId({ range: [min, max], version }, random = Math.random) {
-    const [count] = await this.db.query(
-      `SELECT COUNT(*) AS n FROM scripture_verses WHERE version = ? AND verse_id BETWEEN ? AND ? ${NOT_GAP}`,
-      [version, min, max]
-    );
-    const n = Number(count?.n ?? 0);
+    const key = `${version}|${min}|${max}`;
+    if (!this.countCache.has(key)) {
+      if (this.countCache.size >= 1000) this.countCache.clear();
+      this.countCache.set(key, this.db.query(
+        `SELECT COUNT(*) AS n FROM scripture_verses WHERE version = ? AND verse_id BETWEEN ? AND ? ${NOT_GAP}`,
+        [version, min, max]
+      ).then(([count]) => Number(count?.n ?? 0)).catch(err => { this.countCache.delete(key); throw err; }));
+    }
+    const n = await this.countCache.get(key);
     if (!n) return null;
     const [row] = await this.db.query(
       `SELECT verse_id FROM scripture_verses WHERE version = ? AND verse_id BETWEEN ? AND ? ${NOT_GAP} ORDER BY verse_id LIMIT 1 OFFSET ?`,

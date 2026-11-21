@@ -25,6 +25,14 @@ describe('ApiRepository.randomVerseId', () => {
     await new ApiRepository(db).randomVerseId({ range: [31103, 37706], version: 'CTBOM' }, () => 0.75);
     for (const [sql] of db.query.mock.calls) expect(sql).toContain("text NOT REGEXP '^[*/[:space:]]*$'");
   });
+  test('counts a (version, range) once', async () => {
+    const db = { query: vi.fn(async sql => (sql.includes('COUNT') ? [{ n: 10 }] : [{ verse_id: 31110 }])) };
+    const repo = new ApiRepository(db);
+    await repo.randomVerseId({ range: [31103, 37706], version: 'LDS' });
+    await repo.randomVerseId({ range: [31103, 37706], version: 'LDS' });
+    await repo.randomVerseId({ range: [1, 23145], version: 'LDS' });
+    expect(db.query.mock.calls.filter(([sql]) => sql.includes('COUNT'))).toHaveLength(2);
+  });
   test('null when the version has no verses in range', async () => {
     const db = { query: vi.fn().mockResolvedValueOnce([{ n: 0 }]) };
     expect(await new ApiRepository(db).randomVerseId({ range: [1, 10], version: 'X' })).toBeNull();
