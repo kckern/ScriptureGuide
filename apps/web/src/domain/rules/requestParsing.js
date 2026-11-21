@@ -5,8 +5,6 @@
 
 // Subdomains (and path shortcuts) that select an output format. Anything else renders HTML.
 const SUBDOMAIN_FORMATS = Object.freeze({
-  api: 'api',
-  json: 'api',
   meta: 'meta',
   raw: 'raw',
   plain: 'plain',
@@ -24,10 +22,11 @@ const SUBDOMAIN_FORMATS = Object.freeze({
   fax: 'fax',
 });
 
-// PHP strips these path prefixes and treats them as the subdomain.
-const PHP_PATH_SHORTCUTS = ['api', 'img', 'mp3'];
+// PHP strips these path prefixes and treats them as the subdomain. (/api/ and /json/ go to
+// the v1 API router, src/api/v1/router.js, before these routes.)
+const PHP_PATH_SHORTCUTS = ['img', 'mp3'];
 // The Node routes also accept /<format>/... for these formats.
-const NODE_PATH_FORMATS = ['json', 'meta', 'raw', 'plain', 'markdown', 'xml', 'latex', 'notes', 'audio', 'cover'];
+const NODE_PATH_FORMATS = ['meta', 'raw', 'plain', 'markdown', 'xml', 'latex', 'notes', 'audio', 'cover'];
 
 // Volume ranges used by q=random: OT, NT, Book of Mormon, D&C + PGP + Lectures.
 const RANDOM_RANGES = [[1, 23145], [23146, 31102], [31103, 37706], [37707, 42599]];

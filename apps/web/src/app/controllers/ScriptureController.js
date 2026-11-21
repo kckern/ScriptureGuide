@@ -13,10 +13,10 @@ import versionRepository from '../../data/repositories/VersionRepository.js';
 import { knownVersions, unknownVersions, shownVersions, versionNote } from '../../domain/rules/versionNotice.js';
 
 // Formats whose reference blocks ("meta") name a book given alone (scriptures::loadMetaFromRef)
-const BOOK_ONLY_FORMATS = new Set(['meta', 'api']);
+const BOOK_ONLY_FORMATS = new Set(['meta']);
 // Formats that answer an empty reference in their own format: index.php dispatched these
 // subdomains before its empty($ref) → home.php check.
-const EMPTY_REF_FORMATS = new Set(['api', 'meta', 'raw', 'plain', 'latex', 'markdown', 'xml']);
+const EMPTY_REF_FORMATS = new Set(['meta', 'raw', 'plain', 'latex', 'markdown', 'xml']);
 const answersEmpty = config => EMPTY_REF_FORMATS.has(config?.outputFormat);
 const isHtml = config => !config?.outputFormat || config.outputFormat === 'html';
 

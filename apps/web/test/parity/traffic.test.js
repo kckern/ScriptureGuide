@@ -82,6 +82,12 @@ describe('classify and formatOf', () => {
     ['session ajax', 'scripture.guide', '/settings', 'session ajax'],
     ['cover subdomain', 'cover.scripture.guide', '/john.3.16', 'format cover'],
     ['mp3 shortcut', 'scripture.guide', '/mp3/john.3.16', 'format audio'],
+    ['v1 api host', 'api.scripture.guide', '/v1/john3.16', 'v1 api'],
+    ['v1 json host', 'json.scripture.guide', '/john.3.16', 'v1 api'],
+    ['v1 text host', 'plain.scripture.guide', '/john.3.16', 'v1 api'],
+    ['v1 markdown host', 'markdown.scripture.guide', '/john.3.16', 'v1 api'],
+    ['v1 api shortcut', 'scripture.guide', '/api/john.3.16', 'v1 api'],
+    ['v1 json shortcut', 'scripture.guide', '/JSON/john.3.16', 'v1 api'],
   ])('%s → skip "%s"', (_, host, path, reason) => {
     const c = classify(withStatus('BYPASS 200 200', path, host));
     expect(c.skip ?? formatOf(c.req).skip).toBe(reason);
@@ -90,7 +96,6 @@ describe('classify and formatOf', () => {
     ['scripture.guide', '/john.3.16', 'html'],
     ['www.scripture.guide', '/john.3.16', 'html'],
     ['meta.scripture.guide', '/john.3.16', 'meta'],
-    ['json.scripture.guide', '/john.3.16', 'api'],
     ['scripture.guide', '/passage?ref=John%203:16', 'passage'],
     ['scripture.guide', '/versionselect?ref=x', 'versionselect'],
     ['scripture.guide', '/vbox?verse_id=1', 'vbox'],

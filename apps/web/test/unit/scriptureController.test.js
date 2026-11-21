@@ -33,7 +33,7 @@ describe('ScriptureController: a word alone on meta', () => {
 
 describe('ScriptureController: the PHP blocks of a reference that found nothing', () => {
   test('the legacy formats build them from the reference PHP saw', async () => {
-    expect((await show('foo1', 'api', 'foo')).legacyBlocks).toEqual([{ orig: 'foo', book: 'foo', verse_ids: [] }]);
+    expect((await show('foo1', 'meta', 'foo')).legacyBlocks).toEqual([{ orig: 'foo', book: 'foo', verse_ids: [] }]);
   });
   test('html builds them from the reference it looked up', async () => {
     expect((await show('foo1', 'html', 'foo')).sections[0].legacyBlock).toEqual({ orig: 'foo1', book: 'foo1', verse_ids: [] });
@@ -41,7 +41,7 @@ describe('ScriptureController: the PHP blocks of a reference that found nothing'
   test('not when the lookup found verses', async () => {
     blockService.blocks.mockClear();
     const found = new ScriptureController({ lookup: async () => ({ reference: { isEmpty: false, verseIds: [1] } }) }, references, blockService);
-    expect((await show('gen.1.1', 'api', 'gen.1.1', found)).legacyBlocks).toBeUndefined();
+    expect((await show('gen.1.1', 'meta', 'gen.1.1', found)).legacyBlocks).toBeUndefined();
     expect(blockService.blocks).not.toHaveBeenCalled();
   });
 });
@@ -95,7 +95,7 @@ describe('ScriptureController: one budget per request', async () => {
     const lookup = vi.fn(async () => empty());
     const blocks = vi.fn(async () => [{ orig: 'x', book: 'x', verse_ids: [] }]);
     const ctl = new ScriptureController({ lookup }, references, { blocks });
-    const req = { config: { outputFormat: 'api', reference: 'x1', legacy: { ref: 'x1' } }, params: {}, headers: {} };
+    const req = { config: { outputFormat: 'meta', reference: 'x1', legacy: { ref: 'x1' } }, params: {}, headers: {} };
     await ctl.show(req, {}, () => {});
     const budget = lookup.mock.calls[0][1]._budget;
     expect(budget).toBeInstanceOf(RequestBudget);
@@ -121,7 +121,7 @@ describe('ScriptureController: the title of a reference of several blocks', () =
     expect((await run({ reference: { isEmpty: false, verseIds: [1] } })).title).toBeUndefined();
   });
   test('only on html', async () => {
-    expect((await run(several(), 'api')).title).toBeUndefined();
+    expect((await run(several(), 'meta')).title).toBeUndefined();
   });
 });
 
@@ -157,7 +157,7 @@ describe('ScriptureController: a version segment that names no version', () => {
   test('not without a version segment, and not on other formats', async () => {
     versionRepo.findAll.mockClear();
     expect((await page([])).versionNote).toBeUndefined();
-    expect((await page([{ version: 'HBRS', format: 'HBRS' }], 'api')).versionNote).toBeUndefined();
+    expect((await page([{ version: 'HBRS', format: 'HBRS' }], 'meta')).versionNote).toBeUndefined();
     expect(versionRepo.findAll).not.toHaveBeenCalled();
   });
   test('the version list is read once', async () => {

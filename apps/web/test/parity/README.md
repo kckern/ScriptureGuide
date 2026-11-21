@@ -17,7 +17,7 @@ MYSQL_HOST=127.0.0.1 MYSQL_PORT=3310 MYSQL_USER=root MYSQL_PASSWORD=dev MYSQL_DA
   PORT=3101 node src/app.js
 
 # 3. Compare
-npm run parity -- [--format api,meta] [--only john] [--refresh] [--verbose]
+npm run parity -- [--format meta,raw] [--only john] [--refresh] [--verbose]
 ```
 
 ## How it compares
@@ -25,7 +25,7 @@ npm run parity -- [--format api,meta] [--only john] [--refresh] [--verbose]
 - `corpus.mjs` lists the requests: each reference in every per-reference format, plus search, parallel, and AJAX endpoints.
 - Live responses are fetched once and cached in `.cache/live/` (gitignored; `PARITY_CACHE` points several worktrees at one cache). `--refresh` refetches.
 - The Node app is called at `NODE_BASE` (default `http://127.0.0.1:3101`) with the format's `Host` header, so subdomain routing is exercised.
-- `normalize.mjs` canonicalizes both sides: HTML as a tree of tags, sorted attributes and collapsed text (scoped to `#container` plus `<title>` for pages); JSON with sorted keys, with the `api` `output` HTML canonicalized too; text formats compared exactly apart from trailing spaces.
+- `normalize.mjs` canonicalizes both sides: HTML as a tree of tags, sorted attributes and collapsed text (scoped to `#container` plus `<title>` for pages); JSON with sorted keys; text formats compared exactly apart from trailing spaces.
 - Differences are written to `.cache/diffs/<format>__<path>_<hash>.{live,node}.txt` (the hash keeps paths that flatten alike, such as `/` and `/~/`, apart).
 - `allow.json` records intentional differences: `{ "<format> <path>": "reason" }`. Allowed entries are reported but do not fail. A key `"<format> re:<regex>"` allows every path the regex matches (unanchored, JavaScript syntax), and `"* re:<regex>"` does so in every format; a key `"<format> live:<regex>"` allows every request whose live body the regex matches (for live responses broken whatever the path, such as PHP fatal errors); a key `"<format> re:<regex> && live:<regex>"` needs both; a key `"<format> check:<name>"` allows every request where the named check in `allow.mjs` passes on the canonical live and Node responses, plus what `run.mjs` looks up for it (for a live bug Node fixes: the check rewrites only the lines the fix changes and needs the rest to match; `staleSectionHeading` checks Node's heading against the first verse's live raw-format entry, one more cached live fetch per such page); an exact key wins over a pattern (`allow.mjs`).
 
@@ -47,7 +47,7 @@ The output holds paths real visitors requested, search terms included. Keep it, 
 `perf.mjs` times the same corpus on both sides: one warm-up, then `--runs` (default 5) sequential requests per URL, time to the last byte, over keep-alive connections.
 
 ```sh
-node test/parity/perf.mjs [--corpus traffic] [--format html,api] [--only john] [--runs 5] [--max-live 200] [--refresh-live] [--json out.json]
+node test/parity/perf.mjs [--corpus traffic] [--format html,meta] [--only john] [--runs 5] [--max-live 200] [--refresh-live] [--json out.json]
 ```
 
 It prints, per format and overall, the p50 and p95 across URLs of each URL's median on Node and live, and the ratio of the Node p50 to the live p50 over URLs timed on both. A URL is flagged when its Node median is more than 1.5 times live's and more than 300 ms slower. Responses other than 2xx/3xx are listed apart: a Node error leaves the URL out of the stats, a live one leaves it without a live time. Live requests are spaced at least 250 ms apart and capped by `--max-live` (warm-ups count); URLs past the cap get Node times only. Live times are cached with a timestamp in `.cache/perf-live.json`, so later runs reuse them until `--refresh-live`.

@@ -33,11 +33,12 @@ router.get('/build-info', (req, res) => {
 // Link-preview cards: /og/<page path>.jpg (og:image of each passage page), /og/site.jpg
 router.get('/og/*', ogRoute);
 
-// Path-based format prefixes: /api/John3:16, /xml/John3:16, etc.
-const FORMAT_PREFIXES = ['api', 'json', 'meta', 'raw', 'plain', 'markdown', 'xml', 'latex', 'notes', 'audio', 'cover'];
+// Path-based format prefixes: /xml/John3:16, /meta/John3:16, etc. (/api/ and /json/ are
+// served by the v1 API router, src/api/v1/router.js.)
+const FORMAT_PREFIXES = ['meta', 'raw', 'plain', 'markdown', 'xml', 'latex', 'notes', 'audio', 'cover'];
 FORMAT_PREFIXES.forEach(fmt => {
   router.get(`/${fmt}/:reference(*)`,
-    (req, res, next) => { req.outputFormat = fmt === 'json' ? 'api' : fmt; next(); },
+    (req, res, next) => { req.outputFormat = fmt; next(); },
     configMiddleware,
     (req, res, next) => scriptureController.show(req, res, next),
     outputMiddleware

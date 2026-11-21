@@ -44,10 +44,10 @@ test('X-Forwarded-Host cannot change the subdomain or output format', async () =
   app.set('trust proxy', TRUST_PROXY);
   app.use(subdomainMiddleware, configMiddleware);
   app.get('*', (req, res) => res.json({ sub: req.outputFormat, format: req.config.outputFormat }));
-  const plain = await request(app).get('/kjv/john.3.16').set('Host', 'scripture.guide').set('X-Forwarded-Host', 'api.scripture.guide');
+  const plain = await request(app).get('/kjv/john.3.16').set('Host', 'scripture.guide').set('X-Forwarded-Host', 'meta.scripture.guide');
   expect(plain.body).toEqual({ sub: 'html', format: 'html' });
-  const api = await request(app).get('/kjv/john.3.16').set('Host', 'api.scripture.guide').set('X-Forwarded-Host', 'scripture.guide');
-  expect(api.body).toEqual({ sub: 'api', format: 'api' });
+  const meta = await request(app).get('/kjv/john.3.16').set('Host', 'meta.scripture.guide').set('X-Forwarded-Host', 'scripture.guide');
+  expect(meta.body).toEqual({ sub: 'meta', format: 'meta' });
   const gone = await request(app).get('/x').set('Host', 'scripture.guide').set('X-Forwarded-Host', 'hub.scripture.guide');
   expect(gone.status).toBe(200);
 });

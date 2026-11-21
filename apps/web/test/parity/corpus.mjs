@@ -9,7 +9,8 @@ const REFS = [
   'esv/rom.8.28-39', 'kjv/gen.1.1-5',
 ];
 
-const PER_REF_FORMATS = ['html', 'api', 'meta', 'raw', 'plain', 'latex'];
+// api., json., plain. and markdown. are the v1 API now (src/api/v1), with no PHP to compare
+const PER_REF_FORMATS = ['html', 'meta', 'raw', 'latex'];
 
 const EXTRA = [
   ['html', '/search/faith.hope.charity'],
@@ -17,10 +18,6 @@ const EXTRA = [
   ['html', '/kjv/isa.2.1~2ne.12.1'],
   ['html', '/isa.2~2ne.12'],
   ['html', '/'],
-  ['api', '/john.3.16?meta_only'],
-  ['api', '/john.3.16?output_only'],
-  ['api', '/john.3.16?meta_only&heads'],
-  ['plain', '/john.3.16?plain_reference'],
   ['passage', '/passage?ref=John%203:16&version=KJV'],
   ['passage', '/passage?ref=Matthew%205&version=NIV'],
   ['versionselect', '/versionselect?ref=John%203:16&ver=LDS'],
@@ -44,23 +41,18 @@ const EXTRA = [
   ['passage', '/passage?ref=Doctrine+and+Covenants+26&version=LDS&hversion=LDS&options%5Bstart%5D=38254&options%5Bend%5D=38257&searchterm='],
   // A range across a book end names the second book's verses by that book
   ['html', '/mal.4.5-matt.1.2'],
-  ['api', '/mal.4.5-matt.1.2'],
   ['meta', '/mal.4.5-matt.1.2'],
   ['html', '/mal.4-matt.1'],
   ['html', '/gen.50.26-ex.1.2'],
   // A cross-book range after another piece (the package dropped it)
-  ['api', '/john.3.16;mal.4.5-matt.1.2'],
   ['meta', '/john.3.16;mal.4.5-matt.1.2'],
   ['html', '/john.3.16;mal.4.5-matt.1.2'],
-  ['api', '/john.3.16;gen.50.26-ex.1.2'],
   ['meta', '/john.3.16;gen.50.26-ex.1.2'],
   ['html', '/john.3.16;gen.50.26-ex.1.2'],
   ['raw', '/john.3.16;mal.4.5-matt.1.2'],
-  ['plain', '/john.3.16;mal.4.5-matt.1.2'],
   ['latex', '/john.3.16;mal.4.5-matt.1.2'],
   // A bare piece after a cross-book range keeps the book before the range (John 3)
   ['html', '/john.3.16;mal.4.5-matt.1.2;3'],
-  ['api', '/john.3.16;mal.4.5-matt.1.2;3'],
   ['meta', '/john.3.16;mal.4.5-matt.1.2;3'],
   // ... and with no book before the range PHP read junk
   ['meta', '/acts.28.31-rom.1.1;16.1'],
@@ -71,17 +63,13 @@ const EXTRA = [
   ['latex', '/acts.28.31-rom.1.1;16.1'],
   // A JST piece after another piece (the package dropped it)
   ['html', '/john.3.16;jst.john.3.16'],
-  ['api', '/john.3.16;jst.john.3.16'],
   ['meta', '/john.3.16;jst.john.3.16'],
   ['raw', '/john.3.16;jst.john.3.16'],
   ['html', '/john.3;jst.john.3'],
-  ['api', '/john.3;jst.john.3'],
   ['meta', '/john.3;jst.john.3'],
   ['raw', '/john.3;jst.john.3'],
   // Pieces after a JST piece: its book carries on ("JST John 18"), a named piece repeats its book
   ['meta', '/john.3.16;jst.john.3.16;18'],
-  ['api', '/john.3.16;jst.john.3.16;18'],
-  ['plain', '/john.3.16;jst.john.3.16;18'],
   ['raw', '/john.3.16;jst.john.3.16;18'],
   ['meta', '/jst.john.3.16;18'],
   ['meta', '/john.3.16;jst.john.3.16;john.1.1'],
@@ -118,7 +106,7 @@ export const corpus = [
 ];
 
 // Where each format lives on the live site, and the Host header the Node app should see.
-const SUBDOMAIN = { api: 'api', meta: 'meta', raw: 'raw', plain: 'plain', latex: 'latex', markdown: 'markdown', xml: 'xml', notes: 'notes' };
+const SUBDOMAIN = { meta: 'meta', raw: 'raw', latex: 'latex', xml: 'xml', notes: 'notes' };
 
 export function hostFor(format) {
   return SUBDOMAIN[format] ? `${SUBDOMAIN[format]}.scripture.guide` : 'scripture.guide';

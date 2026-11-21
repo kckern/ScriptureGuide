@@ -2,7 +2,7 @@
 // Parity harness: fetch each corpus request from the live PHP site and from the Node app,
 // normalize both, and report per format.
 //
-//   NODE_BASE=http://127.0.0.1:3101 node test/parity/run.mjs [--corpus traffic] [--format api,meta] [--only john] [--refresh] [--verbose]
+//   NODE_BASE=http://127.0.0.1:3101 node test/parity/run.mjs [--corpus traffic] [--format meta,raw] [--only john] [--refresh] [--verbose]
 //
 // The Node app must run against a full copy of the database (see test/parity/README.md).
 import { createHash } from 'node:crypto';
@@ -72,11 +72,6 @@ function canonical(format, res) {
       const title = collapse($('title').text());
       const container = $('#container').length ? canonicalHtml(page, '#container') : canonicalHtml(page, 'body');
       return `TITLE ${title}\n${homeCleanups(container)}`;
-    }
-    case 'api': {
-      // ?output_only returns the HTML as a bare JSON string.
-      const parsed = JSON.parse(body);
-      return typeof parsed === 'string' ? canonicalHtml(parsed) : canonicalJson(body, ['output']);
     }
     case 'meta':
     case 'raw': return canonicalJson(body);

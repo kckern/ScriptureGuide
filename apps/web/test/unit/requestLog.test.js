@@ -21,10 +21,10 @@ test('one JSON line per request with the fields log queries need', async () => {
   const lines = [];
   const app = express();
   app.use(requestLog({ write: l => lines.push(l) }));
-  app.get('/x', (req, res) => { req.config = { outputFormat: 'api' }; res.status(201).send('ok'); });
+  app.get('/x', (req, res) => { req.config = { outputFormat: 'meta' }; res.status(201).send('ok'); });
   await request(app).get('/x?q=1').set('Host', 'api.scripture.guide').set('User-Agent', 'ua');
   const rec = JSON.parse(lines[0]);
-  expect(rec).toMatchObject({ msg: 'request', method: 'GET', path: '/x?q=1', host: 'api.scripture.guide', status: 201, format: 'api', ua: 'ua' });
+  expect(rec).toMatchObject({ msg: 'request', method: 'GET', path: '/x?q=1', host: 'api.scripture.guide', status: 201, format: 'meta', ua: 'ua' });
   expect(typeof rec.duration_ms).toBe('number');
   expect(rec.time).toMatch(/^\d{4}-\d\d-\d\dT/);
 });

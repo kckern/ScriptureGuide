@@ -98,8 +98,8 @@ describe('SearchParallelController.dispatch', () => {
   test('ordinary references and non-HTML formats pass through', async () => {
     const { ctl, res, req } = setup();
     expect(await ctl.dispatch(req('/john.3.16'), res)).toBe(false);
-    expect(await ctl.dispatch(req('/a~b', { host: 'api.scripture.guide' }), res)).toBe(false);
-    expect(await ctl.dispatch(req('/', { host: 'api.scripture.guide' }), res)).toBe(false);
+    expect(await ctl.dispatch(req('/a~b', { host: 'meta.scripture.guide' }), res)).toBe(false);
+    expect(await ctl.dispatch(req('/', { host: 'meta.scripture.guide' }), res)).toBe(false);
     expect(await ctl.dispatch(req('/~john.3'), res)).toBe(false);
     expect(res.render).not.toHaveBeenCalled();
   });

@@ -17,16 +17,15 @@ describe('parseHost', () => {
 
 describe('format', () => {
   test('subdomain selects the format', () => {
-    expect(req('/john.3.16', {}, 'api.scripture.guide').outputFormat).toBe('api');
-    expect(req('/john.3.16', {}, 'json.scripture.guide').outputFormat).toBe('api');
+    // api. and json. are the v1 API (src/api/v1/router.js), not a format of these routes
+    expect(req('/john.3.16', {}, 'api.scripture.guide').outputFormat).toBe('html');
     expect(req('/john.3.16', {}, 'latex.scripture.guide').outputFormat).toBe('latex');
     expect(req('/john.3.16').outputFormat).toBe('html');
     expect(req('/john.3.16', {}, 'www.scripture.guide').outputFormat).toBe('html');
   });
-  test('api/ img/ mp3/ path shortcuts set the subdomain and are stripped', () => {
-    const r = req('/api/john.3.16');
-    expect(r.subdomain).toBe('api');
-    expect(r.outputFormat).toBe('api');
+  test('img/ mp3/ path shortcuts set the subdomain and are stripped', () => {
+    const r = req('/img/john.3.16');
+    expect(r.subdomain).toBe('img');
     expect(r.reference).toBe('john.3.16');
     expect(req('/IMG/kjv/gen.1.1').subdomain).toBe('img');
     expect(req('/mp3/john.3.16').outputFormat).toBe('audio');
@@ -204,7 +203,7 @@ describe('legacy (what lib.php.inc saw: api input/config, meta, raw, plain)', ()
   });
 
   test('strips a format path prefix', () => {
-    expect(legacy('/api/kjv/john.3.16').versions).toEqual({ KJV: 'KJV' });
+    expect(legacy('/meta/kjv/john.3.16').versions).toEqual({ KJV: 'KJV' });
   });
 
   test('shaves a trailing subverse letter with its digit (PHP quirk)', () => {

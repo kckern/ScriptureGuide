@@ -18,7 +18,7 @@ export function rawQuery(req) {
  * Builds req.config from the request, following the PHP front controller (lib.php.inc).
  *
  * req.config:
- *   outputFormat   'html' | 'api' | 'meta' | ... (subdomain, /api/ /img/ /mp3/ shortcuts, or /<format>/ prefix)
+ *   outputFormat   'html' | 'meta' | 'raw' | ... (subdomain, /img/ /mp3/ shortcuts, or /<format>/ prefix)
  *   subdomain      first host label, or the path shortcut
  *   hostFlags      { flag: 1 } from extra host labels (api.plain.scripture.guide → { plain: 1 })
  *   options        every query key except q; empty value → 1 (?plain ?meta_only ?heads ?headings=0 ...)

@@ -19,7 +19,7 @@ export function createErrorHandler({ write = writeLine } = {}) {
       : err.message;
 
     // Check if request wants JSON
-    if (req.config?.outputFormat === 'api' || req.accepts('json')) {
+    if (req.accepts('json')) {
       return res.status(status).json({
         error: message,
         status

@@ -27,8 +27,11 @@ const PROBE = new RegExp([
 ].join('|'), 'i');
 
 // Formats run.mjs can compare (see canonical() there). Others are counted and skipped.
-const COMPARABLE = new Set(['html', 'api', 'meta', 'raw', 'plain', 'latex', 'markdown', 'xml', 'notes',
+const COMPARABLE = new Set(['html', 'meta', 'raw', 'latex', 'xml', 'notes',
   'passage', 'versionselect', 'vbox']);
+// Hosts and path shortcuts the v1 API serves (src/api/v1/router.js): no PHP output to compare
+const V1_HOSTS = new Set(['api', 'json', 'yml', 'yaml', 'md', 'markdown', 'txt', 'plain']);
+const V1_SHORTCUT = /^\/(api|json)(\/|$)/i;
 // AJAX endpoints served on the main host; each is its own harness format.
 const AJAX = { '/passage': 'passage', '/versionselect': 'versionselect', '/vbox': 'vbox' };
 // AJAX endpoints that read or write the session: not comparable request by request.
@@ -67,6 +70,7 @@ export function formatOf({ host, path }) {
   // api.plain.scripture.guide, www.plain.scripture.guide: run.mjs sends one subdomain only
   if (labels.length > 3) return { skip: 'host flags' };
   const sub = labels.length === 3 && labels[0] !== 'www' ? labels[0] : '';
+  if (V1_HOSTS.has(sub) || V1_SHORTCUT.test(path)) return { skip: 'v1 api' };
   let format = sub ? formatForSubdomain(sub) : 'html';
   // probes and typos: w-ww, wordpress, staging…
   if (sub && format === 'html') return { skip: 'unknown subdomain' };
