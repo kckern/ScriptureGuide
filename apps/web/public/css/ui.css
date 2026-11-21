@@ -597,56 +597,58 @@ html.sg-no-audio h3 span.audio {
 }
 .sgp-reset:hover { background: rgba(255, 255, 255, .8); }
  
- 		ul.tabs + table{
- 			margin-top:0;
- 		}
-       ul.tabs {
-          display: flex;
-          flex-wrap: nowrap;
-          align-items: flex-end;
-          gap: 8px;
-		font-family: 'Roboto Condensed', 'Arial Narrow', sans-serif;
-		font-size:0.6em;
-          list-style-type: none;
-          margin: 0;
-          padding: 0;
-          margin-left:130px;
-      }
-      ul.tabs>li {
-          /* Two centred lines ("Doctrine & / Covenants"), with the result count in its own corner */
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          box-sizing: content-box;
-          height: 2.5em;
-          max-width: 5em;
-          padding: .2em 1.7em 0 .8em;
-          line-height: 1.08em;
-          text-align: center;
-          border: 1px solid #361f17;
-          border-bottom: 0;
-          border-radius: 5px 5px 0 0;
-          cursor:pointer;
-          color:#361f17;
-		    position:relative;
-      }
-      
-		     ul.tabs>li span
-		    {
-		    	color:#777777;
-		    	position:absolute;
-		    	top:.35em;
-		    	right:.45em;
-		    	font-size:.75em;
-		    }
-
-      ul.tabs>li:hover {
-          background-color: lightgray;
-      }
-
-      ul.tabs>li.selected {
-          background-color: lightgray;
-      }
+/* Search volume tabs. They sit on the first result's top rule (ul.tabs reaches down over the table's
+   border); the selected one covers that rule with the paper, so it joins the results below.
+   On narrow screens the row scrolls sideways, which keeps one row of full labels on the rule. */
+ul.tabs + table {
+	margin-top: 0;
+}
+ul.tabs {
+	display: flex;
+	flex-wrap: nowrap;
+	align-items: flex-end;
+	gap: 3px;
+	font-family: 'Roboto Condensed', 'Arial Narrow', sans-serif;
+	font-size: 0.6em;
+	line-height: 1.2;
+	list-style-type: none;
+	margin: 0 0 -3px 117px; /* left: where the rule starts; bottom: the table's 2px cell spacing and the 1px rule */
+	padding: 0;
+	overflow-x: auto;
+	overflow-y: hidden;
+	scrollbar-width: none;
+	position: relative;
+	z-index: 1;
+}
+ul.tabs::-webkit-scrollbar { display: none; }
+ul.tabs > li {
+	display: flex;
+	align-items: baseline;
+	gap: .3em;
+	flex: none;
+	white-space: nowrap;
+	padding: .45em .6em .4em;
+	border: 1px solid rgba(90, 70, 54, .3); /* #5a4636 at 30% */
+	border-bottom: 0;
+	border-radius: 5px 5px 0 0;
+	background: rgba(90, 70, 54, .07);
+	color: #5a4636;
+	cursor: pointer;
+}
+/* The count comes first in the markup; show it after the label, smaller and lighter. */
+ul.tabs > li span {
+	order: 1;
+	font-size: .8em;
+	color: #8a7666;
+}
+ul.tabs > li:hover {
+	background: rgba(90, 70, 54, .14);
+}
+ul.tabs > li.selected {
+	background: url('/img/paper.jpg');
+	border-color: rgba(90, 70, 54, .5);
+	color: #000; /* not bold: a bolder label would widen the tab and shift the row */
+}
 
 
 

@@ -858,6 +858,8 @@ function volfilter(vol)
 {
 	$("#searchresults tr").show();
 	$("#searchresults tr[vol!="+vol+"]").hide();
+	// Mark the chosen tab; ui.css joins it to the results below
+	$("ul.tabs li").removeClass("selected").filter("[onclick*=\"'"+vol+"'\"]").addClass("selected");
 }
 
 function nextNode(node) {

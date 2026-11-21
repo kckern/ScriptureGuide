@@ -262,6 +262,11 @@
      color: #777;
      cursor: pointer;
 }
+ /* Goudy Scripture has one upright weight (already a bold of Sorts Mill Goudy, declared for 400-1000),
+    so font-weight cannot make the reference heavier. Ink-dark instead of grey, it reads as bold as the verse. */
+ .refblock a, .refblock a:visited {
+     color: #361f17;
+ }
  h4 a:hover,.refblock a:hover {
      text-decoration: underline;
      color: #333;
