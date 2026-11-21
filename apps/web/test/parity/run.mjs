@@ -2,13 +2,13 @@
 // Parity harness: fetch each corpus request from the live PHP site and from the Node app,
 // normalize both, and report per format.
 //
-//   NODE_BASE=http://127.0.0.1:3101 node test/parity/run.mjs [--corpus traffic] [--format meta,raw] [--only john] [--refresh] [--verbose]
+//   NODE_BASE=http://127.0.0.1:3101 node test/parity/run.mjs [--corpus traffic] [--format meta,latex] [--only john] [--refresh] [--verbose]
 //
 // The Node app must run against a full copy of the database (see test/parity/README.md).
 import { createHash } from 'node:crypto';
 import { mkdirSync, readFileSync, writeFileSync, existsSync, rmSync } from 'node:fs';
 import * as cheerio from 'cheerio';
-import { DIR, CACHE_ROOT, NODE_BASE, LIVE_SCHEME, USER_AGENT, cliOptions, loadCorpus, selectRequests, get, hostFor, diffName } from './harness.mjs';
+import { DIR, CACHE_ROOT, NODE_BASE, LIVE_SCHEME, USER_AGENT, cliOptions, loadCorpus, selectRequests, get, hostFor, legacyRawPath, diffName } from './harness.mjs';
 import { canonicalHtml, canonicalJson, canonicalAsset, mediaType, encodeCacheEntry, decodeCacheEntry, compare, homeCleanups, rawSearchterm, staleSectionVerse, singleHeadingDropIds, singleHeadingDropVersion } from './normalize.mjs';
 import { allowReason } from './allow.mjs';
 
@@ -35,18 +35,18 @@ async function live(format, path) {
   return res;
 }
 
-// The live raw-format entry of the first verse of a passage live heads with the section before
+// The live legacy raw-format entry (main host /raw/) of the first verse of a passage live heads with the section before
 // it (normalize.mjs staleSectionVerse), for check:staleSectionHeading; one cached live fetch
 async function staleRaw(expected) {
   const v = staleSectionVerse(expected);
   if (!v) return undefined;
   try {
-    const res = await live('raw', `/${v.version.toLowerCase()}/${v.verseId}`);
+    const res = await live('raw', legacyRawPath(v.version, v.verseId));
     return JSON.parse(res.body)?.[v.verseId];
   } catch { return undefined; }
 }
 
-// Live's raw-format entries of the verses a passage lost to single_heading (normalize.mjs
+// Live's legacy raw-format entries (main host /raw/) of the verses a passage lost to single_heading (normalize.mjs
 // singleHeadingDropIds), for check:singleHeadingDrop; one cached live fetch per passage
 async function singleHeadingRaw(format, expected, actual) {
   if (format !== 'passage') return undefined;
@@ -54,7 +54,7 @@ async function singleHeadingRaw(format, expected, actual) {
   const version = ids && singleHeadingDropVersion(actual, ids);
   if (!version) return undefined;
   try {
-    const res = await live('raw', `/${version.toLowerCase()}/${ids.join(';')}`);
+    const res = await live('raw', legacyRawPath(version, ids.join(';')));
     return JSON.parse(res.body);
   } catch { return undefined; }
 }

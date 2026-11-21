@@ -100,10 +100,16 @@ export const corpus = [
 ];
 
 // Where each format lives on the live site, and the Host header the Node app should see.
-// No corpus request is raw now (raw. is the v1 API); run.mjs still reads live's raw. for the
-// staleSectionHeading and singleHeadingDrop checks.
-const SUBDOMAIN = { meta: 'meta', raw: 'raw', latex: 'latex', xml: 'xml', notes: 'notes' };
+// raw is not here: raw. is the v1 database dump (an array of rows). The legacy raw format (keyed
+// by verse id, with headings), which run.mjs reads for the staleSectionHeading and
+// singleHeadingDrop checks, is the main host's /raw/ prefix (legacyRawPath).
+const SUBDOMAIN = { meta: 'meta', latex: 'latex', xml: 'xml', notes: 'notes' };
 
 export function hostFor(format) {
   return SUBDOMAIN[format] ? `${SUBDOMAIN[format]}.scripture.guide` : 'scripture.guide';
+}
+
+// The legacy raw path for a version and a reference or verse ids, on hostFor('raw')
+export function legacyRawPath(version, ref) {
+  return `/raw/${String(version).toLowerCase()}/${ref}`;
 }

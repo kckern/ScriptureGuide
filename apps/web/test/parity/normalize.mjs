@@ -257,7 +257,7 @@ export function singleHeadingDropVersion(node, ids) {
   return line ? attr(line, 'version') : undefined;
 }
 
-// raw: live's raw-format entries by verse id ({ text }) for the dropped verses
+// raw: live's legacy raw-format entries (main host /raw/) by verse id ({ text }) for the dropped verses
 export function singleHeadingDrops(live, node, raw) {
   const ids = singleHeadingDropIds(live, node);
   return !!ids && !!raw && ids.every(id => /§/.test(raw[id]?.text ?? ''));

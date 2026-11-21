@@ -7,7 +7,7 @@ import { readFileSync, existsSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { corpus } from './corpus.mjs';
 
-export { hostFor } from './corpus.mjs';
+export { hostFor, legacyRawPath } from './corpus.mjs';
 
 export const DIR = fileURLToPath(new URL('.', import.meta.url));
 // PARITY_CACHE lets several worktrees share one cache of live responses.
