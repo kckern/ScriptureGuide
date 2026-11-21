@@ -293,11 +293,6 @@ tests:
     context_variations:
       contextAware_true:
         expected_output: 'See [2 Jn 1], then [4 Ne 1; JS-H 1; Pss 120-134].'
-        known_issue: >-
-          The merged span does not round-trip through lookup: in a list, a chapter-only
-          single-chapter book reads as verse 1 ("4 Ne 1; JS-H 1" looks up as 4 Nephi 1:1),
-          so the span re-parses to fewer verses than it was rendered with. Lookup, not the
-          detection bar; adv-051 checks the same forms unmerged.
       contextAware_false:
         expected_output: 'See [2 Jn 1], then [4 Ne 1 and JS-H 1; also Pss 120-134].'
 

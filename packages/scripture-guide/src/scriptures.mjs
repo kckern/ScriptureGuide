@@ -511,14 +511,20 @@ const cleanReference = function(messyReference, config) {
     return cleanReference;
 }
 
+// A bare number after a single-chapter book is a verse ("Obad 3" is Obadiah 1:3), except "1",
+// which is the whole chapter ("4 Ne 1"). Each part of a list is read the way it reads alone:
+// applied to the whole query, the rule turned a leading "4 Ne 1; JS-H 1" into 4 Nephi 1:1 and
+// never reached later parts ("Mt 5; Obad 3" lost Obadiah).
 const handleSingleChapterBookRefs = function(ref, config) {
-
    const singleChapterBooks = Object.keys(config.raw_index).filter(book => loadMaxChapter(book, config) === 1);
-   const [matchingBook] = singleChapterBooks.filter(book => ref.match(new RegExp(`^${book} \\d+`)));
-   if(new RegExp(`^${matchingBook} 1:`).test(ref)) return ref;
-   if(new RegExp(`^${matchingBook} 1$`).test(ref)) return ref;
-   ref = ref.replace(new RegExp(`^${matchingBook} (\\d+)`), `${matchingBook} 1:$1`);
-   return ref;
+   if (!singleChapterBooks.length) return ref;
+   return ref.split(/\s*;\s*/).map(part => {
+      const matchingBook = singleChapterBooks.find(book => part.startsWith(`${book} `) && /^\d/.test(part.slice(book.length + 1)));
+      if (!matchingBook) return part;
+      const rest = part.slice(matchingBook.length + 1);
+      if (/^1(?::|$)/.test(rest)) return part;
+      return `${matchingBook} 1:${rest}`;
+   }).join("; ");
 }
 
 const splitReferences = function(compoundReference, config) {
