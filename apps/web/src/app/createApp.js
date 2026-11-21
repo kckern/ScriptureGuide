@@ -18,6 +18,25 @@ import db from '../data/db/connection.js';
 
 const VIEWS = path.join(path.dirname(fileURLToPath(import.meta.url)), '../presentation/views');
 
+// res.locals.verNames (id → title) for the EJS templates. Read once; a failed read leaves
+// {} for this request and is tried again on the next one.
+export function versionNames(database = db) {
+  let cache = null;
+  return async (req, res, next) => {
+    if (!cache) {
+      try {
+        const rows = await database.query('SELECT id, title FROM scripture_versions ORDER BY priority, title');
+        cache = {};
+        for (const r of rows) cache[r.id] = r.title;
+      } catch {
+        // cache stays null
+      }
+    }
+    res.locals.verNames = cache ?? {};
+    next();
+  };
+}
+
 // The Express app without listening (src/app.js listens; tests use it with supertest).
 // log: one JSON line per request on stdout (off in tests by default).
 export function createApp({ log = config.env !== 'test' } = {}) {
@@ -51,20 +70,7 @@ export function createApp({ log = config.env !== 'test' } = {}) {
   app.set('views', VIEWS);
 
   // Inject ver_names globally for EJS templates
-  let verNamesCache = null;
-  app.use(async (req, res, next) => {
-    if (!verNamesCache) {
-      try {
-        const rows = await db.query('SELECT id, title FROM scripture_versions ORDER BY priority, title');
-        verNamesCache = {};
-        for (const r of rows) verNamesCache[r.id] = r.title;
-      } catch (e) {
-        verNamesCache = {};
-      }
-    }
-    res.locals.verNames = verNamesCache;
-    next();
-  });
+  app.use(versionNames());
 
   // Asset URLs carry the build's commit (layouts/main.ejs), so a deploy reaches cached browsers at once
   app.use((req, res, next) => {
