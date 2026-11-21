@@ -169,8 +169,8 @@ const INTERACTIONS = {
   },
 
   async copy(page) {
-    const button = page.locator('.containerCopy > div');
-    if (await button.count() === 0) throw new Error('no .containerCopy button');
+    const button = page.locator('button.passage-copy');
+    if (await button.count() === 0) throw new Error('no passage Copy button');
     await page.evaluate(() => navigator.clipboard.writeText(''));
     await button.first().click();
     await page.waitForFunction(async () => (await navigator.clipboard.readText()).trim() !== '', null, { timeout: 5000 })

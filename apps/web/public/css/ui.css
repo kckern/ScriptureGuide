@@ -713,3 +713,49 @@ ul.tabs > li.selected {
     .tipsy-se .tipsy-arrow { bottom: 0; right: 10px; border-top-style: solid; border-bottom: none; border-left-color: transparent; border-right-color: transparent; }
   .tipsy-e .tipsy-arrow { right: 0; top: 50%; margin-top: -5px; border-left-style: solid; border-right: none; border-top-color: transparent; border-bottom-color: transparent; }
   .tipsy-w .tipsy-arrow { left: 0; top: 50%; margin-top: -5px; border-right-style: solid; border-left: none; border-top-color: transparent; border-bottom-color: transparent; }
+
+/* "Copy passage" under the page (scripture.ejs; SGCopy.copyPassage in copySelection.js): a paper
+   pill on the desk below the page, centred by the body's align="center" wrapper. */
+.passage-copy {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	gap: .5em;
+	min-width: 9.6em; /* the same width for "Copied" and "Copy failed" */
+	margin: 14px auto 0;
+	padding: .55em 1.15em .55em 1em;
+	font-family: 'Roboto Condensed', 'Arial Narrow', sans-serif;
+	font-size: 16px;
+	line-height: 1.2;
+	letter-spacing: .02em;
+	color: #5a4636;
+	background: #f1ebe0 url('/img/paper.jpg');
+	border: 1px solid rgba(90, 70, 54, .3); /* #5a4636 at 30% */
+	border-radius: 999px;
+	box-shadow: 0 0 0 2px #000, 0 2px 8px rgba(0, 0, 0, .45);
+	cursor: pointer;
+	-webkit-user-select: none;
+	user-select: none;
+	-webkit-tap-highlight-color: transparent;
+	transition: color .15s ease, box-shadow .15s ease;
+}
+.passage-copy img {
+	width: 13px;
+	height: 14px;
+	opacity: .75;
+}
+.passage-copy:hover {
+	color: #2e2219;
+	background-image: linear-gradient(rgba(255, 255, 255, .5), rgba(255, 255, 255, .5)), url('/img/paper.jpg');
+	box-shadow: 0 0 0 2px #000, 0 3px 12px rgba(0, 0, 0, .6);
+}
+.passage-copy:hover img { opacity: 1; }
+.passage-copy:active { transform: translateY(1px); }
+.passage-copy:focus { outline: none; }
+.passage-copy:focus-visible {
+	outline: 2px solid #f0d68c;
+	outline-offset: 3px;
+}
+.passage-copy.is-copied { color: #2f5d2a; }
+.passage-copy.is-copied img { opacity: 1; width: 14px; height: 12px; }
+.passage-copy.is-failed { color: #8a2a1c; }
