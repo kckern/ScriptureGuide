@@ -365,3 +365,33 @@ tests:
         expected_output: '&mdash;&mdash; Read [Mt 5:3; Lu 3:16].'
       contextAware_false:
         expected_output: '&mdash;&mdash; Read [Mt 5:3 and Lu 3:16].'
+
+  - id: en-detect-adv-058
+    input: 'Read Ex 20:1&minus;17 today.'
+    description: an &minus; entity is a range dash, not the end of the link
+    tags: [entities, range]
+    context_variations:
+      contextAware_true:
+        expected_output: 'Read [Ex 20:1&minus;17] today.'
+      contextAware_false:
+        expected_output: 'Read [Ex 20:1&minus;17] today.'
+
+  - id: en-detect-adv-059
+    input: 'Read Ex 20:1&#8722;17 today.'
+    description: a numeric minus entity is a range dash
+    tags: [entities, range]
+    context_variations:
+      contextAware_true:
+        expected_output: 'Read [Ex 20:1&#8722;17] today.'
+      contextAware_false:
+        expected_output: 'Read [Ex 20:1&#8722;17] today.'
+
+  - id: en-detect-adv-060
+    input: 'Read Ex 20:1−17 today.'
+    description: a literal minus sign (U+2212) is a range dash
+    tags: [range]
+    context_variations:
+      contextAware_true:
+        expected_output: 'Read [Ex 20:1−17] today.'
+      contextAware_false:
+        expected_output: 'Read [Ex 20:1−17] today.'

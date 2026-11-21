@@ -27,11 +27,11 @@ const findMatches = (content,books,lang_extra) => {
     // gap = horizontal whitespace + at most one newline (wrapped HTML) + an
     //   optional ", Sec." (D&C) + an optional "(" (Philippians (3:20)) — then a
     //   digit MUST follow, so "Genesis. 2" / "Amos 5. Section 3" don't bind.
-    // core = digits joined by :.,;~ dashes, horizontal whitespace, single
+    // core = digits joined by :.,;~ dashes (and the minus sign "−", &minus;), horizontal whitespace, single
     //   newlines, and the word connectors "and"/"cf" (\b-bounded). Every
     //   position matches exactly one alternative -> linear time.
     const gap = "[ \\t]*(?:\\n(?![ \\t]*\\n)[ \\t]*)?(?:,[ \\t]*sec(?:tion)?\\.?[ \\t]*)?\\(?[ \\t]*(?=[0-9])";
-    const core = "(?:[0-9:.;,~—–-]|[ \\t]|\\n(?![ \\t]*\\n)|and\\b|cf\\b|\\()*[0-9]";
+    const core = "(?:[0-9:.;,~—–−-]|[ \\t]|\\n(?![ \\t]*\\n)|and\\b|cf\\b|\\()*[0-9]";
     const postBookMatch = lang_extra.chapter || (gap + core);
     const capitalizedOnlyAbbreviations = new Set(
         (lang_extra.capitalizedOnly || []).map(i=>String(i).toLowerCase())

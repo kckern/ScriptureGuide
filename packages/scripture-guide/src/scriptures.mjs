@@ -503,7 +503,7 @@ const cleanReference = function(messyReference, config) {
 
     //Cleanup
     ref = ref.replace(/\s+/g, " "); //remove double spaces
-    ref = ref.replace(/\s*[~–-]\s*/g, "-"); //remove spaces around dashes
+    ref = ref.replace(/\s*[~–−-]\s*/g, "-"); //remove spaces around dashes (and minus signs)
     ref = ref.replace(/;(\S+)/g, "; $1"); //add space after semicolons
 
     let cleanReference = ref.trim();

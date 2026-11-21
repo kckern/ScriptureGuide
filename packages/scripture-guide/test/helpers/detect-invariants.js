@@ -106,6 +106,14 @@ export function assertDetectInvariants(deps, input, options) {
     }
   }
 
+  // I2b - A span never stops mid-number: a rendered span ending in a digit is not followed
+  // directly by another digit outside it ("[Ex 20:1&minus;1]7").
+  for (let i = 1; i < pieces.length; i += 2) {
+    if (/\d$/.test(pieces[i]) && /^\d/.test(pieces[i + 1] || '')) {
+      throw new Error(`${where} span ends mid-number: ${JSON.stringify(pieces[i] + pieces[i + 1].slice(0, 10))}`);
+    }
+  }
+
   // I3 - Round-trip, two-way classified. A self-contained span must re-parse to
   // exactly the ids it was rendered with; anything that does not re-parse must
   // at least LOOK like a context-derived reference. Garbage such as "1 ;"
