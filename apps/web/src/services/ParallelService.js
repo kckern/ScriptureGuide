@@ -37,10 +37,6 @@ const isEmpty = v => v == null || v.length === 0;
 const leadingNumber = k => parseFloat(String(k)) || 0;
 
 /**
- * lib.parallel.php.inc row layout. Pure: everything it needs is passed in.
- * Rows are [{ key, left: number[]|null, right: number[]|null }] in display order.
- */
-/**
  * One reference in two versions (ctbom~2hrbom/1.ne.14): rows by verse id. Each version's cell
  * covers its compound verses (spans: verse id → the ids its text stands for), and a row takes
  * every cell whose span overlaps another cell in the row, so both sides show the same verses.
@@ -76,6 +72,13 @@ function sameVerses(leftids, rightids, spans) {
   return rightids.some(id => (spans.right?.get(id) ?? [id]).some(v => covered.has(v)));
 }
 
+/**
+ * lib.parallel.php.inc row layout. Pure: everything it needs is passed in.
+ * Rows are [{ key, left: number[], right: number[], current }] in display order.
+ * Stand-in references between the sides give PHP's matched layout. Without them, sides that cover
+ * the same verses (one reference in two versions) go row by verse through alignByVerse; other
+ * sides go side by side, as PHP did.
+ */
 export function alignRows({ leftids, rightids, references, compounds = {}, lver, rver, spans = null }) {
   const index2d = new Map(); // `${a}|${b}` → { sig:Set, std:Set }
   const sigs = new Set();
