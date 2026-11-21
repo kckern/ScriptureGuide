@@ -53,3 +53,12 @@ describe('parallel view escapes request-derived values', () => {
     expect(html).toContain('<a class="ref" href="/kjv/john.3.16">John 3:16</a>');
   });
 });
+
+describe('parallel view rows', () => {
+  test('a side with no verse has no reference link', async () => {
+    const p = page('');
+    p.rows[0].right = { verseId: '', ref: '', slug: '', text: '', fax: false };
+    const $ = cheerio.load(await ejs.renderFile(VIEW, p));
+    expect($('a.ref').map((i, a) => $(a).attr('href')).get()).toEqual(['/kjv/john.3.16']);
+  });
+});

@@ -38,7 +38,41 @@ const leadingNumber = k => parseFloat(String(k)) || 0;
  * lib.parallel.php.inc row layout. Pure: everything it needs is passed in.
  * Rows are [{ key, left: number[]|null, right: number[]|null }] in display order.
  */
-export function alignRows({ leftids, rightids, references, compounds = {}, lver, rver }) {
+/**
+ * One reference in two versions (ctbom~2hrbom/1.ne.14): rows by verse id. Each version's cell
+ * covers its compound verses (spans: verse id → the ids its text stands for), and a row takes
+ * every cell whose span overlaps another cell in the row, so both sides show the same verses.
+ * Not in PHP, which paired the cells by position and lost verses.
+ */
+function alignByVerse(leftids, rightids, spans) {
+  const cells = [];
+  for (const [side, ids] of [['left', leftids], ['right', rightids]]) {
+    for (const id of ids) {
+      const span = spans[side]?.get(id) ?? [id];
+      cells.push({ side, id, min: Math.min(...span), max: Math.max(...span) });
+    }
+  }
+  cells.sort((a, b) => a.min - b.min || a.max - b.max);
+  const rows = new Map();
+  let current = null;
+  for (const c of cells) {
+    if (!current || c.min > current.max) {
+      current = { max: c.max, row: { left: null, right: null } };
+      rows.set(c.min, current.row);
+    }
+    current.max = Math.max(current.max, c.max);
+    (current.row[c.side] ||= new Map()).set(c.id, c.id);
+  }
+  return rows;
+}
+
+// Do the two sides' verses overlap (the same reference in two versions)?
+function sameVerses(leftids, rightids, spans) {
+  const covered = new Set(leftids.flatMap(id => spans.left?.get(id) ?? [id]));
+  return rightids.some(id => (spans.right?.get(id) ?? [id]).some(v => covered.has(v)));
+}
+
+export function alignRows({ leftids, rightids, references, compounds = {}, lver, rver, spans = null }) {
   const index2d = new Map(); // `${a}|${b}` → { sig:Set, std:Set }
   const sigs = new Set();
   const matches = new Map();
@@ -161,6 +195,10 @@ export function alignRows({ leftids, rightids, references, compounds = {}, lver,
       rows.delete(z2 ?? '');
       setKey(rows, z1 ?? '', tmp);
     }
+  } else if (spans && sameVerses(leftids, rightids, spans)) {
+    rows = alignByVerse(leftids, rightids, spans);
+    rows.byVerse = true;
+    for (const id of [...leftids, ...rightids]) sigs.add(id);
   } else {
     // Side by side, folding compound verses ("*" rows) on either side
     let lids = [...leftids], rids2 = [...rightids];
@@ -171,6 +209,8 @@ export function alignRows({ leftids, rightids, references, compounds = {}, lver,
       for (const lid of lids) {
         const group = [rids2[p++]];
         while ((lc[lid] || 0) > 1) { group.push(rids2[p++]); lc[lid]--; }
+        // past the end of the other side: no verse, not an undefined one
+        while (group.length > 1 && group[group.length - 1] === undefined) group.pop();
         if (group.length > 1) merged.right[group[group.length - 1]] = group;
         out.push(group[group.length - 1]);
       }
@@ -181,6 +221,8 @@ export function alignRows({ leftids, rightids, references, compounds = {}, lver,
       for (const rid of rids2) {
         const group = [lids[p++]];
         while ((rc[rid] || 0) > 1) { group.push(lids[p++]); rc[rid]--; }
+        // past the end of the other side: no verse, not an undefined one
+        while (group.length > 1 && group[group.length - 1] === undefined) group.pop();
         if (group.length > 1) merged.left[group[group.length - 1]] = group;
         out.push(group[group.length - 1]);
       }
@@ -196,8 +238,9 @@ export function alignRows({ leftids, rightids, references, compounds = {}, lver,
   }
   const merged = rows.merged || { left: {}, right: {} };
 
-  // Prevent stragglers: a lone left after a lone right (or the reverse) share a row
-  const keys = [...rows.keys()];
+  // Prevent stragglers: a lone left after a lone right (or the reverse) share a row. Rows by
+  // verse id keep them apart: they are different verses.
+  const keys = rows.byVerse ? [] : [...rows.keys()];
   keys.forEach((k, i) => {
     const cur = rows.get(k), prev = i > 0 ? rows.get(keys[i - 1]) : undefined;
     if (!cur || !prev) return;
@@ -210,11 +253,13 @@ export function alignRows({ leftids, rightids, references, compounds = {}, lver,
     }
   });
 
-  const ids = m => (m ? [...m.keys()] : []);
+  // A compound verse that ran past the other side's verses leaves undefined ids: drop them, and
+  // rows with nothing on either side
+  const ids = m => (m ? [...m.keys()].filter(id => id != null) : []);
   const current = m => { const k = ids(m); return m?.atEnd ? k[k.length - 1] : k[0]; };
   const out = [...rows].map(([key, r]) => ({
     key, left: ids(r.left), right: ids(r.right), current: { left: current(r.left), right: current(r.right) },
-  }));
+  })).filter(r => r.left.length || r.right.length);
   const found = new Set();
   for (const r of out) for (const l of r.left) for (const rr of r.right) if (index2d.has(`${l}|${rr}`)) found.add(r.key);
   return { rows: out, index2d, sigs, found, anymatches: found.size > 0, merged };
@@ -297,7 +342,8 @@ export class ParallelService {
     const leftVerses = await this.verseIds(left.ref);
     const rightVerses = await this.verseIds(right.ref);
     const meta = await this.metaFor([...leftVerses, ...rightVerses]);
-    const ref = (ids, field) => this.reference(ids, field, meta);
+    // formatReference copies PHP's double space after a ";" between chapters ("Isaiah 9;  11")
+    const ref = (ids, field) => this.reference(ids, field, meta).replace(/\s+/g, ' ');
 
     const leftRefSlug = slugifyRef(ref(leftVerses, 'book_title_short'));
     let leftslug = left.ver ? `${left.ver}/${leftRefSlug}` : leftRefSlug;
@@ -324,7 +370,7 @@ export class ParallelService {
       right: await this.repo.chapterVerseIds(rightids),
     };
     const meta2 = await this.metaFor([...chapterIds.left, ...chapterIds.right, ...leftids, ...rightids], meta);
-    const ref2 = (ids, field) => this.reference(ids, field, meta2);
+    const ref2 = (ids, field) => this.reference(ids, field, meta2).replace(/\s+/g, ' ');
     const lchapter = slugifyRef(ref2(chapterIds.left, 'book_title_short'));
     const rchapter = slugifyRef(ref2(chapterIds.right, 'book_title_short'));
     const chslug = `${lver}/${lchapter}~${rver}/${rchapter}`;
@@ -335,10 +381,16 @@ export class ParallelService {
     for (const [ver, flat] of [[lver, leftFlat], [rver, rightFlat]]) {
       for (const v of flat.values()) if (v.compound) (compounds[ver] ||= {})[v.verse_id] = v.compound;
     }
-    const layout = alignRows({ leftids, rightids, references, compounds, lver, rver });
+    const spanOf = flat => new Map([...flat.values()].filter(v => v.refIds).map(v => [v.verse_id, v.refIds]));
+    const spans = { left: spanOf(leftFlat), right: spanOf(rightFlat) };
+    const layout = alignRows({ leftids, rightids, references, compounds, lver, rver, spans });
 
     // Compound verses fold texts and references into one cell
-    const bank = { left: new Map([...leftFlat].map(([k, v]) => [k, { ...v }])), right: new Map([...rightFlat].map(([k, v]) => [k, { ...v }])) };
+    // covers: the verse ids a cell's text stands for (its compound filler, folded verses)
+    const bank = {
+      left: new Map([...leftFlat].map(([k, v]) => [k, { ...v, covers: v.refIds ?? [k] }])),
+      right: new Map([...rightFlat].map(([k, v]) => [k, { ...v, covers: v.refIds ?? [k] }])),
+    };
     for (const side of ['left', 'right']) {
       for (const [id, group] of Object.entries(layout.merged[side])) {
         const b = bank[side];
@@ -346,6 +398,7 @@ export class ParallelService {
         if (!target) continue;
         target.text = `${b.get(group[0])?.text ?? ''} ${target.text}`;
         target.ref = ref2(group, 'book_title_med');
+        target.covers = [...new Set([...group, ...target.covers])];
       }
     }
     for (const b of [bank.left, bank.right]) {
@@ -357,15 +410,16 @@ export class ParallelService {
       right: await this.repo.faxIds(rver, layout.rows.map(r => r.current.right)),
     };
 
+    const covers = (side, ids) => ids.flatMap(id => bank[side].get(id)?.covers ?? [id]);
     let sig = '';
     const rows = layout.rows.map(item => {
       if (isEmpty(item.left) || isEmpty(item.right)) sig = 'sig';
       let verseId;
       let leftText = '', rightText = '', leftRef, rightRef;
       for (const id of item.left) { verseId = id; leftText += ' ' + (bank.left.get(id)?.text ?? ''); }
-      leftRef = item.left.length === 1 ? (bank.left.get(verseId)?.ref ?? '') : ref2(item.left, 'book_title_short');
+      leftRef = item.left.length === 1 ? (bank.left.get(verseId)?.ref ?? '') : ref2(covers('left', item.left), 'book_title_short');
       for (const id of item.right) { verseId = id; rightText += ' ' + (bank.right.get(id)?.text ?? ''); }
-      rightRef = item.right.length === 1 ? (bank.right.get(verseId)?.ref ?? '') : ref2(item.right, 'book_title_short');
+      rightRef = item.right.length === 1 ? (bank.right.get(verseId)?.ref ?? '') : ref2(covers('right', item.right), 'book_title_short');
       for (const id of [...item.left, ...item.right]) if (layout.sigs.has(id)) sig = 'sig';
       let standinclass = '';
       for (const l of item.left) for (const r of item.right) {
@@ -373,17 +427,18 @@ export class ParallelService {
         standinclass = p ? (p.std.has(1) ? 'quote' : 'allusion') : 'sidebyside';
       }
       if (!layout.found.has(item.key) && layout.anymatches) standinclass = 'greyout';
+      // Links always use the short form ("1.ne.14.2-6"), whichever form the cell shows
+      const slug = (side, ids) => (ids.length ? slugifyRef(ref2(covers(side, ids), 'book_title_short')) : '');
       return {
         id: item.key,
         className: `diffrow ${sig} ${standinclass}`,
-        left: { verseId: item.current.left ?? '', ref: leftRef || '', slug: slugifyRef(leftRef), text: leftText, fax: fax.left.has(verseId) },
-        right: { verseId: item.current.right ?? '', ref: rightRef || '', slug: slugifyRef(rightRef), text: rightText, fax: fax.right.has(verseId) },
+        left: { verseId: item.current.left ?? '', ref: leftRef || '', slug: slug('left', item.left), text: leftText, fax: fax.left.has(verseId) },
+        right: { verseId: item.current.right ?? '', ref: rightRef || '', slug: slug('right', item.right), text: rightText, fax: fax.right.has(verseId) },
       };
     });
 
     const leftheader = ref2(leftVerses, 'book_title_med');
     const rightheader = ref2(rightVerses, 'book_title_med');
-    const htmlHeader = h => (/[,;]/.test(h) ? h.replace(/(\s+)(\d+)/g, '$1 $2') : h);
     const volumeOf = ids => meta2.get(ids[0])?.volume_id;
 
     return {
@@ -392,8 +447,8 @@ export class ParallelService {
       limg: versionImg(lver, volumeOf(leftids)),
       rimg: versionImg(rver, volumeOf(rightids)),
       leftheader, rightheader,
-      htmlLeftheader: htmlHeader(leftheader),
-      htmlRightheader: htmlHeader(rightheader),
+      htmlLeftheader: leftheader,
+      htmlRightheader: rightheader,
       leftheaderSlug: slugifyRef(leftheader),
       rightheaderSlug: slugifyRef(rightheader),
       swapslug, chslug, fullslug, ischapter,

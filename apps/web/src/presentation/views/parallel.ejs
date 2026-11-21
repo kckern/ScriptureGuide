@@ -12,7 +12,7 @@ const fullChapter = !ischapter;
 const trs = rows.map(r => `
 		<tr class="">
 			<td class='left ref'>
-				<a class="ref" href="/${lv}/${h(r.left.slug)}">${h(r.left.ref)}</a>
+				${r.left.slug ? `<a class="ref" href="/${lv}/${h(r.left.slug)}">${h(r.left.ref)}</a>` : ''}
 				${r.left.fax ? `<a class="fax" id="left_${h(r.id)}" target="_blank" href="https://img.scripture.guide/=/${h(lver)}/${h(r.left.slug)}">
 					<img src="/img/book_open.png" />
 				</a>` : ''}
@@ -22,7 +22,7 @@ const trs = rows.map(r => `
 				${r.right.fax ? `<a class="fax" id="right_${h(r.id)}" target="_blank" href="https://img.scripture.guide/=/${h(rver)}/${h(r.right.slug)}">
 					<img src="/img/book_open.png" />
 				</a>` : ''}
-				<a class="ref" href="/${rv}/${h(r.right.slug)}">${h(r.right.ref)}</a>
+				${r.right.slug ? `<a class="ref" href="/${rv}/${h(r.right.slug)}">${h(r.right.ref)}</a>` : ''}
 			</td>
 		</tr>
 		<tr  id="row${h(r.id)}" class="${h(r.className)}">
