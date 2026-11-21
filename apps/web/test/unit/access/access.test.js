@@ -1,5 +1,5 @@
 import { describe, test, expect, vi } from 'vitest';
-import { createAccess } from '../../../src/app/access/access.js';
+import { createAccess, addressCaller } from '../../../src/app/access/access.js';
 import { TIERS, KEY_TIERS, MODES } from '../../../src/app/access/policy.js';
 import config from '../../../src/config/index.js';
 import { generateKey, keyPrefix } from '../../../src/app/access/keys.js';
@@ -37,6 +37,13 @@ describe('createAccess: identity', () => {
     const c = await access.check(req({}, '2001:db8:abcd:12::77'), { scope: 'api' }); // limit 2: one bucket for the /64
     expect(c).toMatchObject({ caller: 'ip6:2001:db8:abcd:12::/64', over: true });
     expect((await access.check(req({}, '::ffff:198.51.100.7'), { scope: 'api' })).caller).toBe('ip:198.51.100.7');
+  });
+  test('IPv6 /64 caller ids are written compressed (RFC 5952)', () => {
+    expect(addressCaller('2001:db8:0:0:1:2:3:4')).toBe('ip6:2001:db8::/64');
+    expect(addressCaller('2001:0db8:0000:0005::1')).toBe('ip6:2001:db8:0:5::/64');
+    expect(addressCaller('::1')).toBe('ip6:::/64');
+    expect(addressCaller('fe80::1')).toBe('ip6:fe80::/64');
+    expect(addressCaller('2001:db8:abcd:12:1:2:3:4')).toBe('ip6:2001:db8:abcd:12::/64');
   });
   test('no visitor IP and no known key: not counted', async () => {
     const { access, log } = make({ mode: 'enforce' });

@@ -1,9 +1,10 @@
 // The access check for API and HTML requests.
 // check(req, { scope }) → { caller, tier, allowed, over, refused, retryAfter, headers }.
 // Callers: "key:<prefix>" for a known API key, else the visitor's address: "ip:<IPv4>", or
-// "ip6:<first 4 groups>::/64" for IPv6, since one host often holds a whole /64. Keys are looked
-// up only once the api_keys table exists; until then a well-formed key gets the key tier's limit
-// but is still counted by address, so making up fresh keys never gives fresh buckets.
+// "ip6:<network>/64" for IPv6 ("ip6:2001:db8::/64", RFC 5952), since one host often holds a
+// whole /64. Keys are looked up only once the api_keys table exists; until then a well-formed
+// key gets the key tier's limit but is still counted by address, so making up fresh keys never
+// gives fresh buckets.
 // A request with no visitor address and no known key is not counted.
 // Modes: off (nothing), observe (count and log, never refuse), enforce (refuse over the limit;
 // API only: HTML is never refused here). A caller's rate_limit line is logged when they first go
@@ -19,14 +20,15 @@ import { logEvent, errorText } from '../log.js';
 const KEY_CACHE_MS = 60_000; // a revoked key stops working within this long
 const uncounted = () => ({ caller: null, tier: null, allowed: true, over: false, refused: false, retryAfter: 0, headers: {} });
 
-// "ip:<IPv4>" | "ip6:<first 4 groups>::/64" | null
+// "ip:<IPv4>" | "ip6:<the /64 network, compressed>/64" | null
 export function addressCaller(ip) {
   if (!ip) return null;
   let addr;
   try { addr = ipaddr.parse(ip); } catch { return `ip:${ip}`; }
   if (addr.kind() === 'ipv6' && addr.isIPv4MappedAddress()) addr = addr.toIPv4Address();
   if (addr.kind() === 'ipv4') return `ip:${addr.toString()}`;
-  return `ip6:${addr.parts.slice(0, 4).map(p => p.toString(16)).join(':')}::/64`;
+  // The /64 network, compressed (RFC 5952): "ip6:2001:db8::/64", "ip6:::/64" for ::1
+  return `ip6:${new ipaddr.IPv6([...addr.parts.slice(0, 4), 0, 0, 0, 0]).toRFC5952String()}/64`;
 }
 
 export function createAccess({
