@@ -68,8 +68,12 @@ export class HtmlPresenter {
     });
   }
 
+  // A title of several pieces from referenceFromVerseIds ("Isaiah 56:9–58:14;  65–66:17") has two
+  // spaces after ";" where the book is not repeated (PHP's "$dbook $r" join). The meta and api
+  // formats keep that for parity; the page title, link preview and card use one.
   titleFor(result, data, req) {
-    return result.title ?? (data.title || req?.config?.reference || result.reference.query || '');
+    const title = result.title ?? (data.title || req?.config?.reference || result.reference.query || '');
+    return String(title).replace(/;\s+/g, '; ');
   }
 
   _buildOgMeta(result, data, title, req) {

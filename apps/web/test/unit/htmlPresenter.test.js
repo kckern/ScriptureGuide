@@ -124,3 +124,15 @@ describe('HtmlPresenter: link-preview description (og:description)', () => {
     expect(description.startsWith(`1 Nephi 5— ${summary} And after`)).toBe(true);
   });
 });
+
+describe('HtmlPresenter page title', () => {
+  // referenceFromVerseIds ports PHP's "$dbook $r" join, which leaves two spaces after ";" when the
+  // book is not repeated; the meta and api formats keep that, the page title does not
+  test('one space after ";" in a title of several pieces', () => {
+    const result = { title: 'Isaiah 56:9–58:14;  65–66:17', reference: {} };
+    expect(new HtmlPresenter().titleFor(result, {}, {})).toBe('Isaiah 56:9–58:14; 65–66:17');
+  });
+  test('a title without pieces is unchanged', () => {
+    expect(new HtmlPresenter().titleFor({ reference: {} }, { title: 'John 3:16' }, {})).toBe('John 3:16');
+  });
+});
