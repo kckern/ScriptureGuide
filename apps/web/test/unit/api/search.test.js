@@ -63,5 +63,8 @@ describe('buildSearch', () => {
     expect(await web({ version: 'NRSV' })).toBe('https://scripture.guide/nrsv/loved.the.world');
     expect(await web({ volume: 'bom' })).toBe('https://scripture.guide/bom/loved.the.world');
     expect(await web({ version: 'NRSV', volume: 'nt' })).toBe('https://scripture.guide/nrsv/loved.the.world');
+    // with a digit the site reads /{version}/{terms} as a reference, so the link is a plain search
+    expect(await web({ version: 'NRSV', terms: '144000' })).toBe('https://scripture.guide/search/144000');
+    expect(await web({ volume: 'bom', terms: '2 witnesses' })).toBe('https://scripture.guide/search/2.witnesses');
   });
 });

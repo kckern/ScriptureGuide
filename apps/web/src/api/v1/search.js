@@ -8,9 +8,11 @@ const API = 'https://api.scripture.guide/v1/search';
 const SITE = 'https://scripture.guide';
 
 // The site's search page: /search/{terms}, /{version}/{terms} or /{volume}/{terms}, words
-// joined by dots
+// joined by dots. The site reads /{version}/{terms} as a search only when the terms have no
+// digit (otherwise as a reference), so terms with a digit get the unscoped /search/ page.
 function webLink(terms, version, volume) {
-  const scope = version ? version.toLowerCase() : volume ?? 'search';
+  const scoped = !/\d/.test(terms);
+  const scope = scoped && version ? version.toLowerCase() : (scoped && volume) || 'search';
   return `${SITE}/${scope}/${terms.split(' ').map(encodeURIComponent).join('.')}`;
 }
 
