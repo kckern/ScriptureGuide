@@ -12,6 +12,8 @@ import { notFoundHandler, errorHandler } from './middleware/error.js';
 import { requestLog } from './middleware/requestLog.js';
 import { responseHeaders } from './middleware/headers.js';
 import { apiRouter } from '../api/v1/router.js';
+import { htmlAccess } from './middleware/htmlAccess.js';
+import { createAccess } from './access/access.js';
 import { TRUST_PROXY } from './trustProxy.js';
 import { commit } from './buildInfo.js';
 import { logError } from './log.js';
@@ -43,7 +45,9 @@ export function versionNames(database = db, log = logError) {
 
 // The Express app without listening (src/app.js listens; tests use it with supertest).
 // log: one JSON line per request on stdout (off in tests by default).
-export function createApp({ log = config.env !== 'test' } = {}) {
+// access: the access check (src/app/access), one instance shared by the API and the website
+// pages so both count against the same buckets; tests can pass their own.
+export function createApp({ log = config.env !== 'test', access = createAccess({ mode: config.accessMode }) } = {}) {
   const app = express();
 
   // req.ip is the visitor behind Cloudflare, the ALB and nginx-proxy-manager
@@ -96,7 +100,10 @@ export function createApp({ log = config.env !== 'test' } = {}) {
   app.use(subdomainMiddleware);
 
   // The v1 API (api.) and the simple format hosts (json., yml., md., txt., plain.)
-  app.use(apiRouter());
+  app.use(apiRouter({ access }));
+
+  // Website pages: counted and logged by the access check, never refused (htmlAccess.js)
+  app.use(htmlAccess(access));
 
   // Routes
   app.use('/', routes);

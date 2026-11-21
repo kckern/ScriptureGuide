@@ -110,3 +110,21 @@ describe('access through createApp', () => {
     expect(lines.some(l => l.msg === 'rate_limit' && l.scope === 'api' && l.refused === false)).toBe(true);
   });
 });
+
+describe('one access check shared by the API and the website', () => {
+  test('createApp passes its access to both, with the API and html scopes', async () => {
+    const calls = [];
+    const access = {
+      mode: 'observe',
+      check: async (req, { scope }) => {
+        calls.push({ scope, path: req.path });
+        return { caller: 'ip:203.0.113.9', tier: scope === 'html' ? 'html' : 'anonymous', allowed: true, over: false, refused: false, retryAfter: 0, headers: {} };
+      },
+    };
+    const shared = createApp({ log: false, access });
+    await request(shared).get('/v1/versions').set('Host', 'api.scripture.guide');
+    await request(shared).get('/nrsv/john.3.16').set('Host', 'scripture.guide');
+    await request(shared).get('/healthz').set('Host', 'scripture.guide');
+    expect(calls).toEqual([{ scope: 'api', path: '/v1/versions' }, { scope: 'html', path: '/nrsv/john.3.16' }]);
+  });
+});
