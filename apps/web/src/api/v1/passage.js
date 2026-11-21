@@ -32,6 +32,11 @@ export function versionInfo(id, versions) {
 // found is dropped; its ids, if any, stay in the piece before it.
 const tooManyPieces = n => new ApiError('reference_too_large', `The reference has ${n} pieces. Ask for ${REQUEST_LIMITS.pieces} or fewer.`);
 const tooManyVerses = n => new ApiError('reference_too_large', `The reference has ${n} verses. Ask for ${REQUEST_LIMITS.verses} or fewer.`);
+// After the lookup the count is a lower bound: each range stops at LOOKUP.maxVerses
+const overVerseLimit = () => new ApiError('reference_too_large', `The reference has more than ${REQUEST_LIMITS.verses} verses. Ask for ${REQUEST_LIMITS.verses} or fewer.`);
+// The package cuts a range at 1000 verses by default; one more than the limit lets a longer
+// range show up as too large instead of coming back cut
+const LOOKUP = Object.freeze({ maxVerses: REQUEST_LIMITS.verses + 1 });
 
 // The limits checked on the text, before it is looked up: ";" separated pieces (the site
 // counts only those; "," lists verses inside a piece), and for a verse id list
@@ -51,11 +56,11 @@ function checkQuerySize(query) {
 async function pieces(query, { refs, repo }) {
   // The same limits as the site's pages (RequestBudget)
   checkQuerySize(query);
-  const whole = await refs.resolve(query);
+  const whole = await refs.resolve(query, LOOKUP);
   if (whole.isEmpty) throw await diagnoseMiss(query, repo);
   const labels = whole.normalized.split(';').map(s => s.trim()).filter(Boolean);
   if (labels.length > REQUEST_LIMITS.pieces) throw tooManyPieces(labels.length);
-  if (whole.verseIds.length > REQUEST_LIMITS.verses) throw tooManyVerses(whole.verseIds.length);
+  if (whole.verseIds.length > REQUEST_LIMITS.verses) throw overVerseLimit();
   const ids = whole.verseIds;
   if (labels.length < 2) return [{ label: whole.normalized, ids }];
   const found = [];
@@ -63,7 +68,7 @@ async function pieces(query, { refs, repo }) {
   for (const piece of labels) {
     const label = /[a-z]/i.test(piece) ? piece : `${book} ${piece}`;
     book = new Reference({ normalized: label }).book;
-    const ref = await refs.resolve(label);
+    const ref = await refs.resolve(label, LOOKUP);
     const length = Math.max(ref.verseIds.length, 1);
     const prev = found[found.length - 1];
     if (!prev) { found.push({ label, start: 0, length }); continue; }

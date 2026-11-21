@@ -9,13 +9,15 @@ export class ReferenceService {
     this.verseRepository = verseRepo;
   }
 
-  parse(referenceString) {
+  // options go to the package's lookupReference: { maxVerses } raises its 1000-verse cap on
+  // one range (the v1 API, which has its own limit). The site uses the default.
+  parse(referenceString, options = {}) {
     if (!referenceString || typeof referenceString !== 'string') {
       return new Reference({ query: '', normalized: '', verseIds: [] });
     }
 
     try {
-      const result = lookupReference(referenceString);
+      const result = lookupReference(referenceString, options);
       return Reference.fromLookup(result);
     } catch (error) {
       logError(error, { where: 'reference.parse', ref: referenceString });
@@ -29,8 +31,8 @@ export class ReferenceService {
 
   // parse(), falling back to the verse index for verse ids, JST books and collections
   // the package does not know (Lectures on Faith, The Sealed Portion, ...).
-  async resolve(referenceString) {
-    const parsed = this.parse(referenceString);
+  async resolve(referenceString, options = {}) {
+    const parsed = this.parse(referenceString, options);
     if (!parsed.isEmpty || !referenceString) return parsed;
     try {
       return (await this.resolveFromIndex(referenceString)) || parsed;

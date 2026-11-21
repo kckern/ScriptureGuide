@@ -345,9 +345,8 @@ The simple hosts use the same status and code in their own format: `json.` retur
 ## Limits
 
 - At most 100 reference pieces. A `,` list of verses is read as one piece per verse: `john3.1,3,5` is John 3:1; 3:3; 3:5, three pieces.
-- At most 5,000 verses per request.
+- At most 5,000 verses per request, however they are written: `/v1/gen1-ex40` (2,746 verses) is served whole, and `/v1/gen1-deut34` is `reference_too_large`.
 - At most 10 versions per request.
-- A range written with book names that covers more than 1,000 verses is cut at 1,000 verses. `reference[].label` shows where it stops (`/v1/gen1-ex40` returns Genesis 1:1-34:19).
 
 ## Headers
 

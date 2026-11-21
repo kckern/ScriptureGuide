@@ -175,14 +175,11 @@ describe('buildPassage', () => {
     await expect(build({ reference: 'john3.16-17', versions: ['NRSV', 'KJV'] }, { repo: empty })).rejects.toMatchObject({ message: 'None of NRSV, KJV has text for John 3:16-17.' });
   });
 
-  test('more than 100 pieces is too large, before any piece is looked up', async () => {
-    const looked = [];
-    const many = { resolve: async q => {
-      looked.push(q);
-      return new Reference({ query: q, normalized: Array.from({ length: 101 }, (_, i) => `John 3:${i + 1}`).join('; '), verseIds: [26137] });
-    } };
-    await expect(build({ reference: 'many', versions: ['NRSV'] }, { refs: many })).rejects.toMatchObject({ code: 'reference_too_large', status: 400 });
-    expect(looked).toEqual(['many']);
+  test('the whole reference is looked up with room for more verses than the limit', async () => {
+    const seen = [];
+    const spy = { resolve: async (q, opts) => { seen.push(opts); return REFS[q] ? new Reference({ query: q, normalized: REFS[q][0], verseIds: REFS[q][1] }) : new Reference({ query: q, normalized: '', verseIds: [] }); } };
+    await build({ reference: 'john3.16-17', versions: ['NRSV'] }, { refs: spy });
+    expect(seen[0]).toEqual({ maxVerses: 5001 });
   });
 
   test('a long verse id list or too many pieces is refused before anything is looked up', async () => {
@@ -227,5 +224,18 @@ describe('passageSlug', () => {
   });
   test('without a short title, the label as a slug', () => {
     expect(passageSlug('Lectures on Faith 1:1', null)).toBe('lectures.on.faith.1.1');
+  });
+});
+
+// The real reference lookup: a range written with book names is expanded past the package's
+// default cap of 1000 verses, so the 5000-verse limit applies to it
+describe('buildPassage: long ranges by name', async () => {
+  const { default: referenceService } = await import('../../../src/services/ReferenceService.js');
+  test('Genesis 1 to Deuteronomy 34 (5852 verses) is too large, not cut', async () => {
+    await expect(build({ reference: 'gen1-deut34', versions: ['NRSV'] }, { refs: referenceService })).rejects.toMatchObject({ code: 'reference_too_large', message: 'The reference has more than 5000 verses. Ask for 5000 or fewer.' });
+  });
+  test('Genesis 1 to Exodus 40 (2746 verses) comes back whole; the site keeps the package cap', async () => {
+    expect((await referenceService.resolve('gen1-ex40', { maxVerses: 5001 })).verseIds).toHaveLength(2746);
+    expect((await referenceService.resolve('gen1-ex40')).verseIds).toHaveLength(1000);
   });
 });
