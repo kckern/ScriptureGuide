@@ -330,3 +330,13 @@ tests:
         expected_output: 'Read [Mt 5:3]. Then lu 3 (v. 16) says.'
       contextAware_false:
         expected_output: 'Read [Mt 5:3]. Then lu 3 (v. 16) says.'
+
+  - id: en-detect-adv-054
+    input: '&mdash;&mdash;&mdash; Read Mt 5:3. Then lu 3 (v. 16) says.'
+    description: an implied verse does not bind past a rejected book token when HTML entities shift the offsets
+    tags: [negative, implied, chapter-only, entities]
+    context_variations:
+      contextAware_true:
+        expected_output: '&mdash;&mdash;&mdash; Read [Mt 5:3]. Then lu 3 (v. 16) says.'
+      contextAware_false:
+        expected_output: '&mdash;&mdash;&mdash; Read [Mt 5:3]. Then lu 3 (v. 16) says.'

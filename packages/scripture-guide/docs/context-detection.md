@@ -22,6 +22,8 @@ detected, "l 3:30" and "L3.5" are not. A numbered book counts as two letters, so
 is detected; "book of" before a book adds nothing. Only the first number decides whether there is
 a verse: "L 3, 4:5" is still a lone letter with a chapter. Scripts without letter case are not
 affected.
+A label detection rejected ("L3") between a citation and a later "v. 16" stops the "v. 16" from
+binding to that citation: detection prefers no link to a wrong one.
 
 ## Enabling Context Detection
 

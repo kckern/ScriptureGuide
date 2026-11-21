@@ -20,10 +20,31 @@ const findMatches = (content,books,lang_extra) => {
         '&#8722;': '−'
     };
     
+    // One pass over all entities, recording where each normalized character came from
+    // (toRaw[normalized index] = raw index) so positions can be reported in `content`'s
+    // coordinates. No entities, no map: positions are the same.
     let normalizedContent = content;
-    Object.entries(htmlEntityMap).forEach(([entity, unicode]) => {
-        normalizedContent = normalizedContent.replace(new RegExp(entity, 'g'), unicode);
-    });
+    let toRaw = null;
+    if(content.includes('&')){
+        const entityPattern = new RegExp(Object.keys(htmlEntityMap).join('|'), 'g');
+        const parts = [];
+        const map = [];
+        let last = 0;
+        for(const m of content.matchAll(entityPattern)){
+            for(let r = last; r < m.index; r++) map.push(r);
+            parts.push(content.slice(last, m.index), htmlEntityMap[m[0]]);
+            map.push(m.index);
+            last = m.index + m[0].length;
+        }
+        if(parts.length){
+            for(let r = last; r < content.length; r++) map.push(r);
+            map.push(content.length);
+            parts.push(content.slice(last));
+            normalizedContent = parts.join('');
+            toRaw = map;
+        }
+    }
+    const rawPosition = (i) => toRaw ? toRaw[i] : i;
 
     const tail = lang_extra.tail ? new RegExp(lang_extra.tail,"ig") : /[^0-9]+$/;
     // At most one numeral or ordinal, then an optional "book of". The old repeated groups,
@@ -88,7 +109,8 @@ const findMatches = (content,books,lang_extra) => {
         return [substring,positions];
     }).filter(i=>!!i);
 
-    // [start, end] of matches the detection bar turned away: implied verses must not bind past them.
+    // [start, end] in `content` of matches the detection bar turned away: implied verses must
+    // not bind past them.
     const rejectedByBar = [];
     const possiblyOverlappingMatches = bookSubStrings.map(([substring,positions])=>{
         // One sticky regex per book substring, matched at each position. Building a regex per
@@ -115,7 +137,7 @@ const findMatches = (content,books,lang_extra) => {
             // token that looks like a book ("L3" and "lu 3" are labels); lookup stays lenient.
             // `substring` is the book token as written; the rest of the match is its numbers.
             if(!passesDetectionBar(substring, match.slice(substring.length))){
-                rejectedByBar.push([posIn,posOut]);
+                rejectedByBar.push([rawPosition(posIn), rawPosition(posOut)]);
                 return null;
             }
             //console.log({content:content.slice(i),pattern,match,posIn,posOut});
