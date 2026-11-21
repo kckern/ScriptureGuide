@@ -228,8 +228,8 @@ tests:
 
   - id: en-detect-adv-044
     input: Extracted facts (L3) will appear here; see level L 3 and grid cell L. 3.
-    description: a lone letter is a label, not Luke
-    tags: [negative, abbreviation]
+    description: a lone letter with a chapter only is a label, not Luke
+    tags: [negative, abbreviation, chapter-only]
     context_variations:
       contextAware_true:
         expected_output: 'Extracted facts (L3) will appear here; see level L 3 and grid cell L. 3.'
@@ -238,10 +238,40 @@ tests:
 
   - id: en-detect-adv-045
     input: Read Lk 3:5 and Lu 3:16.
-    description: two-letter abbreviations of Luke still resolve
+    description: two-letter abbreviations of Luke with a verse still resolve
     tags: [abbreviation]
     context_variations:
       contextAware_true:
         expected_output: 'Read [Lk 3:5; Lu 3:16].'
       contextAware_false:
         expected_output: 'Read [Lk 3:5 and Lu 3:16].'
+
+  - id: en-detect-adv-046
+    input: As L 3:16 says, love came first.
+    description: a lone letter with a ":" verse is strong enough
+    tags: [abbreviation]
+    context_variations:
+      contextAware_true:
+        expected_output: 'As [L 3:16] says, love came first.'
+      contextAware_false:
+        expected_output: 'As [L 3:16] says, love came first.'
+
+  - id: en-detect-adv-047
+    input: Upgrade to L3.5 and rename lu 3 to lu 4.
+    description: a lone letter with a "." number, and lowercase short tokens with a chapter only, are not references
+    tags: [negative, abbreviation, chapter-only]
+    context_variations:
+      contextAware_true:
+        expected_output: 'Upgrade to L3.5 and rename lu 3 to lu 4.'
+      contextAware_false:
+        expected_output: 'Upgrade to L3.5 and rename lu 3 to lu 4.'
+
+  - id: en-detect-adv-048
+    input: The discourse in Lk 21 parallels Mt 24.
+    description: capitalized short abbreviations with a chapter only still resolve
+    tags: [abbreviation, chapter-only]
+    context_variations:
+      contextAware_true:
+        expected_output: 'The discourse in [Lk 21] parallels [Mt 24].'
+      contextAware_false:
+        expected_output: 'The discourse in [Lk 21] parallels [Mt 24].'

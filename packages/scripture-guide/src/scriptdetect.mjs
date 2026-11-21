@@ -1,6 +1,7 @@
 
 
 
+import { passesDetectionBar } from './detectconfidence.mjs';
 import { removeOverlaps, calculateGaps, calculateNegativeSpace, mergeAdjacentMatches, buildFinalOutput, defaultTieBreaker, gapCanMerge } from './scriptlib.mjs';
 
 const findMatchingBooks = (content,books) => {
@@ -66,10 +67,6 @@ const findMatches = (content,books,lang_extra) => {
         // abbreviations are affected -- full book names are not, so a lowercase
         // "leviticus 19" keeps matching.
         const token = substring.trim();
-        // A lone Latin letter ("L3", "L. 3") is a label, a grid cell or a level, not a book:
-        // a reference in running text spells at least two letters ("Lk 3", "Lu 3"). Lookup
-        // still reads "l3" as Luke 3; one-character names in other scripts (창, 創) are kept.
-        if(/^[A-Za-z]\.?$/.test(token)) return false;
         if(!capitalizedOnlyAbbreviations.has(token.toLowerCase())) return true;
         return token !== token.toLowerCase();
     }).map(substring=>{
@@ -112,6 +109,10 @@ const findMatches = (content,books,lang_extra) => {
             // "Heb 11:1ff"), so only an uppercase letter fused to the closing digit
             // invalidates the match.
             if(/[0-9]$/.test(match) && /[A-Z]/.test(normalizedContent[posOut] || "")) return null;
+            // Detection's own bar (detectconfidence.mjs): a chapter-only match needs a book
+            // token that looks like a book ("L3" and "lu 3" are labels); lookup stays lenient.
+            // `substring` is the book token as written; the rest of the match is its numbers.
+            if(!passesDetectionBar(substring, match.slice(substring.length))) return null;
             //console.log({content:content.slice(i),pattern,match,posIn,posOut});
             return [match,posIn,posOut];
         }
