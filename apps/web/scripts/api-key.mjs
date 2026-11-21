@@ -1,11 +1,11 @@
 #!/usr/bin/env node
 // API keys for scripture.guide. Uses the app's MySQL settings (MYSQL_* env, src/config).
 //   node scripts/api-key.mjs schema                 print the CREATE TABLE to run in Adminer
-//   node scripts/api-key.mjs issue "<label>" [tier] print a new key once (default tier: key)
+//   node scripts/api-key.mjs issue "<label>" [tier] print a new key once (tier: key, the default, or internal)
 //   node scripts/api-key.mjs list
 //   node scripts/api-key.mjs revoke <prefix>
 import { keyPrefix } from '../src/app/access/keys.js';
-import { TIERS } from '../src/app/access/policy.js';
+import { KEY_TIERS } from '../src/app/access/policy.js';
 
 const [cmd, ...args] = process.argv.slice(2);
 if (cmd === 'schema') {
@@ -19,7 +19,7 @@ try {
   if (cmd === 'issue') {
     const [label, tier = 'key'] = args;
     if (!label) throw new Error('issue needs a label');
-    if (!TIERS[tier]) throw new Error(`unknown tier ${tier}; one of ${Object.keys(TIERS).join(', ')}`);
+    if (!KEY_TIERS.includes(tier)) throw new Error(`a key's tier is one of ${KEY_TIERS.join(', ')}, not ${tier}`);
     const key = await repo.issue({ label, tier });
     console.log(key);
     console.error(`Issued ${keyPrefix(key)} (${tier}) for ${label}. This is the only time the key is shown.`);

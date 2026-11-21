@@ -1,6 +1,7 @@
 import { describe, test, expect, vi } from 'vitest';
 import { createAccess } from '../../../src/app/access/access.js';
-import { TIERS } from '../../../src/app/access/policy.js';
+import { TIERS, KEY_TIERS, MODES } from '../../../src/app/access/policy.js';
+import config from '../../../src/config/index.js';
 import { generateKey, keyPrefix } from '../../../src/app/access/keys.js';
 
 const req = (headers = {}, ip = '203.0.113.9') => ({ ip, headers, method: 'GET', originalUrl: '/v1/john3.16' });
@@ -31,6 +32,13 @@ describe('createAccess: identity', () => {
     keys.findByHash.mockResolvedValueOnce(null);
     expect((await access.check(req({ authorization: `Bearer ${unknown}` }), { scope: 'api' })).tier).toBe('anonymous');
     expect(log).toHaveBeenCalledWith(expect.objectContaining({ msg: 'unknown_key', prefix: keyPrefix(unknown) }));
+  });
+  test('a key row with a tier keys cannot have is unknown, logged with its tier', async () => {
+    const k = generateKey();
+    const { access, keys, log } = make();
+    keys.findByHash.mockResolvedValueOnce({ prefix: keyPrefix(k), tier: 'html' });
+    expect((await access.check(req({ authorization: `Bearer ${k}` }), { scope: 'api' })).tier).toBe('anonymous');
+    expect(log).toHaveBeenCalledWith(expect.objectContaining({ msg: 'unknown_key', prefix: keyPrefix(k), tier: 'html' }));
   });
   test('key lookups are cached for a while', async () => {
     const k = generateKey();
@@ -94,5 +102,11 @@ describe('TIERS defaults', () => {
     expect(TIERS.key.limit).toBe(600);
     expect(TIERS.internal.limit).toBe(Infinity);
     expect(TIERS.html.limit).toBe(120);
+  });
+  test('keys can be issued only for key and internal', () => {
+    expect(KEY_TIERS).toEqual(['key', 'internal']);
+  });
+  test('config.accessMode is one of MODES', () => {
+    expect(MODES).toContain(config.accessMode);
   });
 });

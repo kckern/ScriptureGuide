@@ -10,3 +10,6 @@ export const TIERS = Object.freeze({
   html: { limit: 120, windowMs: MINUTE },
 });
 export const MODES = Object.freeze(['off', 'observe', 'enforce']);
+// The tiers an API key can have (scripts/api-key.mjs issues only these; a stored key with any
+// other tier is treated as unknown).
+export const KEY_TIERS = Object.freeze(['key', 'internal']);

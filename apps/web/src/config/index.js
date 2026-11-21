@@ -1,4 +1,5 @@
 import 'dotenv/config';
+import { MODES } from '../app/access/policy.js';
 
 // An integer environment value, 0 included; the default when unset or not a number
 export function intEnv(value, fallback) {
@@ -10,7 +11,7 @@ export const config = {
   env: process.env.NODE_ENV || 'development',
   port: parseInt(process.env.PORT, 10) || 3000,
   // API rate limiting (src/app/access): off | observe (count and log, never refuse) | enforce
-  accessMode: ['off', 'observe', 'enforce'].includes(process.env.API_ACCESS_MODE) ? process.env.API_ACCESS_MODE : 'observe',
+  accessMode: MODES.includes(process.env.API_ACCESS_MODE) ? process.env.API_ACCESS_MODE : 'observe',
 
   db: {
     host: process.env.MYSQL_HOST || 'localhost',

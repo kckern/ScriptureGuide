@@ -5,7 +5,7 @@
 // Modes: off (nothing), observe (count and log, never refuse), enforce (refuse over the limit;
 // API only: HTML is never refused here).
 import { TokenBuckets } from './buckets.js';
-import { TIERS } from './policy.js';
+import { TIERS, KEY_TIERS } from './policy.js';
 import { parseBearer, hashKey, keyPrefix } from './keys.js';
 import { clientIp } from '../clientIp.js';
 import apiKeyRepository from '../../data/repositories/ApiKeyRepository.js';
@@ -13,7 +13,7 @@ import { writeLine } from '../log.js';
 
 const KEY_CACHE_MS = 5 * 60_000;
 
-export function createAccess({ mode = 'observe', tiers = TIERS, keys = apiKeyRepository, log = rec => writeLine(JSON.stringify(rec)), now = Date.now, buckets = new TokenBuckets() } = {}) {
+export function createAccess({ mode = 'observe', tiers = TIERS, keyTiers = KEY_TIERS, keys = apiKeyRepository, log = rec => writeLine(JSON.stringify(rec)), now = Date.now, buckets = new TokenBuckets() } = {}) {
   const keyCache = new Map(); // hash → { row, at }
 
   async function lookup(key) {
@@ -37,8 +37,8 @@ export function createAccess({ mode = 'observe', tiers = TIERS, keys = apiKeyRep
       return ipCaller;
     }
     if (row === undefined) return { caller: `key:${prefix}`, tier: 'key' }; // no table yet
-    if (row === null || !tiers[row.tier]) {
-      log({ time: new Date(now()).toISOString(), msg: 'unknown_key', prefix });
+    if (row === null || !keyTiers.includes(row.tier) || !tiers[row.tier]) {
+      log({ time: new Date(now()).toISOString(), msg: 'unknown_key', prefix, ...(row ? { tier: row.tier } : {}) });
       return ipCaller;
     }
     return { caller: `key:${prefix}`, tier: row.tier };
