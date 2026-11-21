@@ -187,8 +187,17 @@ describe('buildPassage', () => {
 
   test('a long verse id list or too many pieces is refused before anything is looked up', async () => {
     const never = { resolve: async () => { throw new Error('resolved'); } };
-    for (const reference of ['1-50000;50001-93000', '1-5001', Array(101).fill('john3.16').join(';'), Array(101).fill('1').join(',')]) {
+    for (const reference of ['1-50000;50001-93000', '1-5001', '1-2500,2501-5001', Array(101).fill('john3.16').join(';')]) {
       await expect(build({ reference, versions: ['NRSV'] }, { refs: never })).rejects.toMatchObject({ code: 'reference_too_large' });
+    }
+  });
+
+  test('only ";" separates pieces: a long "," verse list is looked up, as on the site', async () => {
+    const looked = [];
+    const refs = { resolve: async q => { looked.push(q); return new Reference({ query: q, normalized: 'John 3:16', verseIds: [26137] }); } };
+    for (const reference of [`john3.${Array.from({ length: 101 }, (_, i) => i + 1).join(',')}`, Array(101).fill('1').join(',')]) {
+      await build({ reference, versions: ['NRSV'] }, { refs });
+      expect(looked.at(-1)).toBe(reference);
     }
   });
 

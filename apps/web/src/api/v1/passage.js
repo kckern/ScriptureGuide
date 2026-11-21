@@ -33,14 +33,15 @@ export function versionInfo(id, versions) {
 const tooManyPieces = n => new ApiError('reference_too_large', `The reference has ${n} pieces. Ask for ${REQUEST_LIMITS.pieces} or fewer.`);
 const tooManyVerses = n => new ApiError('reference_too_large', `The reference has ${n} verses. Ask for ${REQUEST_LIMITS.verses} or fewer.`);
 
-// The limits checked on the text, before it is looked up: ";" and "," separated segments,
-// and for a verse id list ("1-500;900") the number of ids, counted without building them.
+// The limits checked on the text, before it is looked up: ";" separated pieces (the site
+// counts only those; "," lists verses inside a piece), and for a verse id list
+// ("1-500;900,902") the number of ids, counted without building them.
 function checkQuerySize(query) {
-  const segments = String(query).split(/[;,]/).filter(s => s.trim());
-  if (segments.length > REQUEST_LIMITS.pieces) throw tooManyPieces(segments.length);
+  const pieceCount = String(query).split(';').filter(s => s.trim()).length;
+  if (pieceCount > REQUEST_LIMITS.pieces) throw tooManyPieces(pieceCount);
   if (!/^[\d\s;,-]+$/.test(query)) return;
   let total = 0;
-  for (const segment of segments) {
+  for (const segment of String(query).split(/[;,]/).filter(s => s.trim())) {
     const [a, b] = segment.replace(/\s+/g, '').split('-').filter(Boolean).map(Number);
     total += b > a ? b - a + 1 : 1;
   }
