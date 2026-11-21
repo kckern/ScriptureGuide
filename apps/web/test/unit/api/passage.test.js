@@ -232,6 +232,21 @@ describe('passageSlug', () => {
     expect(passageSlug('Genesis 1:1-2:3', 'Gen.')).toBe('gen.1-2.3');
     expect(passageSlug('Genesis 1:5-2:3', 'Gen.')).toBe('gen.1.5-2.3');
   });
+  test('a range across books: each end in its own book', () => {
+    expect(passageSlug('Malachi 4:5 - Matthew 1:2', 'Mal.', 'Matt.')).toBe('mal.4.5-matt.1.2');
+    expect(passageSlug('Genesis 1 - Exodus 40', 'Gen.', 'Ex.')).toBe('gen.1-ex.40');
+    expect(passageSlug('1 Nephi 22 - 2 Nephi 1', '1 Ne.', '2 Ne.')).toBe('1.ne.22-2.ne.1');
+  });
+  test('a range across books in the reference entry and the web link', async () => {
+    const rows = { 23144: { verse_id: 23144, book_id: 39, chapter: 4, verse: 5, book_title: 'Malachi', book_title_short: 'Mal.' },
+      23146: { verse_id: 23146, book_id: 40, chapter: 1, verse: 1, book_title: 'Matthew', book_title_short: 'Matt.' },
+      23147: { verse_id: 23147, book_id: 40, chapter: 1, verse: 2, book_title: 'Matthew', book_title_short: 'Matt.' } };
+    const r = fakeRepo({ indexRows: async ids => ids.map(id => rows[id]).filter(Boolean), verses: async ids => ids.map(id => ({ verse_id: id, text: 'x' })) });
+    const one = { resolve: async q => new Reference({ query: q, normalized: 'Malachi 4:5 - Matthew 1:2', verseIds: [23144, 23146, 23147] }) };
+    const data = await build({ reference: 'mal4.5-matt1.2', versions: ['KJV'] }, { repo: r, refs: one });
+    expect(data.reference[0].slug).toBe('mal.4.5-matt.1.2');
+    expect(data.links.web).toBe('https://scripture.guide/kjv/mal.4.5-matt.1.2');
+  });
   test('without a short title, the label as a slug', () => {
     expect(passageSlug('Lectures on Faith 1:1', null)).toBe('lectures.on.faith.1.1');
   });

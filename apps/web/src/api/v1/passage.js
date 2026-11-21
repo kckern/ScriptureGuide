@@ -84,7 +84,11 @@ async function pieces(query, { refs, repo }) {
 // The site's URL form for one piece: the book's short title, then chapter and verses
 // ("Solomon's Song 2:1" → "song.2.1", "Genesis 1:1-2:3" → "gen.1-2.3", as
 // ScriptureLookupService writes them). Without a short title, the whole label as a slug.
-export function passageSlug(label, shortTitle) {
+// A range across books ("Malachi 4:5 - Matthew 1:2") slugs each end with its own book's
+// short title (endShortTitle for the second): "mal.4.5-matt.1.2".
+export function passageSlug(label, shortTitle, endShortTitle = shortTitle) {
+  const ends = String(label).split(/\s+[-–]\s+/);
+  if (ends.length === 2) return `${passageSlug(ends[0], shortTitle)}-${passageSlug(ends[1], endShortTitle)}`;
   const tail = String(label).match(/\s(\d+(?::\d+)?(?:[-–]\d+(?::\d+)?)?)$/)?.[1];
   if (!shortTitle || !tail) return slugifyRef(label);
   const fromVerseOne = tail.match(/^(\d+):1[-–](\d+):(\d+)$/);
@@ -98,7 +102,7 @@ function referenceEntry(label, rows) {
   return {
     label,
     book: first.book_title,
-    slug: passageSlug(label, first.book_title_short),
+    slug: passageSlug(label, first.book_title_short, last.book_title_short),
     start: { chapter: first.chapter, verse: first.verse },
     end: { chapter: last.chapter, verse: last.verse },
   };
@@ -127,7 +131,7 @@ async function parallelsFor(ids, repo) {
   }
   return groups.map(rows => {
     const reference = formatReference(rows[0].book_title, rows, false);
-    return { reference, slug: passageSlug(reference, rows[0].book_title_short) };
+    return { reference, slug: passageSlug(reference, rows[0].book_title_short, rows.at(-1).book_title_short) };
   });
 }
 
@@ -207,7 +211,7 @@ export async function buildPassage({ reference, versions: requested, options = [
   }
 
   const parallels = await parallelsFor(allIds, repo);
-  const slug = parts.map(p => passageSlug(p.label, rows.get(p.ids[0])?.book_title_short)).join(';');
+  const slug = parts.map(p => passageSlug(p.label, rows.get(p.ids[0])?.book_title_short, rows.get(p.ids.at(-1))?.book_title_short)).join(';');
   const prefix = requested.length ? `${requested.map(t => t.toLowerCase()).join('.')}/` : '';
   return {
     api: 'v1',
