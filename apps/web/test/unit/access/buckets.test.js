@@ -40,4 +40,12 @@ describe('TokenBuckets', () => {
     b.take('a', p, 0);
     expect(b.take('a', p, 0).resetMs).toBe(2_000);
   });
+  test('a clock step back neither removes nor adds tokens', () => {
+    const b = new TokenBuckets();
+    const p = { limit: 3, windowMs: 60_000 };
+    b.take('a', p, 60_000); // 2 left
+    expect(b.take('a', p, 0)).toMatchObject({ ok: true, remaining: 1 });
+    // back at 60 s: no time has passed since the newest reading, so no refill
+    expect(b.take('a', p, 60_000)).toMatchObject({ ok: true, remaining: 0 });
+  });
 });

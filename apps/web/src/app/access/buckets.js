@@ -16,8 +16,9 @@ export class TokenBuckets {
     let b = this.map.get(id);
     if (b) {
       this.map.delete(id);
-      b.tokens = Math.min(limit, b.tokens + (now - b.at) * rate);
-      b.at = now;
+      // A clock step back neither removes tokens nor, once the clock catches up, adds them twice
+      b.tokens = Math.min(limit, b.tokens + Math.max(0, now - b.at) * rate);
+      b.at = Math.max(b.at, now);
     } else {
       b = { tokens: limit, at: now };
     }
