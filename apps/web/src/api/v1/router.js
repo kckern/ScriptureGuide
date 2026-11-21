@@ -9,6 +9,7 @@ import { buildPassage } from './passage.js';
 import { buildParallel } from './parallel.js';
 import { buildSearch } from './search.js';
 import { pickRandomVerse } from './random.js';
+import { buildVersions } from './versions.js';
 import { renderSimple, renderError, CONTENT_TYPES } from './render.js';
 
 // Subdomain → body kind (render.js)
@@ -46,8 +47,7 @@ const ONLY_ON_API = Object.freeze({
   versions: ['versions_not_supported', 'The version list is only on api.scripture.guide.'],
 });
 
-// Task 12b adds buildVersions
-const DEFAULTS = { repo: apiRepository, buildPassage, buildParallel, buildSearch, pickRandomVerse };
+const DEFAULTS = { repo: apiRepository, buildPassage, buildParallel, buildSearch, pickRandomVerse, buildVersions };
 
 export function apiRouter(deps = DEFAULTS) {
   const router = Router();
