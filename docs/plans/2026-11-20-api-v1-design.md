@@ -208,12 +208,13 @@ Terms are the last segment. Spaces can be written as `%20`, `+` or `.`, as the s
     { "id": 26137, "reference": "John 3:16", "slug": "john.3.16", "version": "NRSV",
       "text": "“For God so loved the world…", "highlights": [[16, 31]] }
   ],
-  "links": { "next": null, "web": "https://scripture.guide/nrsv/search/loved%20the%20world" }
+  "links": { "next": null, "web": "https://scripture.guide/nrsv/loved.the.world" }
 }
 ```
 
-- `highlights` holds `[start, end]` character offsets into `text`, not `<span class="searchterm">` markup, so clients can mark matches however they want.
-- `truncated` is `true` when the search stopped early (the MySQL fallback stops after `REQUERY_OVER` = 300 hits on a broad query). `total` is then a lower bound.
+- `highlights` holds `[start, end]` offsets into `text`, not `<span class="searchterm">` markup, so clients can mark matches however they want. Offsets count UTF-16 code units (JavaScript string indexes), so a character outside the Basic Multilingual Plane counts as two.
+- The highlighter is the site's, which matches on ASCII word boundaries and letters. Text in a script without ASCII letters (Korean, Chinese, Arabic) gets `highlights: []` even when it matched.
+- `truncated` is `true` when the search stopped early (the MySQL fallback ran out of time or rows) or a result limit left verses out (5,000 hits per requery range, 5,000 verses). `total` is then a lower bound.
 - No matches is a 200 with `results: []`, not an error. An empty query is a 400 `empty_query`.
 - `ids` drops `text` and `highlights`.
 - Search is `api.` only for now. `txt.scripture.guide/search/...` could later list matching references, one per line.

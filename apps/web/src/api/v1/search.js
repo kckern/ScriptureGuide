@@ -1,4 +1,7 @@
 // The v1 search object: canon order, PER_PAGE results a page, match offsets instead of markup.
+// highlights are [start, end] offsets into text in UTF-16 code units (JavaScript string indexes).
+// SearchService's highlighter matches ASCII word boundaries and letters only, so text in a script
+// without ASCII letters (Korean, Chinese) gets highlights: [] even when the verse matched.
 import searchService, { volumeRange } from '../../services/SearchService.js';
 import { slugifyRef } from '../../domain/rules/legacyReference.js';
 import { highlightOffsets } from './text.js';
