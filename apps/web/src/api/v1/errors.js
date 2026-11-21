@@ -14,6 +14,7 @@ export const STATUS = Object.freeze({
   unknown_volume: 404,
   not_in_version: 404,
   unsupported_api_version: 404,
+  rate_limited: 429,
   internal_error: 500,
   service_unavailable: 503,
 });

@@ -183,3 +183,96 @@ describe('apiRouter', () => {
     expect(md.text).toBe('Usage: `https://md.scripture.guide/<version>/<reference>`, e.g. <https://md.scripture.guide/nrsv/john3.16>\n');
   });
 });
+
+describe('apiRouter access check', () => {
+  const HEADERS = { 'RateLimit-Policy': '"anonymous";q=60;w=60', RateLimit: '"anonymous";r=59;t=60' };
+  const decision = over => ({ caller: 'ip:203.0.113.9', tier: 'anonymous', allowed: !over, over, refused: over, retryAfter: 7, headers: HEADERS });
+  function appWith(access, extra = {}) {
+    const errors = [];
+    const a = express()
+      .use((req, res, next) => { req.subdomain = req.headers.host.split('.')[0]; next(); })
+      .use(apiRouter({ ...deps, access, logError: (err, fields) => errors.push({ err, fields }), ...extra }))
+      .use((req, res) => res.status(418).json({ access: req.access ?? null }));
+    return { app: a, errors };
+  }
+  const fake = over => {
+    const calls = [];
+    return { calls, check: async (req, opts) => { calls.push({ path: req.path, ...opts }); return decision(over); } };
+  };
+
+  test('refused: 429 in each host format, Retry-After, no-store, RateLimit headers', async () => {
+    const { app: a } = appWith(fake(true));
+    const api = await request(a).get('/v1/john3.16').set('Host', 'api.scripture.guide');
+    expect(api.status).toBe(429);
+    expect(api.body).toEqual({ api: 'v1', error: { code: 'rate_limited', message: 'Too many requests. Slow down, or use an API key.' } });
+    expect(api.headers['retry-after']).toBe('7');
+    expect(api.headers['cache-control']).toBe('no-store');
+    expect(api.headers['x-api-version']).toBe('1');
+    expect(api.headers['ratelimit-policy']).toBe(HEADERS['RateLimit-Policy']);
+    expect(api.headers.ratelimit).toBe(HEADERS.RateLimit);
+    const json = await request(a).get('/nrsv/john3.16').set('Host', 'json.scripture.guide');
+    expect(json.status).toBe(429);
+    expect(json.body).toEqual({ error: { code: 'rate_limited', message: 'Too many requests. Slow down, or use an API key.' } });
+    const txt = await request(a).get('/nrsv/john3.16').set('Host', 'txt.scripture.guide');
+    expect(txt.status).toBe(429);
+    expect(txt.text).toBe('Too many requests. Slow down, or use an API key.\n');
+    expect(txt.headers['retry-after']).toBe('7');
+    expect(txt.headers['cache-control']).toBe('no-store');
+  });
+
+  test('the index and usage hints are counted too', async () => {
+    const access = fake(true);
+    const { app: a } = appWith(access);
+    expect((await request(a).get('/v1').set('Host', 'api.scripture.guide')).status).toBe(429);
+    expect((await request(a).get('/').set('Host', 'txt.scripture.guide')).status).toBe(429);
+    expect(access.calls).toHaveLength(2);
+  });
+
+  test('allowed: the answer carries the RateLimit headers, success and error alike', async () => {
+    const access = fake(false);
+    const { app: a } = appWith(access);
+    const ok = await request(a).get('/v1/nrsv/john3.16').set('Host', 'api.scripture.guide');
+    expect(ok.status).toBe(200);
+    expect(ok.headers['ratelimit-policy']).toBe(HEADERS['RateLimit-Policy']);
+    expect(ok.headers.ratelimit).toBe(HEADERS.RateLimit);
+    expect(ok.headers['retry-after']).toBeUndefined();
+    const err = await request(a).get('/v1/jon3.16').set('Host', 'api.scripture.guide');
+    expect(err.status).toBe(404);
+    expect(err.headers.ratelimit).toBe(HEADERS.RateLimit);
+    expect(access.calls.every(c => c.scope === 'api')).toBe(true);
+  });
+
+  test('no check for service paths or hosts that fall through', async () => {
+    const access = fake(true);
+    const { app: a } = appWith(access);
+    expect((await request(a).get('/health').set('Host', 'api.scripture.guide')).status).toBe(418);
+    expect((await request(a).get('/robots.txt').set('Host', 'api.scripture.guide')).status).toBe(418);
+    expect((await request(a).get('/john3.16').set('Host', 'scripture.guide')).status).toBe(418);
+    expect(access.calls).toHaveLength(0);
+  });
+
+  test('a check that throws is logged and the request goes on', async () => {
+    const { app: a, errors } = appWith({ check: async () => { throw new Error('buckets broke'); } });
+    const res = await request(a).get('/v1/nrsv/john3.16').set('Host', 'api.scripture.guide');
+    expect(res.status).toBe(200);
+    expect(res.headers.ratelimit).toBeUndefined();
+    expect(errors.at(-1)).toMatchObject({ err: { message: 'buckets broke' }, fields: { where: 'api access', path: '/v1/nrsv/john3.16' } });
+  });
+
+  test('an uncounted request (no visitor address) has no RateLimit headers', async () => {
+    const access = { check: async () => ({ caller: null, tier: null, allowed: true, over: false, refused: false, retryAfter: 0, headers: {} }) };
+    const { app: a } = appWith(access);
+    const res = await request(a).get('/v1/nrsv/john3.16').set('Host', 'api.scripture.guide');
+    expect(res.status).toBe(200);
+    expect(res.headers['ratelimit-policy']).toBeUndefined();
+  });
+
+  test('deps are merged over the defaults: no access dep still checks', async () => {
+    const a = express()
+      .use((req, res, next) => { req.subdomain = req.headers.host.split('.')[0]; next(); })
+      .use(apiRouter({ ...deps }));
+    const res = await request(a).get('/v1/nrsv/john3.16').set('Host', 'api.scripture.guide');
+    expect(res.status).toBe(200);
+    expect(res.headers['ratelimit-policy']).toBe('"anonymous";q=60;w=60');
+  });
+});

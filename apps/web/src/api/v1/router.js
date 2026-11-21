@@ -12,6 +12,8 @@ import { pickRandomVerse } from './random.js';
 import { buildVersions } from './versions.js';
 import { renderSimple, renderError, renderUsage, CONTENT_TYPES } from './render.js';
 import { logError } from '../../app/log.js';
+import { createAccess } from '../../app/access/access.js';
+import config from '../../config/index.js';
 
 // Subdomain → body kind (render.js)
 const HOSTS = Object.freeze({
@@ -62,13 +64,33 @@ const ONLY_ON_API = Object.freeze({
 });
 
 const DEFAULTS = { repo: apiRepository, buildPassage, buildParallel, buildSearch, pickRandomVerse, buildVersions };
+const RATE_LIMITED = ['rate_limited', 'Too many requests. Slow down, or use an API key.'];
 
-export function apiRouter(deps = DEFAULTS) {
+// deps are merged over DEFAULTS. access (src/app/access) defaults to one of its own; createApp
+// passes the instance it shares with the website pages.
+export function apiRouter(overrides = {}) {
+  const deps = { ...DEFAULTS, ...overrides };
+  const access = deps.access ?? createAccess({ mode: config.accessMode });
+  const log = deps.logError ?? logError;
   const router = Router();
   router.get('*', async (req, res, next) => {
     const target = hostKind(req.subdomain, req.path);
     if (!target || PASS.has(req.path)) return next();
     const { kind } = target;
+    // Every request served here is counted, the index and usage hints too. A failing check is
+    // logged and the request goes on as allowed.
+    let decision = null;
+    try { decision = await access.check(req, { scope: 'api' }); } catch (err) {
+      log(err, { where: 'api access', method: req.method, path: req.originalUrl });
+    }
+    if (decision) {
+      req.access = decision;
+      res.set(decision.headers);
+      if (!decision.allowed) {
+        res.status(429).set('Retry-After', String(decision.retryAfter));
+        return send(req, res, kind, renderError(kind, new ApiError(...RATE_LIMITED)), CACHE_NONE);
+      }
+    }
     if (kind === 'api' && API_ROOT.test(target.path)) return send(req, res, kind, API_INDEX, CACHE_OK);
     if (kind !== 'api' && target.path === '/') {
       const host = HOSTS[String(req.subdomain).toLowerCase()] ? String(req.subdomain).toLowerCase() : kind;
@@ -100,7 +122,7 @@ export function apiRouter(deps = DEFAULTS) {
       // Anything else is logged and still answered in the v1 shape: a database failure as a 503
       // to retry, anything else (a bug) as a 500
       if (!(err instanceof ApiError)) {
-        (deps.logError ?? logError)(err, { where: 'api', method: req.method, path: req.originalUrl });
+        log(err, { where: 'api', method: req.method, path: req.originalUrl });
         err = isDatabaseError(err)
           ? new ApiError('service_unavailable', 'The scripture database is not answering. Try again shortly.')
           : new ApiError('internal_error', 'Something went wrong on our side. It has been logged.');

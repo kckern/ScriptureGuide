@@ -183,3 +183,18 @@ test('the error handler names an error without a message by its code', async () 
   await request(app).get('/db').set('Accept', 'application/json');
   expect(JSON.parse(lines[0])).toMatchObject({ msg: 'error', path: '/db', status: 500, error: 'ECONNREFUSED', code: 'ECONNREFUSED', errors: ['ECONNREFUSED'] });
 });
+
+test('caller, tier, over and refused come from req.access, null without it', async () => {
+  const lines = [];
+  const app = express();
+  app.use(requestLog({ write: l => lines.push(l) }));
+  app.get('/checked', (req, res) => {
+    req.access = { caller: 'ip:203.0.113.9', tier: 'anonymous', allowed: true, over: true, refused: false, retryAfter: 1, headers: {} };
+    res.send('ok');
+  });
+  app.get('/plain', (req, res) => res.send('ok'));
+  await request(app).get('/checked');
+  await request(app).get('/plain');
+  expect(JSON.parse(lines[0])).toMatchObject({ caller: 'ip:203.0.113.9', tier: 'anonymous', over: true, refused: false });
+  expect(JSON.parse(lines[1])).toMatchObject({ caller: null, tier: null, over: null, refused: null });
+});

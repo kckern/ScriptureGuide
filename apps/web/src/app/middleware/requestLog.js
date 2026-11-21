@@ -1,7 +1,8 @@
 // One JSON line per request on stdout, for the container log shipper.
 // Fields: time, msg:'request', method, host, path, status, bytes, duration_ms, format, ua, referer,
-// ip, client_ip, cf_ray, xff; aborted:true when the client went away before the response finished
-// (status is then null unless the headers had already gone out).
+// ip, client_ip, cf_ray, xff, and from the access check (req.access, src/app/access) caller, tier,
+// over and refused, null when the request wasn't checked; aborted:true when the client went away
+// before the response finished (status is then null unless the headers had already gone out).
 // bytes counts the body bytes written to the socket (nginx's $body_bytes_sent). Register this before
 // compression() so the count is the compressed size.
 // ip is Express's req.ip (the last untrusted hop); client_ip is the visitor (clientIp.js), which
@@ -52,7 +53,11 @@ export function requestLog({ write = writeLine } = {}) {
         ip: req.ip ?? null,
         client_ip: clientIp(req),
         cf_ray: req.headers['cf-ray'] ?? null,
-        xff: req.headers['x-forwarded-for'] ?? null
+        xff: req.headers['x-forwarded-for'] ?? null,
+        caller: req.access?.caller ?? null,
+        tier: req.access?.tier ?? null,
+        over: req.access?.over ?? null,
+        refused: req.access?.refused ?? null
       };
       if (aborted) rec.aborted = true;
       try { write(JSON.stringify(rec)); } catch { /* logging never breaks a response */ }

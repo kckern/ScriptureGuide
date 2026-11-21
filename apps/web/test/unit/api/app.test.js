@@ -99,3 +99,14 @@ describe('v1 through createApp', () => {
     }
   });
 });
+
+describe('access through createApp', () => {
+  test('an api request carries RateLimit headers; observe mode never refuses a burst', async () => {
+    let last;
+    for (let i = 0; i < 70; i++) last = await get('api.scripture.guide', '/v1/versions');
+    expect(last.status).toBe(200);
+    expect(last.headers['ratelimit-policy']).toBe('"anonymous";q=60;w=60');
+    expect(last.headers.ratelimit).toMatch(/^"anonymous";r=0;t=\d+$/);
+    expect(lines.some(l => l.msg === 'rate_limit' && l.scope === 'api' && l.refused === false)).toBe(true);
+  });
+});
