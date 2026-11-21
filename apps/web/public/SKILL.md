@@ -16,7 +16,7 @@ The API is free and needs no account. Every URL below works in a browser.
 
 ```sh
 curl https://txt.scripture.guide/john3.16                  # verse text only
-curl https://md.scripture.guide/nrsv/john3.16-18           # Markdown quote with citation
+curl https://md.scripture.guide/kjv/ps23                   # Markdown quote with citation
 curl https://raw.scripture.guide/nrsv/john3.16             # stored rows, markers kept (JSON)
 curl https://api.scripture.guide/v1/nrsv.kjv/john3.16      # full JSON, two versions side by side
 curl https://api.scripture.guide/v1/search/nrsv/loved+the+world
@@ -26,7 +26,7 @@ curl https://api.scripture.guide/v1/versions               # every version id, n
 
 A path is `/{version}/{reference}`, the same as on the website. Leave out the version to get the site's default. References are written the way the site accepts them: `john3.16`, `john3.16-18`, `John 3:16`, `1ne3.7`, `dc4`, and several pieces joined with `;` (`john3.16;rom8.28`). Encode spaces as `%20`.
 
-Hosts: `api.` is the full JSON API (everything below). `json.`, `yml.` (or `yaml.`), `md.` (or `markdown.`) and `txt.` (or `plain.`) return one passage in a small fixed format, and take no options. `raw.` takes the same paths and returns the stored rows as a JSON array, one per version per verse: `{ "id", "version", "book", "chapter", "verse", "format", "p", "s", "text" }`, where `text` keeps the database's markup (`¶`, `§`, `/`, `▼` and others) and `format` is `prose`, `poetry`, `indent` or `sense`. Use `api.` for clean text; search, parallel and the version list are on `api.` only. `https://scripture.guide/api/...` is the same as `https://api.scripture.guide/...`. `https://api.scripture.guide/` returns a short index with links to this file, the version list and an example.
+Hosts: `api.` is the full JSON API (everything below). `json.`, `yml.` (or `yaml.`), `md.` (or `markdown.`) and `txt.` (or `plain.`) return one passage in a small fixed format, and take no options. Their text keeps the passage's layout: a blank line between paragraphs, a line break between poetry lines, and two spaces for each indent (`md.` writes Markdown hard breaks and `&emsp;` indents). The `verses` list of `json.` and `yml.` is plain text per verse. `raw.` takes the same paths and returns the stored rows as a JSON array, one per version per verse: `{ "id", "version", "book", "chapter", "verse", "format", "p", "s", "text" }`, where `text` keeps the database's markup (`¶`, `§`, `/`, `▼` and others) and `format` is `prose`, `poetry`, `indent` or `sense`. Use `api.` for clean text; search, parallel and the version list are on `api.` only. `https://scripture.guide/api/...` is the same as `https://api.scripture.guide/...`. `https://api.scripture.guide/` returns a short index with links to this file, the version list and an example.
 
 ## Authentication
 
@@ -59,10 +59,10 @@ You can use the API with the curl lines above every time. Building a small CLI o
 ## CLI spec
 
 ```
-scripture get <ref> [-V ID[,ID...]] [-f text|md|json] [--ids] [--html]
+scripture get <ref> [-V ID[,ID...]] [-f text|md|json] [-n] [--ids] [--html] [--verses]
 scripture parallel <ID/ref> <ID/ref> [-f text|json]
 scripture search <terms...> [-V ID] [--volume ot|nt|bom|dc|pgp] [-p N] [-f text|json] [--ids]
-scripture random [-V ID[,ID...]] [--volume ot|nt|bom|dc|pgp] [-f text|md|json]
+scripture random [-V ID[,ID...]] [--volume ot|nt|bom|dc|pgp] [-f text|md|json] [-n]
 scripture versions [-l LANG] [-f text|json]
 scripture --version
 ```
@@ -79,8 +79,9 @@ Rules:
 
 - `-V, --versions` takes version ids, case-insensitive, comma-separated (`nrsv,kjv`). Without it the site's default version is used. `--version` (singular) prints the CLI's own version.
 - `<ref>` and `<terms...>` may be several words (`scripture get John 3:16`). The CLI passes the reference through as written and lets the API parse it.
-- `-f text` is the default for every command. It prints plain lines meant for reading. `-f json` prints the API response unchanged. `-f md` prints a Markdown blockquote with the citation.
-- `--ids` returns references and verse ids only, with no text (for `search`: no text or highlights). `--html` adds a semantic HTML fragment to each passage (JSON only).
+- `-f text` is the default for every command. It prints plain lines meant for reading: a passage as its paragraphs and poetry lines. `-f json` prints the API response unchanged. `-f md` prints a Markdown blockquote with the citation.
+- `-n, --numbers` puts each verse's number where the verse starts (`text` and `md`).
+- `--ids` returns references and verse ids only, with no text (for `search`: no text or highlights). `--html` adds a semantic HTML fragment to each passage, and `--verses` the flat verse list (JSON only).
 - `--volume` limits `search` and `random` to the Old Testament, New Testament, Book of Mormon, Doctrine and Covenants or Pearl of Great Price.
 - `-l, --language` filters `versions` by ISO 639-1 code (`en`, `ko`, `hi`).
 - Exit codes: `0` ok, `1` the API returned an error (message and suggestion on stderr), `2` bad arguments, `3` network error.
@@ -98,6 +99,7 @@ Every CLI command is one GET to `https://api.scripture.guide/v1/...`. Options co
 | `get "John 3:16"` | `/v1/John%203:16` |
 | `get john3.16 --ids` | `/v1/ids/john3.16` |
 | `get john3.16 --html -f json` | `/v1/html/john3.16` |
+| `get john3.16 --verses -f json` | `/v1/verses/john3.16` |
 | `parallel kjv/isa2 lds/2ne12` | `/v1/kjv/isa2~lds/2ne12` |
 | `search loved the world` | `/v1/search/loved+the+world` |
 | `search loved the world -V nrsv --volume nt -p 2` | `/v1/search/nrsv/nt/page-2/loved+the+world` |
@@ -106,40 +108,59 @@ Every CLI command is one GET to `https://api.scripture.guide/v1/...`. Options co
 
 ### Passage (`get`, `random`)
 
-`/v1/nrsv.kjv/john3.16`:
+`/v1/web/ps1.1-2`:
 
 ```json
 {
   "api": "v1",
-  "query": "john3.16",
-  "versions": [
-    { "id": "NRSV", "name": "New Revised Standard Version", "language": "en", "copyright": null },
-    { "id": "KJV", "name": "King James Version", "language": "en", "copyright": null }
-  ],
+  "query": "ps1.1-2",
+  "versions": [{ "id": "WEB", "name": "World English Bible", "language": "en", "copyright": null }],
   "reference": [
-    { "label": "John 3:16", "book": "John", "slug": "john.3.16",
-      "start": { "book": "John", "chapter": 3, "verse": 16 }, "end": { "book": "John", "chapter": 3, "verse": 16 } }
+    { "label": "Psalms 1:1-2", "book": "Psalms", "slug": "ps.1.1-2",
+      "start": { "book": "Psalms", "chapter": 1, "verse": 1 }, "end": { "book": "Psalms", "chapter": 1, "verse": 2 } }
   ],
   "passages": [
-    { "headings": { "NRSV": "Nicodemus Visits Jesus", "KJV": null },
-      "verses": [
-        { "id": 26137, "book": "John", "chapter": 3, "verse": 16,
-          "texts": { "NRSV": "“For God so loved the world that he gave his only Son, …",
-                     "KJV": "For God so loved the world, that he gave his only begotten Son, …" } }
-      ] }
+    { "headings": { "WEB": null },
+      "blocks": { "WEB": [
+        { "type": "subtitle", "pieces": [
+          { "id": 13941, "verse": 1, "start": true, "runs": [{ "text": "Book", "mark": "smallcaps" }, { "text": " I" }] } ] },
+        { "type": "poetry", "style": null, "lines": [
+          { "indent": 0, "pieces": [{ "id": 13941, "verse": 1, "start": false, "runs": [{ "text": "Blessed is the man who doesn’t walk in the counsel of the wicked," }] }] },
+          { "indent": 1, "pieces": [{ "id": 13941, "verse": 1, "start": false, "runs": [{ "text": "nor stand on the path of sinners," }] }] },
+          { "indent": 1, "pieces": [{ "id": 13941, "verse": 1, "start": false, "runs": [{ "text": "nor sit in the seat of scoffers;" }] }] },
+          { "indent": 0, "pieces": [{ "id": 13942, "verse": 2, "start": true, "runs": [{ "text": "but his delight is in Yahweh’s law." }] }] },
+          { "indent": 1, "pieces": [{ "id": 13942, "verse": 2, "start": false, "runs": [{ "text": "On his law he meditates day and night." }] }] }
+        ] }
+      ] } }
   ],
-  "parallels": [{ "reference": "JST John 3:16", "slug": "jst.john.3.16" }],
-  "links": { "web": "https://scripture.guide/nrsv.kjv/john.3.16" }
+  "parallels": [{ "reference": "JST Psalms 1:1-2", "slug": "jst.ps.1.1-2" }],
+  "links": { "web": "https://scripture.guide/web/ps.1.1-2" }
 }
 ```
 
 - `query` is the reference as written in the URL.
 - `versions`, `reference` and `passages` are always arrays, even for one item.
 - `start` and `end` each name their book: a range across books (`mal4.5-matt1.2`) starts in Malachi and ends in Matthew.
-- Each verse names its `book`, so a range across books names each verse's own book.
-- `texts` and `headings` are keyed by version id. A version that lacks a verse has `null` for it.
-- A new passage starts at each heading or where the reference jumps.
-- With `ids`, verses have no `texts` and passages have no `headings`.
+- `blocks` and `headings` are keyed by version id. A new passage starts at each heading or where the reference jumps.
+- `blocks` is the passage's layout, in order. A block's `type` is:
+  - `paragraph`, with `pieces`. `style` is `null`, `flush` (no first-line indent), `linebreak` (a line break inside prose: the paragraph goes on the next line, with no gap), `nogap` or `indent` (an indented block, such as a letter or a quotation). An optional `indent` (1, 2, …) indents the paragraph's first line.
+  - `poetry` or `sense` (sense lines), with `lines`: `{ "indent", "pieces" }`. Each new `poetry` block is a new stanza.
+  - `subtitle`, with `pieces`: a superscription or division label ("A Psalm of David.").
+- A piece is the part of one verse that lies in one paragraph or line: `{ "id", "verse", "start", "runs" }`. `start` is `true` on the piece where the verse begins, which is where to put the verse number. A verse can run across several paragraphs or lines, and a paragraph or line holds several verses.
+- `runs` is the text: `{ "text" }`, or `{ "text", "mark" }` where `mark` is `smallcaps`, `small`, `em`, `strong`, `sup`, `strike` or `sans`. Joining the runs of a paragraph or line gives its text with normal spacing: a piece that continues the text before it starts with a space. `strike` is struck text in a manuscript (`printer`); leave it out for a reading text.
+- A version that lacks a verse has no piece for it, and `[]` for blocks when it has none of the passage.
+- With `verses` (`/v1/verses/web/ps1.1-2`), each passage also has the flat verse list, one plain text per version per verse:
+
+  ```json
+  "verses": [
+    { "id": 13941, "book": "Psalms", "chapter": 1, "verse": 1,
+      "texts": { "WEB": "Book I Blessed is the man who doesn’t walk in the counsel of the wicked, nor stand on the path of sinners, nor sit in the seat of scoffers;" } }
+  ]
+  ```
+
+  Each verse names its `book`, so a range across books names each verse's own book. A version that lacks a verse has `null` for it.
+- With `ids`, passages have only `verses`, with `id`, `book`, `chapter` and `verse` (no `texts`, `blocks` or `headings`).
+- With `html`, each passage has `html`, a fragment per version: `<p class="paragraph …">`, `<div class="poetry"><span class="line indent-1">`, `<p class="subtitle">`, the mark tags, and `<span class="verse-num" data-verse="2" data-verse-id="13942">2</span>` where a verse starts.
 
 ### Parallel
 
@@ -217,7 +238,7 @@ Errors have a 4xx status (or 500/503, below) and this body:
 | `service_unavailable` | 503 | The database is not answering. Wait for `Retry-After` (30 seconds) and retry once |
 | `internal_error` | 500 | A server bug. Don't retry in a loop; report it if it repeats |
 
-Apart from `suggestion`, every field is always present with the same type. The options change that on purpose: `ids` removes `texts` and `headings`, and `html` adds `html`.
+Apart from `suggestion`, every field is always present with the same type. The options change that on purpose: `ids` leaves only the verse ids, `verses` adds `verses`, and `html` adds `html`.
 
 ### Limits
 
@@ -233,7 +254,7 @@ Apart from `suggestion`, every field is always present with the same type. The o
 
 ## Core samples
 
-Each sample does the same three things: one GET with the key header when the key is set, error handling for the error body, and one lookup. Use one to start your own CLI in a language other than Python.
+Each sample does the same three things: one GET with the key header when the key is set, error handling for the error body, and one lookup. They ask for the flat verse list (`verses`), the shortest thing to print; the reference CLI prints from `blocks`. Use one to start your own CLI in a language other than Python.
 
 ### Shell
 
@@ -251,7 +272,7 @@ scripture_get() {  # usage: scripture_get <path>, e.g. scripture_get nrsv/john3.
   printf '%s\n' "$body"
 }
 
-scripture_get nrsv/john3.16 | jq -r '.passages[].verses[] | "\(.chapter):\(.verse) \(.texts | to_entries[0].value)"'
+scripture_get verses/nrsv/john3.16 | jq -r '.passages[].verses[] | "\(.chapter):\(.verse) \(.texts | to_entries[0].value)"'
 ```
 
 Without `jq`, use the text hosts directly: `curl -fsS https://txt.scripture.guide/nrsv/john3.16`.
@@ -273,7 +294,7 @@ def scripture(path):
         err = json.load(e)["error"]
         raise SystemExit(err["message"] + (f" Try: {err['suggestion']}" if err.get("suggestion") else ""))
 
-data = scripture("nrsv/john3.16")
+data = scripture("verses/nrsv/john3.16")  # verses: the flat verse list
 for p in data["passages"]:
     for v in p["verses"]:
         print(f'{v["chapter"]}:{v["verse"]} {v["texts"]["NRSV"]}')
@@ -296,7 +317,7 @@ async function scripture(path) {
   return body;
 }
 
-const data = await scripture('nrsv/john3.16');
+const data = await scripture('verses/nrsv/john3.16'); // verses: the flat verse list
 for (const p of data.passages) for (const v of p.verses) console.log(`${v.chapter}:${v.verse} ${v.texts.NRSV}`);
 ```
 
@@ -327,7 +348,7 @@ fn scripture(path: &str) -> Result<Value, String> {
 }
 
 fn main() {
-    let data = scripture("nrsv/john3.16").unwrap_or_else(|e| { eprintln!("{e}"); std::process::exit(1) });
+    let data = scripture("verses/nrsv/john3.16").unwrap_or_else(|e| { eprintln!("{e}"); std::process::exit(1) });
     for p in data["passages"].as_array().unwrap() {
         for v in p["verses"].as_array().unwrap() {
             println!("{}:{} {}", v["chapter"], v["verse"], v["texts"]["NRSV"].as_str().unwrap_or(""));
@@ -346,7 +367,7 @@ Save as `scripture`, `chmod +x`, and put it on your `PATH`.
 """scripture: a small client for the scripture.guide v1 API (https://scripture.guide/SKILL.md)."""
 import argparse, json, os, sys, time, urllib.error, urllib.parse, urllib.request
 
-__version__ = "1.1.0"
+__version__ = "1.2.0"
 BASE = os.environ.get("SCRIPTURE_GUIDE_BASE", "https://api.scripture.guide").rstrip("/")
 KEY = os.environ.get("SCRIPTURE_GUIDE_API_KEY")
 VOLUMES = ["ot", "nt", "bom", "dc", "pgp"]
@@ -393,37 +414,77 @@ def label(refs):
     return "; ".join(r["label"] for r in refs)
 
 
-def render_passage(data, fmt):
-    where = label(data["reference"])
-    verses = [v for p in data["passages"] for v in p["verses"]]
-    if verses and "texts" not in verses[0]:  # --ids
-        return "\n".join(f'{where}\t{v["chapter"]}:{v["verse"]}\t{v["id"]}' for v in verses)
-    blocks = []
-    for ver in data["versions"]:
-        lines = [(v, v["texts"].get(ver["id"])) for v in verses]
-        lines = [(v, t) for v, t in lines if t is not None]
+MD_MARKS = {"em": "*", "strong": "**", "strike": "~~"}
+
+
+def run_text(run, md):
+    text, mark = run["text"], run.get("mark")
+    if mark == "strike" and not md:  # struck manuscript text is not part of the reading text
+        return ""
+    if md and mark in MD_MARKS and text.strip():
+        lead, body, trail = text[: len(text) - len(text.lstrip())], text.strip(), text[len(text.rstrip()):]
+        return f"{lead}{MD_MARKS[mark]}{body}{MD_MARKS[mark]}{trail}"
+    return text
+
+
+def piece_text(piece, numbers, md):
+    text = "".join(run_text(r, md) for r in piece["runs"])
+    if numbers and piece["start"]:
+        lead = " " if text.startswith(" ") else ""
+        text = f'{lead}{piece["verse"]} {text.lstrip()}'
+    return text
+
+
+def render_blocks(blocks, numbers, md):
+    """Paragraphs with a blank line between them, poetry lines one per line, indents."""
+    out = ""
+    for b in blocks:
+        lines = b.get("lines") or [{"indent": b.get("indent", 0), "pieces": b["pieces"]}]
+        lines = [(l["indent"], " ".join("".join(piece_text(p, numbers, md) for p in l["pieces"]).split())) for l in lines]
+        lines = [(i, t) for i, t in lines if t]
         if not lines:
             continue
-        if fmt == "md":
-            body = " ".join(t for _, t in lines)
-            block = f"> {body}\n>\n> — {where} ({ver['id']})"
+        if md:
+            text, line, gap = "  \n".join("> " + "&emsp;" * i + t for i, t in lines), "  \n", "\n>\n"
         else:
-            block = f"{where} ({ver['id']})\n" + "\n".join(f'{v["chapter"]}:{v["verse"]} {t}' for v, t in lines)
+            text, line, gap = "\n".join("  " * i + t for i, t in lines), "\n", "\n\n"
+        if out:  # a linebreak paragraph goes on the next line
+            out += line if b.get("style") == "linebreak" else gap
+        out += text
+    return out
+
+
+def render_passage(data, fmt, numbers=False):
+    where = label(data["reference"])
+    passages = data["passages"]
+    if passages and "blocks" not in passages[0]:  # --ids
+        verses = [v for p in passages for v in p["verses"]]
+        return "\n".join(f'{where}\t{v["chapter"]}:{v["verse"]}\t{v["id"]}' for v in verses)
+    out = []
+    for ver in data["versions"]:
+        blocks = [b for p in passages for b in p["blocks"].get(ver["id"], [])]
+        body = render_blocks(blocks, numbers, fmt == "md")
+        if not body:
+            continue
+        if fmt == "md":
+            block = f"{body}\n>\n> — {where} ({ver['id']})"
+        else:
+            block = f"{where} ({ver['id']})\n{body}"
         if ver.get("copyright"):
             block += f"\n{ver['copyright']}"
-        blocks.append(block)
-    return "\n\n".join(blocks)
+        out.append(block)
+    return "\n\n".join(out)
 
 
 def cmd_get(a):
-    opts = (["ids"] if a.ids else []) + (["html"] if a.html else [])
+    opts = (["ids"] if a.ids else []) + (["html"] if a.html else []) + (["verses"] if a.verses else [])
     data = call(*opts, a.versions, seg(" ".join(a.ref)))
-    return data if a.format == "json" else render_passage(data, a.format)
+    return data if a.format == "json" else render_passage(data, a.format, a.numbers)
 
 
 def cmd_random(a):
     data = call(a.versions, "random", a.volume)
-    return data if a.format == "json" else render_passage(data, a.format)
+    return data if a.format == "json" else render_passage(data, a.format, a.numbers)
 
 
 def cmd_parallel(a):
@@ -477,12 +538,15 @@ def main(argv=None):
     g = add("get", cmd_get, ("text", "md", "json"))
     g.add_argument("ref", nargs="+")
     g.add_argument("-V", "--versions", type=version_list)
+    g.add_argument("-n", "--numbers", action="store_true", help="verse numbers where each verse starts")
     g.add_argument("--ids", action="store_true")
     g.add_argument("--html", action="store_true")
+    g.add_argument("--verses", action="store_true", help="add the flat verse list (json)")
 
     r = add("random", cmd_random, ("text", "md", "json"))
     r.add_argument("-V", "--versions", type=version_list)
     r.add_argument("--volume", choices=VOLUMES)
+    r.add_argument("-n", "--numbers", action="store_true")
 
     pa = add("parallel", cmd_parallel)
     pa.add_argument("left", help="version/reference, e.g. kjv/isa2")
