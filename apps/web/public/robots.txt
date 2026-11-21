@@ -1,0 +1,17 @@
+# scripture.guide: reading, quoting and search indexing are welcome.
+# For programmatic use, please use the API: https://api.scripture.guide/ (docs: https://scripture.guide/SKILL.md)
+# Content signals (https://contentsignals.org/): search yes, AI input yes, AI training no.
+User-agent: *
+Content-Signal: search=yes, ai-input=yes, ai-train=no
+Allow: /
+
+# AI training crawlers
+User-agent: GPTBot
+User-agent: CCBot
+User-agent: Google-Extended
+User-agent: Applebot-Extended
+User-agent: Bytespider
+User-agent: meta-externalagent
+User-agent: ClaudeBot
+User-agent: anthropic-ai
+Disallow: /
