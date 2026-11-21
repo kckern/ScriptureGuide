@@ -4,6 +4,9 @@ import db from '../db/connection.js';
 // reproduce PHP queries.
 // These queries rely on pool.query's client-side formatting (IN (?) with arrays, a numeric
 // OFFSET ?), so they must not move to execute (server-side prepared statements).
+// Gap rows hold no verse: the filler of a compound verse ("*", "/") or empty text
+const NOT_GAP = "AND text NOT REGEXP '^[*/[:space:]]*$'";
+
 export class ApiRepository {
   constructor(database = db) {
     this.db = database;
@@ -90,13 +93,13 @@ export class ApiRepository {
   // A uniformly random verse id in [min, max] that the version has text for, or null
   async randomVerseId({ range: [min, max], version }, random = Math.random) {
     const [count] = await this.db.query(
-      'SELECT COUNT(*) AS n FROM scripture_verses WHERE version = ? AND verse_id BETWEEN ? AND ?',
+      `SELECT COUNT(*) AS n FROM scripture_verses WHERE version = ? AND verse_id BETWEEN ? AND ? ${NOT_GAP}`,
       [version, min, max]
     );
     const n = Number(count?.n ?? 0);
     if (!n) return null;
     const [row] = await this.db.query(
-      'SELECT verse_id FROM scripture_verses WHERE version = ? AND verse_id BETWEEN ? AND ? ORDER BY verse_id LIMIT 1 OFFSET ?',
+      `SELECT verse_id FROM scripture_verses WHERE version = ? AND verse_id BETWEEN ? AND ? ${NOT_GAP} ORDER BY verse_id LIMIT 1 OFFSET ?`,
       [version, min, max, Math.floor(random() * n)]
     );
     return row ? Number(row.verse_id) : null;
