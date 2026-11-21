@@ -430,3 +430,44 @@ describe('lookup: a passage the version leaves out', () => {
     expect(titles).toEqual([]);
   });
 });
+
+describe('lookup: the canonical slug of ranges across books and chapters', () => {
+  const BOOKS = {
+    1: { book_id: 1, lds_org: 'gen', book_title: 'Genesis', book_title_short: 'Gen.' },
+    39: { book_id: 39, lds_org: 'mal', book_title: 'Malachi', book_title_short: 'Mal.' },
+    40: { book_id: 40, lds_org: 'matt', book_title: 'Matthew', book_title_short: 'Matt.' },
+  };
+  const slugFor = async (normalized, rows, chapter) => {
+    const refs = { parse: () => ({ isEmpty: false, book: BOOKS[rows[0][1]].book_title, normalized, verseIds: rows.map(r => r[0]), chapter }) };
+    const verses = {
+      findByIds: async () => rows.map(([verse_id, , ch, verse]) => ({ verse_id, chapter: ch, verse, text: 'And it came to pass.', version: 'KJV' })),
+      findChaptersByVerseIds: async ids => rows.filter(r => ids.includes(r[0])).map(([verse_id, book_id, ch]) => ({ verse_id, book_id, chapter: ch })),
+    };
+    const headings = {
+      findBookId: async () => BOOKS[rows[0][1]],
+      findBooks: async ids => ids.map(id => BOOKS[id]),
+      findByVerseIds: async () => [],
+      findChapterHeading: async () => null,
+      findChapterNavRows: async () => ({}),
+      findChapterBounds: async () => null,
+      hasAudio: async () => 0,
+      findParallels: async () => ({}),
+      findFaxVerseIds: async () => [],
+    };
+    const r = await new ScriptureLookupService(refs, verses, headings).lookup('x', { version: 'KJV' });
+    return r.config._canonicalRefSlug;
+  };
+  test('across books: each end in its own book', async () => {
+    expect(await slugFor('Malachi 4:5 - Matthew 1:2', [[23144, 39, 4, 5], [23145, 39, 4, 6], [23146, 40, 1, 1], [23147, 40, 1, 2]], 4)).toBe('mal.4.5-matt.1.2');
+  });
+  test('across chapters: no colon', async () => {
+    expect(await slugFor('Genesis 1:1-34:19', [[1, 1, 1, 1], [1000, 1, 34, 19]], 1)).toBe('gen.1-34.19');
+  });
+  test('a chapter range', async () => {
+    expect(await slugFor('Genesis 1-2', [[1, 1, 1, 1], [56, 1, 2, 25]], null)).toBe('gen.1-2');
+  });
+  test('one chapter and its verses: as before', async () => {
+    expect(await slugFor('Genesis 1:3,5', [[3, 1, 1, 3], [5, 1, 1, 5]], 1)).toBe('gen.1.3,5');
+    expect(await slugFor('Genesis 1', [[1, 1, 1, 1]], 1)).toBe('gen.1');
+  });
+});

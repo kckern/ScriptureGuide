@@ -14,6 +14,20 @@ export function slugifyRef(ref) {
 // A book's short title as a slug: "Gen." → "gen", "D&C" → "d&c", "1 Ne." → "1.ne"
 export const slugBook = title => String(title || '').toLowerCase().replace(/\./g, '').replace(/\s+/g, '.');
 
+// The site's URL form for one piece: the book's short title, then chapter and verses
+// ("Solomon's Song 2:1" → "song.2.1", "Genesis 1:1-2:3" → "gen.1-2.3", as
+// ScriptureLookupService writes them). Without a short title, the whole label as a slug.
+// A range across books ("Malachi 4:5 - Matthew 1:2") slugs each end with its own book's
+// short title (endShortTitle for the second): "mal.4.5-matt.1.2".
+export function passageSlug(label, shortTitle, endShortTitle = shortTitle) {
+  const ends = String(label).split(/\s+[-–]\s+/);
+  if (ends.length === 2) return `${passageSlug(ends[0], shortTitle)}-${passageSlug(ends[1], endShortTitle)}`;
+  const tail = String(label).match(/\s(\d+(?::\d+)?(?:[-–]\d+(?::\d+)?)?)$/)?.[1];
+  if (!shortTitle || !tail) return slugifyRef(label);
+  const fromVerseOne = tail.match(/^(\d+):1[-–](\d+):(\d+)$/);
+  return `${slugBook(shortTitle)}.${fromVerseOne ? `${fromVerseOne[1]}-${fromVerseOne[2]}.${fromVerseOne[3]}` : slugifyRef(tail)}`;
+}
+
 // scriptutil::getBook: the leading non-digit run, or the previous block's book.
 export function getBook(ref, lastBook) {
   const t = ref.trim();

@@ -5,7 +5,7 @@ import apiRepository from '../../data/repositories/ApiRepository.js';
 import { Reference } from '../../domain/entities/Reference.js';
 import { defaultVersions } from '../../domain/rules/defaultVersions.js';
 import { plainText } from '../../domain/rules/legacyText.js';
-import { slugifyRef, slugBook } from '../../domain/rules/legacyReference.js';
+import { passageSlug } from '../../domain/rules/legacyReference.js';
 import { formatReference } from '../../domain/rules/referenceParsing.js';
 import { REQUEST_LIMITS } from '../../domain/rules/requestBudget.js';
 import { ApiError } from './errors.js';
@@ -13,6 +13,9 @@ import { diagnoseMiss } from './diagnose.js';
 import { copyrightFor } from './copyright.js';
 import { languageFor } from './language.js';
 import { passageHtml } from './html.js';
+
+// passageSlug moved to legacyReference.js (the site's slugs use it too); kept here for callers
+export { passageSlug };
 
 const SITE = 'https://scripture.guide';
 
@@ -79,20 +82,6 @@ async function pieces(query, { refs, repo }) {
     if (start > prev.start) found.push({ label, start, length });
   }
   return found.map((p, k) => ({ label: p.label, ids: ids.slice(p.start, found[k + 1]?.start ?? ids.length) }));
-}
-
-// The site's URL form for one piece: the book's short title, then chapter and verses
-// ("Solomon's Song 2:1" → "song.2.1", "Genesis 1:1-2:3" → "gen.1-2.3", as
-// ScriptureLookupService writes them). Without a short title, the whole label as a slug.
-// A range across books ("Malachi 4:5 - Matthew 1:2") slugs each end with its own book's
-// short title (endShortTitle for the second): "mal.4.5-matt.1.2".
-export function passageSlug(label, shortTitle, endShortTitle = shortTitle) {
-  const ends = String(label).split(/\s+[-–]\s+/);
-  if (ends.length === 2) return `${passageSlug(ends[0], shortTitle)}-${passageSlug(ends[1], endShortTitle)}`;
-  const tail = String(label).match(/\s(\d+(?::\d+)?(?:[-–]\d+(?::\d+)?)?)$/)?.[1];
-  if (!shortTitle || !tail) return slugifyRef(label);
-  const fromVerseOne = tail.match(/^(\d+):1[-–](\d+):(\d+)$/);
-  return `${slugBook(shortTitle)}.${fromVerseOne ? `${fromVerseOne[1]}-${fromVerseOne[2]}.${fromVerseOne[3]}` : slugifyRef(tail)}`;
 }
 
 function referenceEntry(label, rows) {

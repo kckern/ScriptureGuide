@@ -135,3 +135,15 @@ describe('slugBook', () => {
     expect(['Gen.', 'D&C', '1 Ne.', 'JST John', 'Song.'].map(slugBook)).toEqual(['gen', 'd&c', '1.ne', 'jst.john', 'song']);
   });
 });
+
+describe('passageSlug (shared by the site and the API)', async () => {
+  const { passageSlug } = await import('../../src/domain/rules/legacyReference.js');
+  test('a range across books: each end in its own book', () => {
+    expect(passageSlug('Malachi 4:5 - Matthew 1:2', 'Mal.', 'Matt.')).toBe('mal.4.5-matt.1.2');
+    expect(passageSlug('1 Nephi 22 - 2 Nephi 1', '1 Ne.', '2 Ne.')).toBe('1.ne.22-2.ne.1');
+  });
+  test('a range across chapters', () => {
+    expect(passageSlug('Genesis 1:1-34:19', 'Gen.')).toBe('gen.1-34.19');
+    expect(passageSlug('Genesis 1:5-2:3', 'Gen.')).toBe('gen.1.5-2.3');
+  });
+});

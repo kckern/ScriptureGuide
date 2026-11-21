@@ -7,7 +7,7 @@ import { Reference } from '../domain/entities/Reference.js';
 import VerseSerializer from '../presentation/serializers/VerseSerializer.js';
 import { defaultVersions, versionOrder } from '../domain/rules/defaultVersions.js';
 import { applyFormatOverride } from '../domain/rules/formatOverride.js';
-import { getBook, slugifyRef, slugBook, splitRuns } from '../domain/rules/legacyReference.js';
+import { getBook, slugifyRef, slugBook, splitRuns, passageSlug } from '../domain/rules/legacyReference.js';
 import { numericVerseIds, cleanReference } from '../domain/rules/cleanReference.js';
 import { parseVerseIdList } from '../domain/rules/referenceParsing.js';
 import { isCompoundLine, isFillerText } from '../domain/rules/legacyText.js';
@@ -290,7 +290,13 @@ export class ScriptureLookupService {
         const chapterPart = reference.chapter;
         const verseMatch = reference.normalized.match(/:(.+)$/);
         const versePart = verseMatch ? '.' + verseMatch[1] : '';
-        config._canonicalRefSlug = `${bookPart}.${chapterPart}${versePart}`;
+        // A range across books, across chapters or of whole chapters: the form the API writes
+        // ("mal.4.5-matt.1.2", "gen.1-34.19", "gen.1-2"), each end in its own book
+        const spans = chapterPart == null || /\s[-–]\s/.test(reference.normalized) || /:\d+[-–]\d+:/.test(reference.normalized);
+        const endBook = books.get(vBookMap[lastVerseId]) ?? bookInfo;
+        config._canonicalRefSlug = spans
+          ? passageSlug(reference.normalized, bookTitleShort, endBook.book_title_short)
+          : `${bookPart}.${chapterPart}${versePart}`;
 
         // Sub-chapter request: has explicit verse(s) in the reference (e.g. john.3.16, gen.1.1-5)
         const isSubChapterRequest = !!versePart;
