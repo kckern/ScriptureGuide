@@ -509,7 +509,11 @@ const cleanReference = function(messyReference, config) {
     let cleanReference = ref.trim();
 
     cleanReference = handleSingleChapterBookRefs(cleanReference, config);
-    if (!cleanReference.match(/:/)) cleanReference = cleanReference.replace(/,/, "; ");
+    //Treat a comma as a semicolon in a part without verses ("Gen 1, 3" is chapters 1 and 3), part
+    //by part: a verse in one part ("Gen 1:1; Gen 3, 5") says nothing about the others
+    cleanReference = cleanReference.split(/\s*;\s*/)
+        .map(part => part.match(/:/) ? part : part.replace(/,/, "; "))
+        .join("; ");
     return cleanReference;
 }
 
@@ -543,7 +547,10 @@ const splitReferences = function(compoundReference, config) {
             completeRefs.push(ref.trim());
             continue;
         }
-        let pieces = ref.split(/([0-9:,-]+)$/);
+        // The trailing numbers may hold spaces ("Matthew 5:3, 7"): without them the book piece
+        // was "Matthew 5:3,", not a book, and the running book was prepended to a part that
+        // names its own ("Gen 1; Mt 5:3, 7" lost Matthew)
+        let pieces = ref.split(/([0-9:, -]+)$/);
         const firstPiece = pieces[0].trim();
         runningBook = bookExists(firstPiece, config) ? firstPiece : runningBook;
         const needsPreBook = !bookExists(firstPiece, config);
