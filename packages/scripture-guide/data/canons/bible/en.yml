@@ -109,9 +109,11 @@ books:
     alt: [eccl, ecc, ec]
 
   song_of_solomon:
-    name: Song of Solomon
-    pattern: "(?<!solomon's )(the )*song*\\.*(?: *of *solomon)*"
-    alt: [song, sos, ss, song of songs, canticles]
+    # The LDS edition's name (lds_scriptures_books.book_title). The pattern's lookbehind keeps it
+    # from reading the "Song" of "Solomon's Song" as a second book name.
+    name: Solomon's Song
+    pattern: "(?<!solomon['’]?s )(the )*song*\\.*(?: *of *solomon)*"
+    alt: [solomon’s song, solomons song, song, sos, ss, song of songs, canticles]
 
   isaiah:
     name: Isaiah

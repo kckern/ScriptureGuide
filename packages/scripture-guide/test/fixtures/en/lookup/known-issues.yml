@@ -1,8 +1,2 @@
 description: Known issues - tests that fail due to library bugs
-tests:
-  - id: en-lookup-known-001
-    input: Solomon's Song 1:1
-    expected_ids:
-      - 17539
-    description: Generated canonical form 'Solomon's Song' cannot be parsed back - library bug
-    issue: generateReference produces 'Solomon's Song' but lookupReference cannot parse it
+tests: []

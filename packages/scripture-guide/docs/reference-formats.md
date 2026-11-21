@@ -175,7 +175,7 @@ Scripture Guide recognizes standard abbreviations for book names.
 | Psalms | Ps, Psa, Psalm |
 | Proverbs | Prov, Pr |
 | Ecclesiastes | Eccl, Ecc, Ec |
-| Song of Solomon | Song, SoS, SS |
+| Solomon's Song | Song of Solomon, Song, SoS, SS, Song of Songs, Canticles |
 | Isaiah | Isa, Is |
 | Jeremiah | Jer, Je |
 | Lamentations | Lam, La |

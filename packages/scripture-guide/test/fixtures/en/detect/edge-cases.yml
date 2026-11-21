@@ -317,7 +317,7 @@ tests:
   - id: en-detect-archaic-035
     input: The Song of Songs 2:1 speaks of the rose of Sharon.
     expected_refs:
-      - Song of Solomon 2:1
+      - Solomon's Song 2:1
     tags:
       - alternate-name
       - song-of-songs
@@ -325,7 +325,7 @@ tests:
   - id: en-detect-archaic-036
     input: Medieval mystics loved to allegorize Canticles 1:2.
     expected_refs:
-      - Song of Solomon 1:2
+      - Solomon's Song 1:2
     tags:
       - alternate-name
       - canticles

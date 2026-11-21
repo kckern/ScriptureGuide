@@ -720,8 +720,6 @@ tests:
     variant: Ec
     description: Ecclesiastes using variant "Ec"
   - id: lookup-0127
-    known_issue: >-
-      Bug: the canonical common name "Song of Solomon" does not resolve; the book pattern only reaches it via the "song of songs" pre-rule.
     input: Song of Solomon 1:1
     expected_ids:
       - 17539
@@ -730,8 +728,6 @@ tests:
     variant: Song of Solomon
     description: Song of Solomon using variant "Song of Solomon"
   - id: lookup-0128
-    known_issue: >-
-      Bug: the "Song" alt does not resolve to Solomon's Song.
     input: Song 1:1
     expected_ids:
       - 17539
@@ -739,6 +735,14 @@ tests:
     book: Song of Solomon
     variant: Song
     description: Song of Solomon using variant "Song"
+  - id: en-lookup-known-001
+    input: Solomon's Song 1:1
+    expected_ids:
+      - 17539
+    expected_ref: Solomon's Song 1:1
+    book: Song of Solomon
+    variant: Solomon's Song
+    description: The name generateReference produces, "Solomon's Song", parses back
   - id: lookup-0131
     input: Isaiah 1:1
     expected_ids:

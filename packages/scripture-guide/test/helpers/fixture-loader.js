@@ -177,8 +177,6 @@ export const UNIMPLEMENTED_FEATURES = [
   'ch-vv',              // "Ch. 5 ... vv. 16-26" chapter and verse abbreviations
   'comma-delimiter',    // European style "19,16-22" comma as chapter:verse separator
   'chapter-list',       // "Matthew 5, 6, and 7" list of chapters
-  'song-of-songs',      // "Song of Songs" alternate name for Song of Solomon
-  'canticles',          // "Canticles" alternate name for Song of Solomon
   'gospel-of',          // "Gospel of Matthew" without chapter (book-only context)
   'roman-numeral',      // "I Kings 18", "II Corinthians 12:7-10" archaic numbering
   'spelled-ordinal',    // "First Corinthians 13", "Second Timothy 4:7"
