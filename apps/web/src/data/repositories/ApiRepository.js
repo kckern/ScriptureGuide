@@ -7,16 +7,20 @@ import db from '../db/connection.js';
 export class ApiRepository {
   constructor(database = db) {
     this.db = database;
-    this.translationCache = null;
+    this.versionCache = null;
   }
 
-  // Map of lower-case id → { id, name }. Translations don't change while the process runs.
-  async translations() {
-    this.translationCache ??= this.db
-      .query('SELECT id, title, title_long FROM scripture_versions ORDER BY priority, title')
-      .then(rows => new Map(rows.map(r => [String(r.id).toLowerCase(), { id: String(r.id), name: r.title_long || r.title }])))
-      .catch(err => { this.translationCache = null; throw err; });
-    return this.translationCache;
+  // Map of lower-case id → { id, name, lang }, in priority order. lang is the stored value
+  // (languageFor turns it into an ISO code). Versions don't change while the process runs.
+  async versions() {
+    this.versionCache ??= this.db
+      .query('SELECT id, title, title_long, lang FROM scripture_versions ORDER BY priority, title')
+      .then(rows => new Map(rows.map(r => [
+        String(r.id).toLowerCase(),
+        { id: String(r.id), name: r.title_long || r.title, lang: r.lang ?? null },
+      ])))
+      .catch(err => { this.versionCache = null; throw err; });
+    return this.versionCache;
   }
 
   // Index rows (book, chapter, verse) for verse ids, in order
@@ -30,7 +34,7 @@ export class ApiRepository {
     );
   }
 
-  // One translation's text for verse ids
+  // One version's text for verse ids
   async verses(ids, version) {
     if (!ids.length) return [];
     return this.db.query(
@@ -83,7 +87,7 @@ export class ApiRepository {
     return Number(row?.n ?? 0);
   }
 
-  // A uniformly random verse id in [min, max] that the translation has text for, or null
+  // A uniformly random verse id in [min, max] that the version has text for, or null
   async randomVerseId({ range: [min, max], version }, random = Math.random) {
     const [count] = await this.db.query(
       'SELECT COUNT(*) AS n FROM scripture_verses WHERE version = ? AND verse_id BETWEEN ? AND ?',

@@ -7,9 +7,9 @@ export const STATUS = Object.freeze({
   unknown_book: 404,
   chapter_out_of_range: 404,
   verse_out_of_range: 404,
-  unknown_translation: 404,
+  unknown_version: 404,
   unknown_volume: 404,
-  not_in_translation: 404,
+  not_in_version: 404,
   unsupported_api_version: 404,
 });
 
