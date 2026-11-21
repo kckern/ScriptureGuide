@@ -5,7 +5,7 @@
 //   SGPrefs.reset()
 //   SGPrefs.on(function (key, value, all) { ... })   → returns a function that removes the listener
 //
-// Stored as versioned JSON, {"v":1,"verseNumbers":false,...}. Missing, unknown or mistyped values
+// Stored as versioned JSON, {"v":2,"verseNumbers":false,...}. Missing, unknown or mistyped values
 // fall back to the defaults. Every storage access is guarded, so a browser that blocks storage
 // (private mode, disabled site data) gets the defaults and changes last for the page only.
 //
@@ -14,13 +14,17 @@
 // with the visitor's choices from the first paint.
 (function (root) {
   var KEY = 'sg_prefs';
-  var VERSION = 1;
+  var VERSION = 2;
+  // Version 1 saved every key, so most returning visitors have facsimile and audio stored as on.
+  // Version 2 keeps their other choices and puts these back to the default (off until the
+  // facsimile and audio assets are ready).
+  var RESET_FROM_V1 = { facsimile: true, audio: true };
   var DEFAULTS = {
     verseNumbers: false, // verse numbers before each verse
     twoColumn: true, // two columns for editions with one verse per paragraph (KJV, LDS)
     parallel: true, // "parallel passage" buttons on headings
-    facsimile: true, // facsimile buttons on headings
-    audio: true, // audio buttons on headings
+    facsimile: false, // facsimile buttons on headings (off until the facsimile assets are ready)
+    audio: false, // audio buttons on headings (off until the audio assets are ready)
     verpanel: 'ver', // what the verse panel (right-click on a verse) opens on: versions or references
     copyHint: true, // show "Shift-click to copy a range" on the copy buttons until the first copy
   };
@@ -45,8 +49,10 @@
   // The values in a stored object, over the defaults
   function clean(stored) {
     var out = copy(DEFAULTS);
-    if (!stored || typeof stored !== 'object' || stored.v !== VERSION) return out;
-    for (var k in DEFAULTS) if (valid(k, stored[k])) out[k] = stored[k];
+    if (!stored || typeof stored !== 'object') return out;
+    var fromV1 = stored.v === 1;
+    if (stored.v !== VERSION && !fromV1) return out;
+    for (var k in DEFAULTS) if (valid(k, stored[k]) && !(fromV1 && RESET_FROM_V1[k])) out[k] = stored[k];
     return out;
   }
 
