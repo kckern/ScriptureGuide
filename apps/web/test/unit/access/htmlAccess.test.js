@@ -57,6 +57,13 @@ describe('htmlAccess', () => {
     expect(access.calls).toEqual([]);
   });
 
+  test('legacy .php URLs are not checked: they redirect, and the page they lead to is', async () => {
+    const access = fakeAccess(allowed);
+    const app = appWith(access);
+    for (const path of ['/index.php?q=john.3.16', '/versebox.php', '/mount.php']) await request(app).get(path);
+    expect(access.calls).toEqual([]);
+  });
+
   test('pages whose names start like a skipped path are still checked', async () => {
     const access = fakeAccess(allowed);
     const app = appWith(access);
