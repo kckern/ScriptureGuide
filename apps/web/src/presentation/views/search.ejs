@@ -15,7 +15,7 @@ const trs = rows.map(r => `			<tr vol="${r.vol}" >
 				<td  class="searchtext">
 					<span class="clipboard">${r.text}</span>
 					<span class='verse v_${r.verse_id}' verse_id="${r.verse_id}" ref="${r.ref}" version="${r.version}">${r.highlighted}</span>
-					<div><img 	onClick="copyToClipbord(this)"	src="/img/copy.svg"></div>
+					<div class="copybtn"><img onClick="copyToClipbord(this, event)" src="/img/copy.svg"></div>
 				</td>
 			</tr>
 `).join('');
@@ -37,21 +37,8 @@ const trs = rows.map(r => `			<tr vol="${r.vol}" >
 searchterm = ${jsq(query)};
 versions_index = null
 
-
-function copyToClipbord(e)
-{
-	e.src = "/img/check.svg";
-	let main = e.parentElement.previousElementSibling;
-	let clipboardtext = e.parentElement.previousElementSibling.previousElementSibling.textContent;
-	let version = main.attributes.version.value;
-	let ref = main.attributes.ref.value;
-	let parenth = \` (\${ref}, \${version})\`;
-	if(["LDS","KJV"].includes(version)) parenth = \` (\${ref})\`;
-	parenth = parenth.replace("Doctrine and Covenants","D&C");
-	let copyMe = clipboardtext + parenth;
-
-	navigator.clipboard.writeText(copyMe);
-}
+// The copy buttons use the layout's copyToClipbord (copySelection.js): click, Shift-click for a
+// range of the shown results, Cmd/Ctrl-click to pick several
 
 </script>
 

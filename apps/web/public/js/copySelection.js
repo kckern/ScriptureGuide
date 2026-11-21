@@ -71,12 +71,16 @@
     var ref = formatRefs(items);
     var versions = items.map(function (it) { return it.version; });
     if (items.length === 1) return items[0].text + citation(ref, versions);
+    // Verses from more than one book (picked from search results) each name their reference
+    var books = {};
+    items.forEach(function (it) { var r = parseRef(it.ref); books[r ? r.book : it.ref] = true; });
+    var manyBooks = Object.keys(books).length > 1;
     var lines = [];
     var chapter = null;
     items.forEach(function (it, i) {
       var r = parseRef(it.ref);
       // The verse number; chapter:verse at the start of a new chapter after the first
-      var label = r ? (i > 0 && r.chapter !== chapter ? r.chapter + ':' + r.verse : String(r.verse)) : '';
+      var label = manyBooks ? it.ref : r ? (i > 0 && r.chapter !== chapter ? r.chapter + ':' + r.verse : String(r.verse)) : '';
       if (r) chapter = r.chapter;
       lines.push((label ? label + ' ' : '') + it.text);
     });
@@ -127,7 +131,17 @@
   var state = { anchor: null, sel: [] };
   var HINT = 'Shift-click to copy a range, ' + (isMac ? '⌘' : 'Ctrl') + '-click to add a verse';
 
-  function buttons() { return Array.prototype.slice.call(root.document.querySelectorAll('.copyprose img')); }
+  // The copy buttons: beside a passage's verses (.copyprose) and on each search result (.copybtn,
+  // views/search.ejs). A search result whose row the volume tabs hid (volfilter, main.js: an
+  // inline display:none on the row) does not count, so a Shift-click range takes only the shown
+  // results.
+  var BOX = '.copyprose, .copybtn';
+  function buttons() {
+    return Array.prototype.filter.call(root.document.querySelectorAll('.copyprose img, .copybtn img'), function (img) {
+      var row = img.closest('.copybtn') && img.closest('tr');
+      return !(row && row.style.display === 'none');
+    });
+  }
   function verseOf(img) { return img.parentElement && img.parentElement.previousElementSibling; }
   function itemOf(img) {
     var v = verseOf(img);
@@ -158,10 +172,12 @@
     }
   }
 
+  // Every button, the hidden search results too: a volume tab hides rows before the click that
+  // clears reaches the document, and their marks must go as well
   function clear() {
     if (!state.sel.length && state.anchor == null) return;
     state = { anchor: null, sel: [] };
-    show(buttons());
+    show(Array.prototype.slice.call(root.document.querySelectorAll('.copyprose img, .copybtn img')));
   }
 
   // The hint on the buttons, until the first copy
@@ -174,10 +190,10 @@
     var doc = root.document;
     // Shift+click would otherwise select page text from the last click
     doc.addEventListener('mousedown', function (e) {
-      if (e.shiftKey && e.target.closest && e.target.closest('.copyprose')) e.preventDefault();
+      if (e.shiftKey && e.target.closest && e.target.closest(BOX)) e.preventDefault();
     });
     doc.addEventListener('click', function (e) {
-      if (e.target.closest && e.target.closest('.copyprose')) return;
+      if (e.target.closest && e.target.closest(BOX)) return;
       if (e.shiftKey || e.metaKey || e.ctrlKey) return;
       clear();
     });

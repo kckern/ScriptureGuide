@@ -80,3 +80,66 @@ describe('modifier keys', () => {
     expect(win.modeOf({})).toBe('plain');
   });
 });
+
+describe('copyText across books', () => {
+  test('when the verses come from more than one book, each line names its reference', () => {
+    const items = [
+      { id: 26685, ref: 'John 14:16', version: 'KJV', text: 'And I will pray.' },
+      { id: 27931, ref: 'Romans 8:28', version: 'KJV', text: 'And we know.' },
+    ];
+    expect(C.copyText(items)).toBe('John 14:16 And I will pray.\nRomans 8:28 And we know. (John 14:16; Romans 8:28)');
+  });
+});
+
+// The search page (views/search.ejs): one row per result, its copy button in a div.copybtn after
+// the verse span; volfilter() hides the rows of other volumes
+describe('search results', () => {
+  const row = (vol, id, ref, text, hidden = false) => `
+    <tr vol="${vol}"${hidden ? ' style="display:none"' : ''}><td class="searchtext">
+      <span class="clipboard">${text}</span>
+      <span class="verse v_${id}" verse_id="${id}" ref="${ref}" version="KJV">${text}</span>
+      <div class="copybtn"><img src="/img/copy.svg"></div>
+    </td></tr>`;
+  function page() {
+    const dom = new JSDOM(`<!doctype html><html><body><table>
+      ${row('nt', 29000, 'James 1:5', 'If any of you lack wisdom,')}
+      ${row('dc', 40000, 'Doctrine and Covenants 1:1', 'Hearken, O ye people', true)}
+      ${row('nt', 29100, 'James 2:17', 'Even so faith,')}
+      ${row('pgp', 41000, 'Joseph Smith—History 1:11', 'I at length came')}
+    </table></body></html>`, { runScripts: 'outside-only' });
+    Object.defineProperty(dom.window.navigator, 'platform', { value: 'MacIntel' });
+    const written = [];
+    Object.defineProperty(dom.window.navigator, 'clipboard', { value: { writeText: t => { written.push(t); return Promise.resolve(); } } });
+    dom.window.eval(SRC);
+    const imgs = [...dom.window.document.querySelectorAll('.copybtn img')];
+    return { S: dom.window.SGCopy, imgs, written, doc: dom.window.document };
+  }
+
+  test('a plain click copies one result', () => {
+    const { S, imgs, written } = page();
+    S.click(imgs[0], {});
+    expect(written.at(-1)).toBe('If any of you lack wisdom, (James 1:5)');
+  });
+  test('Shift-click copies the shown results between, not the hidden ones', () => {
+    const { S, imgs, written, doc } = page();
+    S.click(imgs[0], {});
+    S.click(imgs[2], { shiftKey: true });
+    expect(written.at(-1)).toBe('5 If any of you lack wisdom,\n2:17 Even so faith, (James 1:5; 2:17)');
+    expect(doc.querySelectorAll('.verse.sg-picked')).toHaveLength(2);
+  });
+  test('Cmd-click picks results across books', () => {
+    const { S, imgs, written } = page();
+    S.click(imgs[0], {});
+    S.click(imgs[3], { metaKey: true });
+    expect(written.at(-1)).toBe('James 1:5 If any of you lack wisdom,\nJoseph Smith—History 1:11 I at length came (James 1:5; Joseph Smith—History 1:11)');
+  });
+  test('clearing after a volume tab hid picked rows unmarks them too', () => {
+    const { S, imgs, doc } = page();
+    S.click(imgs[0], {});
+    S.click(imgs[2], { shiftKey: true });
+    doc.querySelectorAll('tr')[0].style.display = 'none';
+    S.clear();
+    expect(doc.querySelectorAll('.verse.sg-picked')).toHaveLength(0);
+    expect(imgs[0].getAttribute('src')).toBe('/img/copy.svg');
+  });
+});
