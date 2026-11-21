@@ -469,3 +469,10 @@
   top: -1.6em;
   margin-left: .15em;
 }
+
+/* Study-edition titles: a size that fits and balanced line breaks, so no short stub line */
+.ver_SEBOM h2, .ver_KRSEB h2
+{
+  font-size: 2em;
+  text-wrap: balance;
+}
