@@ -23,7 +23,7 @@ function memoryStore(seed = {}) {
   };
 }
 
-const DEFAULTS = { verseNumbers: false, twoColumn: true, parallel: true, facsimile: true, audio: true, verpanel: 'ver' };
+const DEFAULTS = { verseNumbers: false, twoColumn: true, parallel: true, facsimile: true, audio: true, verpanel: 'ver', copyHint: true };
 
 describe('prefs.js defaults', () => {
   test('a new visitor gets the defaults and nothing is written', () => {

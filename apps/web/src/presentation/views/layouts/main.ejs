@@ -98,28 +98,21 @@ function copyContainerToClipbord(e) {
   navigator.clipboard.writeText(clipboardtext.trim() + ` ${ref}`);
 }
 
-function copyToClipbord(e) {
-  e.src = "/img/check.svg";
-  let main = e.parentElement.previousElementSibling;
-  const verseContent = main.textContent;
-  const vnumContent = main.querySelector('.vnum')?.textContent || '';
-  const clipboardtext = verseContent.replace(new RegExp('^' + vnumContent), '');
-  let version = main.attributes.version?.value;
-  let ref = main.attributes.ref?.value;
-  let parenth = ` (${ref}, ${version})`;
-  if(["LDS","KJV"].includes(version)) parenth = ` (${ref})`;
-  parenth = parenth.replace("Doctrine and Covenants","D&C");
-  navigator.clipboard.writeText(clipboardtext + parenth);
+// A verse's copy button: one verse, or with Shift / Cmd (Mac) / Ctrl several (copySelection.js)
+function copyToClipbord(e, ev) {
+  SGCopy.click(e, ev);
 }
 
 function activateCopyButtons() {
   Array.prototype.slice.call(document.querySelectorAll("p.prose > .verse:only-child"))
-    .map(i => i.outerHTML = `<div style="display:flex">${i.outerHTML}<div class="copyprose"><img onClick="copyToClipbord(this)" src="/img/copy.svg"/></div></div>`);
+    .map(i => i.outerHTML = `<div style="display:flex">${i.outerHTML}<div class="copyprose"><img onClick="copyToClipbord(this, event)" src="/img/copy.svg"/></div></div>`);
+  if(window.SGCopy) SGCopy.init();
 }
 </script>
 <script src="/js/main.js<%= av %>"></script>
 <script src="/js/prefsPanel.js<%= av %>"></script>
 <script src="/js/columns.js<%= av %>"></script>
+<script src="/js/copySelection.js<%= av %>"></script>
 </head>
 <body class="<%- typeof browserClass !== 'undefined' ? browserClass : '' %>">
 

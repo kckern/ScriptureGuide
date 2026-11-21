@@ -542,6 +542,11 @@
 	flex-grow: 1;
 }
 
+/* Verses picked for copying (copySelection.js): a highlight that moves nothing */
+.verse.sg-picked {
+    background-color: rgba(240, 214, 140, .45);
+    border-radius: 2px;
+}
 .copyprose img{
 	width: 1.5ex;
     margin-left: 1em;
@@ -654,7 +659,8 @@ html:not(.sg-one-column) .vcols p.prose {
     html:not(.sg-one-column) .vcols p.vstart-r .copyprose {
         width: 1.5em;
     }
-    html:not(.sg-one-column) .vcols p.prose > div:hover .copyprose {
+    html:not(.sg-one-column) .vcols p.prose > div:hover .copyprose,
+    html:not(.sg-one-column) .vcols p.prose > div:has(> .verse.sg-picked) .copyprose {
         visibility: visible;
     }
     html:not(.sg-one-column) .vcols .copyprose img {

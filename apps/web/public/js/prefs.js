@@ -22,6 +22,7 @@
     facsimile: true, // facsimile buttons on headings
     audio: true, // audio buttons on headings
     verpanel: 'ver', // what the verse panel (right-click on a verse) opens on: versions or references
+    copyHint: true, // show "Shift-click to copy a range" on the copy buttons until the first copy
   };
   var CHOICES = { verpanel: ['ver', 'ref'] };
   // <html> class for each preference that is off, read by the CSS
