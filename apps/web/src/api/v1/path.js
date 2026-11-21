@@ -8,7 +8,7 @@ export const CURRENT_API = 1;
 export const OPTIONS = Object.freeze(['html', 'ids']);
 export const VOLUMES = Object.freeze(['ot', 'nt', 'bom', 'dc', 'pgp']);
 export const RESERVED = Object.freeze([...OPTIONS, ...VOLUMES, 'search', 'random']);
-const API_VERSION = /^v(\d+)$/i;
+const API_VERSION = /^v([1-9]\d*)$/i; // v1, v2, …; "v01" and "v0" are not versions
 const PAGE = /^page-(\d+)$/i;
 
 function decode(segment) {

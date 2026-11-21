@@ -49,6 +49,10 @@ describe('parseApiPath: errors', () => {
   test('an unsupported api version', () => {
     expect(errorOf('/v2/john3.16').code).toBe('unsupported_api_version');
   });
+  test('a version with a leading zero is not a version', () => {
+    expect(errorOf('/v01/john3.16')).toMatchObject({ code: 'unknown_translation', message: 'There is no translation "v01".' });
+    expect(parse('/v01')).toMatchObject({ api: 1, kind: 'passage', translations: [], reference: 'v01' });
+  });
   test('nothing to look up', () => {
     expect(errorOf('/v1').code).toBe('unparseable_reference');
   });
