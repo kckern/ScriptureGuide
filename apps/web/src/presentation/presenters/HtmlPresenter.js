@@ -5,6 +5,9 @@ import { versionImg, formatReference as referenceFromVerseIds, splitRuns } from 
 import { isEmptyRange } from '../../domain/rules/blockIds.js';
 import { renderHeadingHtml, renderHeadingFields, RENDERED_HEADING_FIELDS, segmentFormats, escapeHtml, isCompoundLine, isFillerText, sectionMarksHtml, readableText } from '../../domain/rules/legacyText.js';
 import { verseStartsSection } from '../../domain/rules/sectionStart.js';
+import { noteIdsIn, footnotesHtml } from '../../domain/rules/footnotes.js';
+import { FootnoteRepository } from '../../data/repositories/FootnoteRepository.js';
+import { logError } from '../../app/log.js';
 
 // versionImg takes lds_scriptures_volumes.volume_id; Reference.volume is a volume code.
 // Verses outside the five volumes (null) have no LDS cover: 0 gives "lds".
@@ -66,6 +69,25 @@ export function apiAlternateUrl(result, data) {
 }
 
 export class HtmlPresenter {
+  // footnotes: where the study editions' notes are read (FootnoteRepository)
+  constructor({ footnotes = new FootnoteRepository() } = {}) {
+    this.footnotes = footnotes;
+  }
+
+  // The rendered html with its ｢N｣ footnote markers as the ✱ spans the page script reads
+  // (domain/rules/footnotes.js). Without notes (a failed read) the markers are dropped.
+  async withFootnotes(html) {
+    const ids = noteIdsIn(html);
+    if (!ids.length) return html;
+    let rows = [];
+    try {
+      rows = await this.footnotes.notesByIds(ids);
+    } catch (err) {
+      logError(err, { where: 'footnotes' });
+    }
+    return footnotesHtml(html, rows);
+  }
+
   present(result, req, res) {
     const data = this.serialize(result);
     // No verses: the title is the reference as requested (index.php); a page built from the PHP
@@ -82,6 +104,9 @@ export class HtmlPresenter {
       apiAlternate: apiAlternateUrl(result, data),
       // 'There is no version "HBRS". Showing LDS.' (ScriptureController.versionNote)
       versionNote: result.versionNote ? escapeHtml(result.versionNote) : null,
+    }, (err, html) => {
+      if (err) return req.next ? req.next(err) : res.status(500).send('Internal error');
+      this.withFootnotes(html).then(out => res.send(out), e => (req.next ? req.next(e) : res.status(500).send('Internal error')));
     });
   }
 

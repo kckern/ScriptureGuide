@@ -89,6 +89,7 @@ export class AjaxController {
       singleHeading(data);
       let html = await this.renderView(req, 'partials/passage', { data, config: result.config });
       html = html.replace(/<h3\b/gi, "<h4 class='filler'></h4><h3");
+      if (this.presenter.withFootnotes) html = await this.presenter.withFootnotes(html);
       this.send(res, highlightSearchTerm(html, str(p.searchterm)));
     } catch (err) { this.fail(res, err); }
   }

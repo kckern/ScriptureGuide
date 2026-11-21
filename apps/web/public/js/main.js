@@ -708,12 +708,13 @@ function activateVerses(time)
     }
   });
   
-  $('span.fn').click(function(){
+  $('span.fn').click(function(e){
   	
   	if($(this).attr("type")=="ref")
   	{
+  		// "Mos 29.42" -> /mos.29.42; "Mos 18; 23–25" -> /mos.18;23–25
   		var ref = base64_decode($(this).attr("extra"));
-  		ref = ref.replace("/[\s+]/",".").toLowerCase();
+  		ref = ref.replace(/;\s+/g,";").replace(/\s+/g,".").toLowerCase();
 		PopupCenter("/"+ref,"Scripture Guide: Footnote Lookup",1000,750);
   	}
   	if($(this).attr("type")=="ver")
