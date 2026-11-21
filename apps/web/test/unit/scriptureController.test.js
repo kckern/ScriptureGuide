@@ -171,3 +171,16 @@ describe('ScriptureController: a version segment that names no version', () => {
     expect(repo.findAll).toHaveBeenCalledTimes(1);
   });
 });
+
+describe('ScriptureController: the version list cannot be read', () => {
+  test('the page renders without the note', async () => {
+    const repo = { findAll: vi.fn(async () => { throw new Error('db down'); }) };
+    const found = { reference: { isEmpty: false, verseIds: [18000] }, verses: [{}], config: { version: 'LDS' } };
+    const ctrl = new ScriptureController({ lookup: async () => ({ ...found }) }, references, blockService, repo);
+    const req = { config: { outputFormat: 'html', reference: 'isa.49', versions: [{ version: 'HBRS', format: 'HBRS' }], legacy: {} }, params: {}, headers: {} };
+    const next = vi.fn();
+    await ctrl.show(req, {}, next);
+    expect(next).toHaveBeenCalledWith();
+    expect(req.scriptureResult.versionNote).toBeUndefined();
+  });
+});

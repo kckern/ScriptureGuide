@@ -1,6 +1,7 @@
 import scriptureLookupService from '../../services/ScriptureLookupService.js';
 import searchParallelController from './SearchParallelController.js';
 import outputMiddleware from '../middleware/output.js';
+import { logError } from '../log.js';
 import referenceService from '../../services/ReferenceService.js';
 import legacyBlockService, { allVerseIds } from '../../services/LegacyBlockService.js';
 import { ScriptureResult } from '../../domain/entities/ScriptureResult.js';
@@ -44,7 +45,10 @@ export class ScriptureController {
   // site does not have; undefined otherwise
   async versionNote(config, page) {
     if (!config.versions?.length || config.parallel) return undefined;
-    const unknown = unknownVersions(config.versions, await this.knownVersions());
+    // Without the version list the page renders without the note
+    const known = await this.knownVersions().catch(err => { logError(err, { where: 'version list' }); });
+    if (!known) return undefined;
+    const unknown = unknownVersions(config.versions, known);
     return versionNote(unknown, shownVersions(page)) ?? undefined;
   }
 
