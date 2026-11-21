@@ -14,25 +14,29 @@ import { responseHeaders } from './middleware/headers.js';
 import { apiRouter } from '../api/v1/router.js';
 import { TRUST_PROXY } from './trustProxy.js';
 import { commit } from './buildInfo.js';
+import { logError } from './log.js';
 import db from '../data/db/connection.js';
 
 const VIEWS = path.join(path.dirname(fileURLToPath(import.meta.url)), '../presentation/views');
 
-// res.locals.verNames (id → title) for the EJS templates. Read once; a failed read leaves
-// {} for this request and is tried again on the next one.
-export function versionNames(database = db) {
-  let cache = null;
+// res.locals.verNames (id → title) for the EJS templates. Read once: concurrent requests share
+// the read in flight. A failed read is logged, leaves {} for the requests waiting on it and is
+// tried again on the next one.
+export function versionNames(database = db, log = logError) {
+  let pending = null;
+  const load = async () => {
+    const rows = await database.query('SELECT id, title FROM scripture_versions ORDER BY priority, title');
+    const names = {};
+    for (const r of rows) names[r.id] = r.title;
+    return names;
+  };
   return async (req, res, next) => {
-    if (!cache) {
-      try {
-        const rows = await database.query('SELECT id, title FROM scripture_versions ORDER BY priority, title');
-        cache = {};
-        for (const r of rows) cache[r.id] = r.title;
-      } catch {
-        // cache stays null
-      }
-    }
-    res.locals.verNames = cache ?? {};
+    pending ??= load().catch(err => {
+      pending = null;
+      log(err, { where: 'version names' });
+      return null;
+    });
+    res.locals.verNames = (await pending) ?? {};
     next();
   };
 }
