@@ -2,6 +2,8 @@ import db from '../db/connection.js';
 
 // Database reads for the v1 API (src/api/v1). Kept apart from the legacy repositories, which
 // reproduce PHP queries.
+// These queries rely on pool.query's client-side formatting (IN (?) with arrays, a numeric
+// OFFSET ?), so they must not move to execute (server-side prepared statements).
 export class ApiRepository {
   constructor(database = db) {
     this.db = database;
