@@ -88,7 +88,7 @@ function searchScope(segs, translations) {
     if (page) scope.page = Math.max(1, Number(page[1]));
     else if (VOLUMES.includes(word)) scope.volume = word;
     else if (stored) scope.translation = stored;
-    else throw new ApiError('unknown_translation', `There is no translation "${seg}".`);
+    else throw new ApiError('unknown_translation', `Unknown search scope "${seg}". Use a translation, a volume or page-<n>; the search terms go last.`);
   }
   return scope;
 }

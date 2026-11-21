@@ -68,7 +68,10 @@ describe('parseApiPath: search', () => {
     expect(parse('/v1/search/nrsv/nt/page-2/loved%20the%20world')).toMatchObject({ terms: 'loved the world', translation: 'NRSV', volume: 'nt', page: 2 });
   });
   test('an unknown scope word is an unknown translation', () => {
-    expect(errorOf('/v1/search/foo/love').code).toBe('unknown_translation');
+    expect(errorOf('/v1/search/foo/love')).toMatchObject({
+      code: 'unknown_translation',
+      message: 'Unknown search scope "foo". Use a translation, a volume or page-<n>; the search terms go last.',
+    });
   });
   test('no terms', () => {
     expect(errorOf('/v1/search').code).toBe('empty_query');
