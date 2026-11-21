@@ -17,6 +17,8 @@
  * below are calibrated to the normalizing contract instead.
  */
 
+import { normalizeEntities } from '../../src/scriptlib.mjs';
+
 // Private-use codepoint: cannot occur in scripture prose, so splitting on it
 // cleanly separates rendered spans from the text around them.
 const SENTINEL = '';
@@ -93,9 +95,12 @@ export function assertDetectInvariants(deps, input, options) {
   }
 
   // I2 - Strict span grammar. A merged citation must read as a citation.
+  // The span keeps the input's HTML entity dashes ("Mt 5:3&ndash;5"); the ";" that ends an
+  // entity is not a separator, so grammar is checked on the decoded span.
   for (const text of rendered) {
+    const decoded = normalizeEntities(text).text;
     for (const [pattern, label] of GRAMMAR_VIOLATIONS) {
-      if (pattern.test(text)) {
+      if (pattern.test(decoded)) {
         throw new Error(`${where} malformed citation span (${label}): ${JSON.stringify(text)}`);
       }
     }

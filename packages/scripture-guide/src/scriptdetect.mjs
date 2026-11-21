@@ -2,7 +2,7 @@
 
 
 import { passesDetectionBar } from './detectconfidence.mjs';
-import { removeOverlaps, calculateGaps, calculateNegativeSpace, mergeAdjacentMatches, buildFinalOutput, defaultTieBreaker, gapCanMerge } from './scriptlib.mjs';
+import { normalizeEntities, removeOverlaps, calculateGaps, calculateNegativeSpace, mergeAdjacentMatches, buildFinalOutput, defaultTieBreaker, gapCanMerge } from './scriptlib.mjs';
 
 const findMatchingBooks = (content,books) => {
     const matchingBooks = books.filter(i=>(new RegExp(i,"ig")).test(content));
@@ -10,40 +10,9 @@ const findMatchingBooks = (content,books) => {
 }
 
 const findMatches = (content,books,lang_extra) => {
-    // Pre-process content to normalize HTML entities to Unicode dashes
-    const htmlEntityMap = {
-        '&ndash;': '–',
-        '&mdash;': '—', 
-        '&minus;': '−',
-        '&#8211;': '–',
-        '&#8212;': '—',
-        '&#8722;': '−'
-    };
-    
-    // One pass over all entities, recording where each normalized character came from
-    // (toRaw[normalized index] = raw index) so positions can be reported in `content`'s
-    // coordinates. No entities, no map: positions are the same.
-    let normalizedContent = content;
-    let toRaw = null;
-    if(content.includes('&')){
-        const entityPattern = new RegExp(Object.keys(htmlEntityMap).join('|'), 'g');
-        const parts = [];
-        const map = [];
-        let last = 0;
-        for(const m of content.matchAll(entityPattern)){
-            for(let r = last; r < m.index; r++) map.push(r);
-            parts.push(content.slice(last, m.index), htmlEntityMap[m[0]]);
-            map.push(m.index);
-            last = m.index + m[0].length;
-        }
-        if(parts.length){
-            for(let r = last; r < content.length; r++) map.push(r);
-            map.push(content.length);
-            parts.push(content.slice(last));
-            normalizedContent = parts.join('');
-            toRaw = map;
-        }
-    }
+    // HTML entity dashes ("&ndash;") are matched as the dashes they stand for; toRaw maps
+    // positions back to `content` (null when there are no entities).
+    const { text: normalizedContent, toRaw } = normalizeEntities(content);
     const rawPosition = (i) => toRaw ? toRaw[i] : i;
 
     const tail = lang_extra.tail ? new RegExp(lang_extra.tail,"ig") : /[^0-9]+$/;
@@ -185,7 +154,17 @@ const findMatches = (content,books,lang_extra) => {
 
 
 
-function findMatchIndexes(content, matches,lookupReference, lang_extra) {
+// Spans of `matches` in `content`. Matches come from findMatches, which reads HTML entity dashes
+// as dashes ("Mt 5:3–5" for "Mt 5:3&ndash;5"), so the spans are found in the same normalized text
+// and mapped back: the returned span covers the raw text, entity included.
+function findMatchIndexes(content, matches, lookupReference, lang_extra) {
+    const { text, toRaw } = normalizeEntities(content);
+    const spans = findNormalizedMatchIndexes(text, matches, lookupReference, lang_extra);
+    if(!spans || !toRaw) return spans;
+    return spans.map(([start,end])=>[toRaw[start], toRaw[end]]);
+}
+
+function findNormalizedMatchIndexes(content, matches,lookupReference, lang_extra) {
     const tail = lang_extra.tail ? new RegExp(lang_extra.tail,"ig") : /[^0-9]+$/;
     const indexes =  matches
     .sort((b, a) => b.length - a.length)

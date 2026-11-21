@@ -335,3 +335,33 @@ tests:
         expected_output: '&mdash;&mdash;&mdash; Read [Mt 5:3]. Then lu 3 (v. 16) says.'
       contextAware_false:
         expected_output: '&mdash;&mdash;&mdash; Read [Mt 5:3]. Then lu 3 (v. 16) says.'
+
+  - id: en-detect-adv-055
+    input: 'Read Mt 5:3&ndash;5 today.'
+    description: a reference with an HTML entity dash links over the raw text, entity included
+    tags: [entities, range]
+    context_variations:
+      contextAware_true:
+        expected_output: 'Read [Mt 5:3&ndash;5] today.'
+      contextAware_false:
+        expected_output: 'Read [Mt 5:3&ndash;5] today.'
+
+  - id: en-detect-adv-056
+    input: 'Lu 3&#8212;4 tells it.'
+    description: a numeric entity dash inside a chapter range links over the raw text
+    tags: [entities, range, chapter-only]
+    context_variations:
+      contextAware_true:
+        expected_output: '[Lu 3&#8212;4] tells it.'
+      contextAware_false:
+        expected_output: '[Lu 3&#8212;4] tells it.'
+
+  - id: en-detect-adv-057
+    input: '&mdash;&mdash; Read Mt 5:3 and Lu 3:16.'
+    description: entities before references do not shift the linked spans
+    tags: [entities, merge]
+    context_variations:
+      contextAware_true:
+        expected_output: '&mdash;&mdash; Read [Mt 5:3; Lu 3:16].'
+      contextAware_false:
+        expected_output: '&mdash;&mdash; Read [Mt 5:3 and Lu 3:16].'

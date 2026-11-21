@@ -8,6 +8,7 @@ import { processReferenceDetection, collectReferences } from './scriptdetect.mjs
 import { detectReferencesWithContext, collectReferencesWithContext } from './scriptdetectcontext.mjs';
 import { detectCanon, formatId, parseId, convertCanon, registerCanon, registerMapping } from './scriptcanon.mjs';
 import { toSlug } from './slug.mjs';
+import { normalizeEntities } from './scriptlib.mjs';
 
 import {
   MAX_RANGE_SIZE,
@@ -456,7 +457,8 @@ const cleanRules = function(config) {
 
 const cleanReference = function(messyReference, config) {
 
-    let ref = messyReference.replace(/[\s]+/g, " ").trim();
+    // HTML entity dashes ("Mt 5:3&ndash;5") are the dashes they stand for
+    let ref = normalizeEntities(messyReference).text.replace(/[\s]+/g, " ").trim();
 
     // Verse/chapter continuation: "16:17 and 18" -> "16:17,18"
     ref = ref.replace(/(\d)\s+and\s+(\d)/g, "$1,$2");

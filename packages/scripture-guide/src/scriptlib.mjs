@@ -256,3 +256,39 @@ export const defaultTieBreaker = (pair1, pair2, content) => {
 
     return pair1;
 };
+
+// HTML entity dashes a string caller may pass ("Mt 5:3&ndash;5"); detection and lookup read
+// them as the dashes they stand for.
+const HTML_ENTITY_DASHES = {
+    '&ndash;': '–',
+    '&mdash;': '—',
+    '&minus;': '−',
+    '&#8211;': '–',
+    '&#8212;': '—',
+    '&#8722;': '−'
+};
+const HTML_ENTITY_PATTERN = new RegExp(Object.keys(HTML_ENTITY_DASHES).join('|'), 'g');
+
+/**
+ * Replace HTML entity dashes with the characters they stand for, in one pass.
+ * Returns { text, toRaw }: toRaw[i] is the index in `content` of text[i] (with one extra entry,
+ * content.length, so an end offset maps too), or null when nothing was replaced. Content without
+ * "&" costs nothing.
+ */
+export const normalizeEntities = (content) => {
+    if (!content.includes('&')) return { text: content, toRaw: null };
+    const parts = [];
+    const toRaw = [];
+    let last = 0;
+    for (const m of content.matchAll(HTML_ENTITY_PATTERN)) {
+        for (let r = last; r < m.index; r++) toRaw.push(r);
+        parts.push(content.slice(last, m.index), HTML_ENTITY_DASHES[m[0]]);
+        toRaw.push(m.index);
+        last = m.index + m[0].length;
+    }
+    if (!parts.length) return { text: content, toRaw: null };
+    for (let r = last; r < content.length; r++) toRaw.push(r);
+    toRaw.push(content.length);
+    parts.push(content.slice(last));
+    return { text: parts.join(''), toRaw };
+};
