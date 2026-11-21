@@ -310,3 +310,13 @@ tests:
         expected_output: 'See [2 Jn 1] first, then [4 Ne 1] later, and [JS-H 1] after that; also [Pss 120-134].'
       contextAware_false:
         expected_output: 'See [2 Jn 1] first, then [4 Ne 1] later, and [JS-H 1] after that; also [Pss 120-134].'
+
+  - id: en-detect-adv-052
+    input: Read Lu 3 today. Then rename lu 3 to lu 4. Read Mt 5. Level mt 5 unlocked.
+    description: an accepted span does not carry a differently cased copy of itself past the bar
+    tags: [negative, abbreviation, chapter-only]
+    context_variations:
+      contextAware_true:
+        expected_output: 'Read [Lu 3] today. Then rename lu 3 to lu 4. Read [Mt 5]. Level mt 5 unlocked.'
+      contextAware_false:
+        expected_output: 'Read [Lu 3] today. Then rename lu 3 to lu 4. Read [Mt 5]. Level mt 5 unlocked.'

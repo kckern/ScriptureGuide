@@ -143,7 +143,9 @@ const findMatches = (content,books,lang_extra) => {
     const matches =  [...new Set(matchesWithReferences)].map(string=>{
         // `string` is a literal matched span, re-found to enumerate occurrences;
         // it may contain regex metacharacters (e.g. "(" from "Philippians (3:20").
-        const pattern = (new RegExp(string.replace(/[.*+?^${}()|[\]\\]/g,"\\$&"),"ig"));
+        // Case-sensitive: each accepted span passed the detection bar as written, and a
+        // differently cased copy ("lu 3" after "Lu 3", "is 53" after "IS 53") was never checked.
+        const pattern = (new RegExp(string.replace(/[.*+?^${}()|[\]\\]/g,"\\$&"),"g"));
         const matches = normalizedContent.match(pattern)?.map(i=>i.trim().replace(tail,""));
         //console.log({string,matches,tail});
         return matches;
