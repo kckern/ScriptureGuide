@@ -58,8 +58,9 @@ async function pieces(query, { refs, repo }) {
   checkQuerySize(query);
   const whole = await refs.resolve(query, LOOKUP);
   if (whole.isEmpty) throw await diagnoseMiss(query, repo);
+  // Only the verse limit applies here: a "," list typed as one piece comes back as one label
+  // per verse, and the site counts pieces as typed (checkQuerySize)
   const labels = whole.normalized.split(';').map(s => s.trim()).filter(Boolean);
-  if (labels.length > REQUEST_LIMITS.pieces) throw tooManyPieces(labels.length);
   if (whole.verseIds.length > REQUEST_LIMITS.verses) throw overVerseLimit();
   const ids = whole.verseIds;
   if (labels.length < 2) return [{ label: whole.normalized, ids }];

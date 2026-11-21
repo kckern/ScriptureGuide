@@ -329,7 +329,7 @@ The simple hosts use the same status and code in their own format: `json.` retur
 |---|---|---|
 | `unparseable_reference` | 400 | The reference can't be read (`/v1/@@@`), is missing (`/v1/nrsv/`), or a parallel side finds no verses |
 | `empty_query` | 400 | Search terms are empty |
-| `reference_too_large` | 400 | More than 100 pieces, 5,000 verses or 10 versions (see Limits) |
+| `reference_too_large` | 400 | More than 100 `;` pieces, 5,000 verses or 10 versions (see Limits) |
 | `parallel_not_supported` | 400 | Parallel on a simple host |
 | `search_not_supported` | 400 | Search on a simple host |
 | `versions_not_supported` | 400 | `/versions` on a simple host |
@@ -344,7 +344,7 @@ The simple hosts use the same status and code in their own format: `json.` retur
 
 ## Limits
 
-- At most 100 reference pieces. A `,` list of verses is read as one piece per verse: `john3.1,3,5` is John 3:1; 3:3; 3:5, three pieces.
+- At most 100 reference pieces, counted as `;`-separated pieces in the URL. A `,` list of verses inside a piece does not add pieces (`ps119.1,3,5` is one), though the response lists each verse as its own `reference` entry (Psalms 119:1; 119:3; 119:5).
 - At most 5,000 verses per request, however they are written: `/v1/gen1-ex40` (2,746 verses) is served whole, and `/v1/gen1-deut34` is `reference_too_large`.
 - At most 10 versions per request.
 

@@ -175,6 +175,16 @@ describe('buildPassage', () => {
     await expect(build({ reference: 'john3.16-17', versions: ['NRSV', 'KJV'] }, { repo: empty })).rejects.toMatchObject({ message: 'None of NRSV, KJV has text for John 3:16-17.' });
   });
 
+  test('the piece limit counts the ";" pieces typed, not the pieces a "," list resolves to', async () => {
+    // "john3.1,2,…,101" is one piece typed; the lookup reads it as 101 ("John 3:1; 3:2; …")
+    const many = { resolve: async q => new Reference({
+      query: q,
+      normalized: q === 'many' ? Array.from({ length: 101 }, () => 'John 3:16').join('; ') : 'John 3:16',
+      verseIds: [26137],
+    }) };
+    await expect(build({ reference: 'many', versions: ['NRSV'] }, { refs: many })).resolves.toMatchObject({ api: 'v1' });
+  });
+
   test('the whole reference is looked up with room for more verses than the limit', async () => {
     const seen = [];
     const spy = { resolve: async (q, opts) => { seen.push(opts); return REFS[q] ? new Reference({ query: q, normalized: REFS[q][0], verseIds: REFS[q][1] }) : new Reference({ query: q, normalized: '', verseIds: [] }); } };
