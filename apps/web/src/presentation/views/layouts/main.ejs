@@ -121,7 +121,7 @@ function activateCopyButtons() {
     (middleware/clickyProxy.js, src="/cd7dba44d5.js") stays unused until Clicky allows it.
     In <head>, outside #container and body. -%>
 <% if (typeof clickyId !== 'undefined' && clickyId) { %>
-<script async data-id="<%= clickyId %>" src="//static.getclicky.com/js"></script>
+<script async data-id="<%= clickyId %>" src="<%= typeof clickyProxy !== 'undefined' && clickyProxy ? '/cd7dba44d5.js' : '//static.getclicky.com/js' %>"></script>
 <% } %>
 </head>
 <body class="<%- typeof browserClass !== 'undefined' ? browserClass : '' %>">

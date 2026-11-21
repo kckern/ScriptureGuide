@@ -296,6 +296,12 @@ describe('the page tag', () => {
     expect(res.text.indexOf(TAG)).toBeLessThan(res.text.indexOf('</head>'));
   });
 
+  test('?clicky=proxy loads the script through the same-origin proxy (for testing it)', async () => {
+    const res = await request(createApp({ log: false, analytics: true })).get('/?clicky=proxy').set('Host', 'scripture.guide');
+    expect(res.text).toContain(`<script async data-id="${CLICKY_SITE_ID}" src="/cd7dba44d5.js"></script>`);
+    expect(res.text).not.toContain('static.getclicky.com');
+  });
+
   test('is absent outside production', async () => {
     const res = await request(createApp({ log: false, analytics: false })).get('/').set('Host', 'scripture.guide');
     expect(res.status).toBe(200);
