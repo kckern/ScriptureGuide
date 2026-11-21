@@ -4,7 +4,8 @@ import db from '../db/connection.js';
 // reproduce PHP queries.
 // These queries rely on pool.query's client-side formatting (IN (?) with arrays, a numeric
 // OFFSET ?), so they must not move to execute (server-side prepared statements).
-// Gap rows hold no verse: the filler of a compound verse ("*", "/") or empty text
+// Gap rows hold no verse: the filler of a compound verse ("*", "/") or empty text. The same rule
+// as isFillerText in domain/rules/legacyText.js; change both together.
 const NOT_GAP = "AND text NOT REGEXP '^[*/[:space:]]*$'";
 
 export class ApiRepository {

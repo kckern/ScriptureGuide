@@ -111,7 +111,8 @@ export function isCompoundLine(text) {
 }
 
 // A gap row: no verse text, only the filler of a compound verse ("*", "/") or spaces. A version
-// that leaves a passage out (2HRBOM skips 2 Nephi 12-24) has only these rows there.
+// that leaves a passage out (2HRBOM skips 2 Nephi 12-24) has only these rows there. NOT_GAP in
+// data/repositories/ApiRepository.js is the same rule in SQL; change both together.
 export function isFillerText(text) {
   return /^[*/\s]*$/.test(String(text ?? ''));
 }
