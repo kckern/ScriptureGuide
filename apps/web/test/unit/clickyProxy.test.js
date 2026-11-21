@@ -296,7 +296,7 @@ describe('the page tag', () => {
     expect(res.text.indexOf(TAG)).toBeLessThan(res.text.indexOf('</head>'));
   });
 
-  test('?clicky=direct loads Clicky's standard script instead (for comparing)', async () => {
+  test('?clicky=direct loads the standard Clicky script instead (for comparing)', async () => {
     const res = await request(createApp({ log: false, analytics: true })).get('/?clicky=direct').set('Host', 'scripture.guide');
     expect(res.text).toContain(`<script async data-id="${CLICKY_SITE_ID}" src="//static.getclicky.com/js"></script>`);
     expect(res.text).not.toContain('cd7dba44d5');

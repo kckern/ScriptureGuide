@@ -120,7 +120,7 @@ function activateCopyButtons() {
     (middleware/clickyProxy.js) so ad-blocked visitors are counted; ?clicky=direct loads Clicky's
     standard script. In <head>, outside #container and body. -%>
 <% if (typeof clickyId !== 'undefined' && clickyId) { %>
-<script async data-id="<%= clickyId %>" src="<%= typeof clickyProxy !== 'undefined' && clickyProxy ? '/cd7dba44d5.js' : '//static.getclicky.com/js' %>"></script>
+<script async data-id="<%= clickyId %>" src="<%= typeof clickyProxy !== 'undefined' && !clickyProxy ? '//static.getclicky.com/js' : '/cd7dba44d5.js' %>"></script>
 <% } %>
 </head>
 <body class="<%- typeof browserClass !== 'undefined' ? browserClass : '' %>">
