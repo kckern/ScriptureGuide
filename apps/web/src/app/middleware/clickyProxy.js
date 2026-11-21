@@ -11,6 +11,7 @@
 import express from 'express';
 import config from '../../config/index.js';
 import { clientIp } from '../clientIp.js';
+import { logEvent } from '../log.js';
 
 export const CLICKY_SITE_ID = '100988820';
 export const SCRIPT_PATH = '/cd7dba44d5.js';
@@ -41,7 +42,7 @@ function clickyCookie(header = '') {
   return jar._cky_ignore ? `_cky_ignore=${jar._cky_ignore}; _cky_osa=${jar._cky_osa ?? ''}` : null;
 }
 
-export function clickyProxy({ fetchImpl = fetch, now = Date.now, production = config.env === 'production' } = {}) {
+export function clickyProxy({ fetchImpl = fetch, now = Date.now, production = config.env === 'production', log = logEvent } = {}) {
   const router = express.Router();
   let cached = null;      // { body: Buffer, until }
   let retryAt = 0;        // no fetch before this after a failure
@@ -105,6 +106,14 @@ export function clickyProxy({ fetchImpl = fetch, now = Date.now, production = co
     try {
       const up = await fetchImpl(url, init);
       const body = Buffer.from(await up.arrayBuffer());
+      // What Clicky answers to a relayed hit (diagnosis: hits answered 200 that Clicky doesn't count)
+      log('clicky_beacon', {
+        status: up.status,
+        reply: body.toString('utf8', 0, 200),
+        xff: headers['X-Forwarded-For'],
+        ua: (headers['User-Agent'] || '').slice(0, 80),
+        type: new URLSearchParams(query >= 0 ? req.originalUrl.slice(query + 1) : '').get('type') || 'pageview',
+      });
       res.status(up.status);
       const type = up.headers.get('content-type');
       if (type) res.set('Content-Type', type);
