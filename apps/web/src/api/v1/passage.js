@@ -210,7 +210,7 @@ export async function buildPassage({ reference, versions: requested, options = [
       // (raw. reads it with stored)
       if (idsOnly || options.includes('verses') || stored) passage.verses = verses;
       if (options.includes('html') && !idsOnly) {
-        passage.html = Object.fromEntries(versions.map(t => [t, passageHtml({ ...passage, verses }, t)]));
+        passage.html = Object.fromEntries(versions.map(t => [t, passageHtml(passage, t)]));
       }
       passages.push(passage);
     }

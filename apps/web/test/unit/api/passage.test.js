@@ -146,7 +146,7 @@ describe('buildPassage', () => {
 
   test('html option adds a fragment per version', async () => {
     const data = await build({ reference: 'john3.16-17', versions: ['NRSV'], options: ['html'] });
-    expect(data.passages[0].html.NRSV).toContain('<span class="verse" data-verse-id="26137"');
+    expect(data.passages[0].html.NRSV).toBe('<div class="passage" data-version="NRSV"><h3 class="heading">Nicodemus Visits Jesus</h3><p class="paragraph"><span class="verse-num" data-verse="16" data-verse-id="26137">16</span>“For God so loved the world. <span class="verse-num" data-verse="17" data-verse-id="26138">17</span>“Indeed, God did not send.</p></div>');
   });
 
   test('a reference in pieces: each piece is a reference entry and a passage; a piece without a book takes the one before', async () => {
