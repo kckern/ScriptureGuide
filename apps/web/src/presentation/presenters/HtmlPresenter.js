@@ -64,7 +64,9 @@ export class HtmlPresenter {
       sections,
       config: result.config,
       title,
-      ogMeta
+      ogMeta,
+      // 'There is no version "HBRS". Showing LDS.' (ScriptureController.versionNote)
+      versionNote: result.versionNote ? escapeHtml(result.versionNote) : null,
     });
   }
 

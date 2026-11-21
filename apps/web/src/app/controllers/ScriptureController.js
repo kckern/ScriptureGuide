@@ -9,6 +9,8 @@ import { blockVerseIds } from '../../domain/rules/blockIds.js';
 import { RequestBudget } from '../../domain/rules/requestBudget.js';
 import { bookOnlyQuery } from '../../domain/rules/referenceParsing.js';
 import { isEmptyReference } from '../../domain/rules/requestParsing.js';
+import versionRepository from '../../data/repositories/VersionRepository.js';
+import { knownVersions, unknownVersions, shownVersions, versionNote } from '../../domain/rules/versionNotice.js';
 
 // Formats whose reference blocks ("meta") name a book given alone (scriptures::loadMetaFromRef)
 const BOOK_ONLY_FORMATS = new Set(['meta', 'api']);
@@ -26,10 +28,25 @@ function blockSection(block, config) {
 }
 
 export class ScriptureController {
-  constructor(lookupService, references = referenceService, blockService = legacyBlockService) {
+  constructor(lookupService, references = referenceService, blockService = legacyBlockService, versions = versionRepository) {
     this.lookupService = lookupService;
     this.references = references;
     this.blockService = blockService;
+    this.versions = versions;
+  }
+
+  // The names a version segment may use (versionNotice.knownVersions), read once
+  knownVersions() {
+    this._known ??= this.versions.findAll().then(knownVersions, err => { this._known = null; throw err; });
+    return this._known;
+  }
+
+  // 'There is no version "HBRS". Showing LDS.' when the version segment names a version the
+  // site does not have; undefined otherwise
+  async versionNote(config, page) {
+    if (!config.versions?.length || config.parallel) return undefined;
+    const unknown = unknownVersions(config.versions, await this.knownVersions());
+    return versionNote(unknown, shownVersions(page)) ?? undefined;
   }
 
   // A reference that found no verses: the blocks the PHP site built for it (cleanReference, one
@@ -79,6 +96,7 @@ export class ScriptureController {
         const page = await this.notFoundPage(result.legacyBlocks, config);
         // index.php: every id null → referenceFromVerseIds gave "" → empty($ref) → home.php
         if (!page) return res.render('home', { config, title: '' });
+        page.versionNote = await this.versionNote(config, page);
         req.scriptureResult = page;
         return next();
       }
@@ -90,6 +108,7 @@ export class ScriptureController {
         result.title = await this.blockService.repo.referenceFromVerseIds(result.reference.verseIds) || undefined;
       }
 
+      if (isHtml(config)) result.versionNote = await this.versionNote(config, result);
       // Attach result for output middleware
       req.scriptureResult = result;
       next();

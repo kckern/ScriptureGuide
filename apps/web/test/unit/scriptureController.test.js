@@ -137,3 +137,37 @@ describe('ScriptureController: notes', () => {
     expect(result).toBeDefined();
   });
 });
+
+describe('ScriptureController: a version segment that names no version', () => {
+  const versionRepo = { findAll: vi.fn(async () => [{ id: 'LDS', volumes: 'bom,dc,ot,nt.pgp' }, { id: 'MEV', volumes: 'ot,nt' }]) };
+  const found = { reference: { isEmpty: false, verseIds: [18000] }, verses: [{}], config: { version: 'LDS' } };
+  const ctrl = new ScriptureController({ lookup: async () => ({ ...found }) }, references, blockService, versionRepo);
+  const page = async (versions, outputFormat = 'html', extra = {}) => {
+    const req = { config: { outputFormat, reference: 'isa.49', versions, legacy: { ref: 'isa.49' }, ...extra }, params: { reference: 'isa.49' }, headers: {} };
+    await ctrl.show(req, {}, () => {});
+    return req.scriptureResult;
+  };
+  test('the html page notes it and names the version shown', async () => {
+    expect((await page([{ version: 'HBRS', format: 'MEV' }])).versionNote).toBe('There is no version "HBRS". Showing LDS.');
+  });
+  test('not for a known version or volume word', async () => {
+    expect((await page([{ version: 'LDS', format: 'MEV' }])).versionNote).toBeUndefined();
+    expect((await page([{ version: 'BOM', format: 'BOM' }])).versionNote).toBeUndefined();
+  });
+  test('not without a version segment, and not on other formats', async () => {
+    versionRepo.findAll.mockClear();
+    expect((await page([])).versionNote).toBeUndefined();
+    expect((await page([{ version: 'HBRS', format: 'HBRS' }], 'api')).versionNote).toBeUndefined();
+    expect(versionRepo.findAll).not.toHaveBeenCalled();
+  });
+  test('the version list is read once', async () => {
+    const repo = { findAll: vi.fn(async () => [{ id: 'LDS', volumes: 'bom' }]) };
+    const fresh = new ScriptureController({ lookup: async () => ({ ...found }) }, references, blockService, repo);
+    for (const version of ['HBRS', 'ZZZ']) {
+      const req = { config: { outputFormat: 'html', reference: 'isa.49', versions: [{ version, format: version }], legacy: {} }, params: {}, headers: {} };
+      await fresh.show(req, {}, () => {});
+      expect(req.scriptureResult.versionNote).toBe(`There is no version "${version}". Showing LDS.`);
+    }
+    expect(repo.findAll).toHaveBeenCalledTimes(1);
+  });
+});

@@ -15,7 +15,8 @@ const sectionsHtml = sectionList
   config,
   slugref: data.canonicalRefSlug || '',
   slugver: version,
-  body: `
+  body: `${typeof versionNote !== 'undefined' && versionNote ? `
+<div class="versionNote">${versionNote}</div>` : ''}
 <div id="container">
   <div class="scriptures">
 ${sectionsHtml}

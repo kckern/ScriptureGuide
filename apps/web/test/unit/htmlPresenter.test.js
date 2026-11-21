@@ -136,3 +136,19 @@ describe('HtmlPresenter page title', () => {
     expect(new HtmlPresenter().titleFor({ reference: {} }, { title: 'John 3:16' }, {})).toBe('John 3:16');
   });
 });
+
+describe('HtmlPresenter: the note on an unknown version', () => {
+  const render = versionNote => {
+    const result = crossChapter('Genesis 29:31-30:3', 31);
+    result.versionNote = versionNote;
+    let locals;
+    new HtmlPresenter().present(result, { headers: {}, path: '/' }, { render: (view, l) => { locals = l; } });
+    return locals;
+  };
+  test('is passed to the page, escaped', () => {
+    expect(render('There is no version "<B>". Showing LDS.').versionNote).toBe('There is no version &quot;&lt;B&gt;&quot;. Showing LDS.');
+  });
+  test('none without one', () => {
+    expect(render(undefined).versionNote).toBeNull();
+  });
+});
