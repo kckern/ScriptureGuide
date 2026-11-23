@@ -9,6 +9,7 @@ import { detectReferencesWithContext, collectReferencesWithContext } from './scr
 import { detectCanon, formatId, parseId, convertCanon, registerCanon, registerMapping } from './scriptcanon.mjs';
 import { toSlug } from './slug.mjs';
 import { normalizeEntities } from './scriptlib.mjs';
+import { guardRecords } from './falsepositives.mjs';
 
 import {
   MAX_RANGE_SIZE,
@@ -914,7 +915,9 @@ const detectReferences = (content, callBack, options = null) => {
         chapterOnly: true,
         // A bare "6:3" binds to an earlier book only when the token before it is
         // citation material. false restores pre-1.0.98 distance-only binding.
-        strictImpliedBooks: true
+        strictImpliedBooks: true,
+        // English only: drop matches that are prose, not citations ("Wood Is 4,300 Years Old").
+        guardFalsePositives: true
     };
 
     const finalOptions = { ...defaultOptions, ...options };
@@ -931,7 +934,7 @@ const detectReferences = (content, callBack, options = null) => {
         : config.lang_extra;
 
     // The abbreviations / chapterOnly flags, applied to the collected records as findReferences does
-    const filterRecords = detectionFlagFilter(finalOptions, effectiveLanguage);
+    const filterRecords = detectionFlagFilter(finalOptions, effectiveLanguage, content);
 
     // Use enhanced processing if context-aware mode is enabled
     if (finalOptions.contextAware) {
@@ -965,7 +968,9 @@ const findReferences = (content, options = null) => {
         chainAcrossMarkers: true,
         // A bare "6:3" binds to an earlier book only when the token before it is
         // citation material. false restores pre-1.0.98 distance-only binding.
-        strictImpliedBooks: true
+        strictImpliedBooks: true,
+        // English only: drop matches that are prose, not citations ("Wood Is 4,300 Years Old").
+        guardFalsePositives: true
     };
 
     const finalOptions = { ...defaultOptions, ...options };
@@ -1004,7 +1009,8 @@ const findReferences = (content, options = null) => {
         records = [...records, ...spelled].sort((a, b) => a.start - b.start);
     }
 
-    return applyDetectionFlags(records, finalOptions);
+    records = applyDetectionFlags(records, finalOptions);
+    return guardApplies(finalOptions, effectiveLanguage) ? guardRecords(content, records) : records;
 }
 
 // English ordinal words -> number, covering 1..39 (single words + twenty-/
@@ -1125,14 +1131,18 @@ const applyDetectionFlags = (records, opts) => {
 
 // applyDetectionFlags for detectReferences' records, which carry no canonical `ref` (the plain
 // path's `ref` is the query as written). Returns null when both flags are on: nothing to filter.
-const detectionFlagFilter = (opts, language) => {
-    if (opts.chapterOnly !== false && opts.abbreviations !== false) return null;
+const guardApplies = (opts, language) => opts.guardFalsePositives !== false && language === 'en';
+
+const detectionFlagFilter = (opts, language, content) => {
+    const guard = guardApplies(opts, language);
+    if (opts.chapterOnly !== false && opts.abbreviations !== false && !guard) return null;
     return (records) => {
         const kept = applyDetectionFlags(
-            records.map(record => ({ text: record.text, ref: generateReference(record.verse_ids || [], language), record })),
+            records.map(record => ({ start: record.start, end: record.end, text: record.text, ref: generateReference(record.verse_ids || [], language), record })),
             opts
         );
-        const keep = new Set(kept.map(k => k.record));
+        const vetted = guard ? guardRecords(content, kept) : kept;
+        const keep = new Set(vetted.map(k => k.record));
         return records.filter(record => keep.has(record));
     };
 }

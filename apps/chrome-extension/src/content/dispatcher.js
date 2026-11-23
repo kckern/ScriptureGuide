@@ -5,8 +5,6 @@
 //
 // A job is { chunks: [text...], onResult(resultsPerChunk) }.
 
-import { guardMatches } from './guard.js';
-
 export function createDispatcher({
   send, parseLocal, governor, idle, options,
   timeoutMs = 2000, maxBatchChars = 16000, now = () => performance.now()
@@ -26,7 +24,7 @@ export function createDispatcher({
     let matches = [];
     try { matches = parseLocal(item.job.chunks[item.next], { ...options(), contextAware: governor.contextAware && options().contextAware !== false }) || []; } catch (e) { matches = []; }
     governor.recordLocal(now() - start);
-    item.results.push(guardMatches(item.job.chunks[item.next], matches));
+    item.results.push(matches);
     item.next++;
     if (item.next >= item.job.chunks.length) {
       localQueue.shift();
@@ -71,7 +69,7 @@ export function createDispatcher({
         governor.workerOk();
         let i = 0;
         for (const job of batch) {
-          job.onResult(results.slice(i, i + job.chunks.length).map((r, k) => guardMatches(job.chunks[k], r)));
+          job.onResult(results.slice(i, i + job.chunks.length).map((r) => r || []));
           i += job.chunks.length;
         }
       } else {
