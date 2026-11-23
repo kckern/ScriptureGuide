@@ -1,5 +1,13 @@
 # scripture-guide-chrome-extension
 
+## 2.2.5
+
+### Patch Changes
+
+- 097f605: Fewer false links: headlines like "Wood Is 4,300 Years Old" no longer turn "Is 4,300" into an Isaiah reference.
+- Updated dependencies [097f605]
+  - scripture-guide@1.1.5
+
 ## 2.2.4
 
 ### Patch Changes
