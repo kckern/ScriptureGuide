@@ -2,8 +2,11 @@
    content script sets (data-sg-style). No page-wide styling. */
 
 :root[data-sg-style="badge"] a.sg_autolink,
+:root[data-sg-style="badge"] span.sg_inlink,
 :root[data-sg-style="badge"] a.sg_autolink:link,
-:root[data-sg-style="badge"] a.sg_autolink:visited {
+:root[data-sg-style="badge"] span.sg_inlink:link,
+:root[data-sg-style="badge"] a.sg_autolink:visited,
+:root[data-sg-style="badge"] span.sg_inlink:visited {
   font-family: 'SG Goudy Scripture', Georgia, 'Times New Roman', serif !important;
   font-weight: 400 !important;
   font-style: normal !important;
@@ -23,7 +26,8 @@
   box-decoration-break: clone !important;
   box-sizing: border-box !important;
 }
-:root[data-sg-style="badge"] a.sg_autolink:hover {
+:root[data-sg-style="badge"] a.sg_autolink:hover,
+:root[data-sg-style="badge"] span.sg_inlink:hover {
   border-bottom-style: solid !important;
   color: #552B1B !important;
   background-color: #f2e5d9 !important;
@@ -42,13 +46,17 @@ a.sg_origlink:focus-visible {
 }
 
 :root[data-sg-style="subtle"] a.sg_autolink,
+:root[data-sg-style="subtle"] span.sg_inlink,
 :root[data-sg-style="subtle"] a.sg_autolink:link,
-:root[data-sg-style="subtle"] a.sg_autolink:visited {
+:root[data-sg-style="subtle"] span.sg_inlink:link,
+:root[data-sg-style="subtle"] a.sg_autolink:visited,
+:root[data-sg-style="subtle"] span.sg_inlink:visited {
   color: inherit !important;
   text-decoration: none !important;
   border-bottom: 1px dotted #552B1B !important;
 }
-:root[data-sg-style="subtle"] a.sg_autolink:hover {
+:root[data-sg-style="subtle"] a.sg_autolink:hover,
+:root[data-sg-style="subtle"] span.sg_inlink:hover {
   border-bottom-style: solid !important;
 }
 
@@ -91,3 +99,13 @@ a.sg_origlink svg {
   vertical-align: -0.1em !important;
   display: inline-block !important;
 }
+
+/* A reference inside a site's own link (a card or headline anchor). It sits above the card's
+   click overlay so it stays clickable. */
+span.sg_inlink {
+  position: relative !important;
+  z-index: 2 !important;
+  cursor: pointer !important;
+}
+span.sg_inlink:focus { outline: none !important; }
+span.sg_inlink:focus-visible { outline: 2px solid #552B1B !important; outline-offset: 1px !important; }

@@ -16,6 +16,7 @@ export function annotateTextNode(textNode, matches, processed) {
   const text = textNode.nodeValue;
   const frag = doc.createDocumentFragment();
   const links = [];
+  const inAnchor = !!(parent.closest && parent.closest('a'));
   let cursor = 0;
 
   const addText = (str) => {
@@ -28,12 +29,25 @@ export function annotateTextNode(textNode, matches, processed) {
   for (const m of matches) {
     if (m.start < cursor || m.end > text.length || m.end <= m.start) continue; // overlap/bounds guard
     addText(text.slice(cursor, m.start));
-    const a = doc.createElement('a');
-    a.className = 'sg_autolink';
-    a.textContent = text.slice(m.start, m.end);
-    a.setAttribute('href', 'https://scripture.guide/' + toSlug(m.ref || a.textContent));
-    a.setAttribute('target', '_blank');
-    a.setAttribute('rel', 'noopener noreferrer');
+    const label = text.slice(m.start, m.end);
+    const url = 'https://scripture.guide/' + toSlug(m.ref || label);
+    let a;
+    if (inAnchor) {
+      // An <a> cannot nest in an <a>. The click handler in index.js opens data-href.
+      a = doc.createElement('span');
+      a.className = 'sg_autolink sg_inlink';
+      a.setAttribute('role', 'link');
+      a.setAttribute('tabindex', '0');
+      a.setAttribute('data-href', url);
+      a.textContent = label;
+    } else {
+      a = doc.createElement('a');
+      a.className = 'sg_autolink';
+      a.textContent = label;
+      a.setAttribute('href', url);
+      a.setAttribute('target', '_blank');
+      a.setAttribute('rel', 'noopener noreferrer');
+    }
     frag.appendChild(a);
     links.push(a);
     cursor = m.end;
@@ -48,7 +62,7 @@ export function annotateTextNode(textNode, matches, processed) {
 // disabled live). Merges the resulting adjacent text nodes.
 export function removeAllAnnotations(root) {
   // Badges that replaced a site's own link are restored by removeAllReflinks instead
-  const links = [...root.querySelectorAll('a.sg_autolink:not(.sg_takeover)')];
+  const links = [...root.querySelectorAll('.sg_autolink:not(.sg_takeover)')];
   for (const a of links) {
     const parent = a.parentNode;
     if (!parent) continue;

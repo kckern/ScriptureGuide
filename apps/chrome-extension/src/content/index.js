@@ -236,6 +236,16 @@ const CHANGED_TEXT_DELAY_MS = 3000; // text that keeps changing is re-parsed at 
 
   // One delegated click handler: popup-mode for our own links (badges + 🔗).
   document.addEventListener('click', (e) => {
+    const inline = e.target && e.target.closest && e.target.closest('span.sg_inlink');
+    if (inline) {
+      // Inside a site's own link: keep that link from navigating, open ours instead.
+      e.preventDefault();
+      e.stopPropagation();
+      const url = inline.getAttribute('data-href');
+      if (settings.click.action === 'popup') openCenteredPopup(url, settings.click.popupWidth, settings.click.popupHeight);
+      else window.open(url, '_blank', 'noopener,noreferrer');
+      return;
+    }
     const a = e.target && e.target.closest && e.target.closest('a.sg_autolink, a.sg_reflink');
     if (!a || settings.click.action !== 'popup') return;
     e.preventDefault();

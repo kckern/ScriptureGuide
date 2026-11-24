@@ -12,6 +12,17 @@ const UNIT_AFTER = new RegExp('^\\s*(?:%|(?:years?|yrs?|people|persons?|times|pe
     'km|miles?|days?|months?|weeks?|hours?|minutes?|seconds?|dollars?|feet|ft|kg|lbs?|pounds?|' +
     'items?|points?|votes?|children|kids|members|users|views|likes|shares|comments)\\b)', 'i');
 
+// Abbreviations that stay linkable as chapter-only ("Ps 23", "Heb 11"). Any other abbreviated
+// book followed by a bare chapter is too weak a signal. Numbered books ("1 Ne 3") and
+// non-letter forms ("D&C 4") are always allowed.
+const CHAPTER_ONLY_ABBREVIATIONS = new Set(['ps', 'psa', 'mt', 'matt', 'mk', 'lk', 'jn', 'rom', 'heb', 'isa',
+    'lu', 'prov', 'eph', 'gal', 'deut', 'jer', 'ezek', 'zech', 'mal']);
+
+// Implied verses ("v. 16") carry no book of their own.
+const VERSE_MARKERS = new Set(['v', 'vv', 'vs', 'ver', 'vers', 'verse', 'verses']);
+
+const normalizeBook = (b) => b.toLowerCase().replace(/[\s.]/g, '');
+
 const VERSE_SEPARATOR = /\d\s*[:.]\s*\d/;
 
 export const acceptMatch = (content, m) => {
@@ -33,6 +44,14 @@ export const acceptMatch = (content, m) => {
     // "Is", "Am", "So", "Gen"... need a verse.
     const book = /^\s*(?:\d\s*)?([A-Za-z]+)/.exec(span);
     if (book && COMMON_ABBREVIATIONS.has(book[1].toLowerCase()) && !hasVerse) return false;
+
+    // An abbreviated book with a bare chapter ("Gen 2", "Jer 29") needs a verse to count as a citation.
+    const bare = !hasVerse && /^\s*([A-Za-z][A-Za-z.\s]*?)\s*\d+\s*$/.exec(span);
+    if (bare && m.ref) {
+        const written = normalizeBook(bare[1]);
+        const canonical = normalizeBook(m.ref.replace(/\s*\d.*$/, ''));
+        if (written !== canonical && !VERSE_MARKERS.has(written) && !CHAPTER_ONLY_ABBREVIATIONS.has(written)) return false;
+    }
 
     // Chapter-only followed by a unit word.
     if (!hasVerse && UNIT_AFTER.test(after)) return false;
