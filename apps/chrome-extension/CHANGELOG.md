@@ -1,5 +1,13 @@
 # scripture-guide-chrome-extension
 
+## 2.2.6
+
+### Patch Changes
+
+- 7e7cba4: Product names like "Gen2" or "Rev 3.0" are no longer turned into Bible links.
+- Updated dependencies [7e7cba4]
+  - scripture-guide@1.1.6
+
 ## 2.2.5
 
 ### Patch Changes
