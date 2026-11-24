@@ -10,7 +10,12 @@ describe('false-positive guard (English)', () => {
     'Ex 4,300',
     'Am 3',
     'Is 4',
-    'Job 3 people came'
+    'Job 3 people came',
+    'Smart Portable TV for Home, Office - Gen2',
+    'iPad Gen 2 case',
+    'Rev 3.0 released',
+    'Dan 2 tickets',
+    'Mark5 sensor'
   ])('rejects %s', (t) => expect(kept(t)).toEqual([]));
 
   test.each([
@@ -20,7 +25,10 @@ describe('false-positive guard (English)', () => {
     ['Mark 5', 'Mark 5'],
     ['Ps 119:105,160', 'Ps 119:105'],
     ['John 3:16', 'John 3:16'],
-    ['Genesis 2', 'Genesis 2']
+    ['Genesis 2', 'Genesis 2'],
+    ['Gen 2:3', 'Gen 2:3'],
+    ['Rev 3:20', 'Rev 3:20'],
+    ['Dan 2:44', 'Dan 2:44']
   ])('keeps %s', (t, want) => expect(kept(t)[0]).toContain(want));
 
   test('guardFalsePositives: false restores the old behavior', () => {
