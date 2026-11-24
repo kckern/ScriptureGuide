@@ -1,5 +1,13 @@
 # scripture-guide-chrome-extension
 
+## 2.2.7
+
+### Patch Changes
+
+- 6fe28a3: References inside post titles and previews now link on Reddit and other sites that wrap a whole card in one link. Product titles on shopping pages are skipped.
+- Updated dependencies [6fe28a3]
+  - scripture-guide@1.1.7
+
 ## 2.2.6
 
 ### Patch Changes
