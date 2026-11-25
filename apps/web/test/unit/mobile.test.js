@@ -80,3 +80,33 @@ describe('device.js (the same decision in the browser)', () => {
     expect(load({ ua: ANDROID_TABLET, mobileHint: false }).cls().contains('sg-mobile')).toBe(false);
   });
 });
+
+describe('swipe.js (chapter swipes on a phone)', () => {
+  const SWIPE = readFileSync(new URL('../../public/js/swipe.js', import.meta.url), 'utf8');
+  function page({ mobile = true } = {}) {
+    const dom = new JSDOM(`<!doctype html><html${mobile ? ' class="sg-mobile"' : ''}><body><p id="t">text</p><input id="f"><a class="prev" href="/p">p</a><a class="next" href="/n">n</a></body></html>`, { url: 'https://scripture.guide/', runScripts: 'outside-only' });
+    const w = dom.window;
+    const clicks = [];
+    w.document.querySelectorAll('a').forEach(a => a.addEventListener('click', e => { e.preventDefault(); clicks.push(a.className); }));
+    w.eval(SWIPE);
+    const touch = (type, id, x, y) => {
+      const ev = new w.Event(type, { bubbles: true });
+      const pt = { clientX: x, clientY: y };
+      ev.touches = type === 'touchend' ? [] : [pt];
+      ev.changedTouches = [pt];
+      w.document.getElementById(id).dispatchEvent(ev);
+    };
+    const swipe = (dx, dy = 0, id = 't') => { touch('touchstart', id, 200, 300); touch('touchend', id, 200 + dx, 300 + dy); return clicks.slice(); };
+    return { swipe, clicks };
+  }
+  test('left goes to the next chapter, right to the previous', () => {
+    expect(page().swipe(-100)).toEqual(['next']);
+    expect(page().swipe(100)).toEqual(['prev']);
+  });
+  test('short, mostly vertical, form-field and desktop swipes do nothing', () => {
+    expect(page().swipe(-30)).toEqual([]);
+    expect(page().swipe(-100, 90)).toEqual([]);
+    expect(page().swipe(-100, 0, 'f')).toEqual([]);
+    expect(page({ mobile: false }).swipe(-100)).toEqual([]);
+  });
+});
