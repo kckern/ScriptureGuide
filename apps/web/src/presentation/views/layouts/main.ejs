@@ -1,18 +1,19 @@
 <%# No doctype on purpose: live sends none, so browsers lay it out in quirks mode, and the CSS
     (tables not inheriting font size, the search box, the home buttons) depends on that.
     Adding one changed 5 of 10 pages by 2-22% of pixels in the browser smoke suite. -%>
-<html lang="en">
+<html lang="en"<%- typeof mobile !== 'undefined' && mobile ? ' class="sg-mobile"' : '' %>>
 <head>
 <title><%= typeof title !== 'undefined' && title != null ? title + ' | ' : '' %>Scripture Guide</title>
 <link rel="shortcut icon" href="/favicon.ico">
 <link rel="chrome-webstore-item" href="https://chrome.google.com/webstore/detail/lkagejkikblabiegfnehlknmlgckhgan">
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <% /* Asset names are not fingerprinted and are cached for an hour: the build's commit in the URL
       keeps a page and its scripts from different builds apart. */
    const av = typeof assetVersion !== 'undefined' && assetVersion ? '?v=' + encodeURIComponent(assetVersion) : ''; %>
 <%# Preferences (localStorage); sets the <html> classes the CSS reads before the first paint %>
 <script src="/js/prefs.js<%= av %>"></script>
+<script src="/js/device.js<%= av %>"></script>
 <link rel="preload" href="/css/webfont/GoudyScripture.woff2" as="font" type="font/woff2" crossorigin>
 <% if (typeof ogMeta !== 'undefined' && ogMeta) { %>
 <meta property="og:title" content="<%= ogMeta.title %>" />
@@ -39,6 +40,7 @@
 <link rel="stylesheet" href="/css/featherlight.css<%= av %>">
 <link rel="stylesheet" href="/css/parallel.css<%= av %>">
 <link rel="stylesheet" href="/css/fax.css<%= av %>">
+<link rel="stylesheet" href="/css/mobile.css<%= av %>">
 <style>
   body { opacity: 0; transition: opacity 0.15s ease; }
   h3.heading a { color: inherit; text-decoration: none; }

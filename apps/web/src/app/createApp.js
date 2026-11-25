@@ -111,6 +111,17 @@ export function createApp({
     next();
   });
 
+  // Phone detection for the <html> class sg-mobile (public/js/device.js repeats it in the browser).
+  // The Client Hints flag wins when the browser sends one; tablets are not phones.
+  app.use((req, res, next) => {
+    const hint = req.headers['sec-ch-ua-mobile'];
+    const ua = req.headers['user-agent'] || '';
+    res.locals.mobile = hint ? hint === '?1' : /Mobi|iPhone|iPod|Windows Phone|Android.+Mobile/i.test(ua) && !/iPad|Tablet/i.test(ua);
+    res.vary('User-Agent');
+    res.vary('Sec-CH-UA-Mobile');
+    next();
+  });
+
   // Subdomain parsing
   app.use(subdomainMiddleware);
 

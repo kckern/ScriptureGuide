@@ -39,6 +39,7 @@
 
   function active() {
     if (window.innerWidth < MIN_WIDTH) return false;
+    if (document.documentElement.classList.contains('sg-mobile')) return false;
     return !document.documentElement.classList.contains('sg-one-column');
   }
 

@@ -135,6 +135,8 @@
       applyClasses: function (el) {
         if (!el || !el.classList) return;
         for (var k in OFF_CLASS) el.classList.toggle(OFF_CLASS[k], current[k] === false);
+        // A phone (device.js puts sg-mobile on <html>) has one column whatever the preference
+        if (el.classList.contains('sg-mobile')) el.classList.add(OFF_CLASS.twoColumn);
         for (var j in ON_CLASS) el.classList.toggle(ON_CLASS[j], current[j] === true);
       },
     };

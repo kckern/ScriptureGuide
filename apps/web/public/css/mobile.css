@@ -1,0 +1,245 @@
+/* Phone layout. Applies under html.sg-mobile only (public/js/device.js: a phone, or a window of
+   700px or less), so the desktop page is untouched. The page is one fluid column the width of the
+   screen: nothing in it is wider than the viewport, so it never scrolls sideways. The toolbar is a
+   full-width bar fixed to the bottom with touch-sized buttons, clear of the home indicator. */
+
+html.sg-mobile {
+	-webkit-text-size-adjust: 100%;
+	text-size-adjust: 100%;
+	--sg-bar: 48px; /* toolbar height, without the home-indicator inset */
+}
+html.sg-mobile, html.sg-mobile body {
+	max-width: 100%;
+	overflow-x: hidden;
+}
+html.sg-mobile body {
+	min-width: 0;
+	margin: 0;
+	font-size: 17px;
+	line-height: 1.4;
+	/* room under the last line for the fixed toolbar */
+	margin-bottom: calc(var(--sg-bar) + env(safe-area-inset-bottom, 0px) + 24px);
+	/* iOS ignores or janks on a fixed background */
+	background-attachment: scroll;
+	word-break: normal;
+	overflow-wrap: break-word;
+}
+/* the page's wrapper (align="center") */
+html.sg-mobile body > div[align] { width: 100%; }
+
+/* ---- the paper ---- */
+html.sg-mobile #container,
+html.sg-mobile .versionNote {
+	box-sizing: border-box;
+	width: auto;
+	min-width: 0;
+	max-width: none;
+	margin: 0 0 0;
+	padding-left: max(14px, env(safe-area-inset-left, 0px));
+	padding-right: max(14px, env(safe-area-inset-right, 0px));
+	border-width: 0 0 3px 0;
+	text-align: left;
+	overflow-wrap: break-word;
+}
+html.sg-mobile #container { margin-top: 0; padding-top: 4px; }
+html.sg-mobile .versionNote { margin-top: 0; padding-top: 6px; padding-bottom: 6px; font-size: 14px; }
+html.sg-mobile .versionNote + #container { margin-top: 0; border-top: 0; }
+
+/* ---- headings ---- */
+html.sg-mobile h1 { font-size: 1.9em; line-height: 1.1; }
+html.sg-mobile h2 { font-size: 2em; line-height: 1.15; margin-top: 18px; letter-spacing: 0; }
+html.sg-mobile h3 {
+	font-size: 1.6em;
+	line-height: 1.1;
+	margin-top: 18px;
+	padding-right: 0;
+	overflow-wrap: break-word;
+}
+html.sg-mobile h3.section_title { font-size: 1.7em; }
+/* The cover image floats at the heading's right (main.js); shrink it and keep the text clear */
+html.sg-mobile h3.heading { min-height: 34px; }
+html.sg-mobile img.cover, html.sg-mobile img.option { width: 90px; height: 30px; max-width: 40%; }
+html.sg-mobile .paddedH3 { margin-right: 0; }
+html.sg-mobile h4 {
+	float: none;
+	width: auto;
+	margin: 0;
+	text-align: right;
+	font-size: 14px;
+	line-height: 1.2;
+}
+html.sg-mobile h3 span.b { font-size: .5em; line-height: 2.2em; }
+
+html.sg-mobile div.headnote,
+html.sg-mobile div.summary { padding: 12px 4px 0; font-size: 15px; line-height: 1.3; letter-spacing: 0; }
+html.sg-mobile div.background { padding: 12px 4px 0; font-size: 15px; line-height: 1.3; letter-spacing: 0; }
+html.sg-mobile div.verse_head { letter-spacing: 0; }
+html.sg-mobile div.section_footer { letter-spacing: 0; }
+
+/* ---- scripture text ---- */
+html.sg-mobile .passage { font-size: 19px; overflow: visible; overflow-wrap: anywhere; }
+/* flex items (a verse beside its copy button) may shrink below their longest word */
+html.sg-mobile .prose, html.sg-mobile .prose > *, html.sg-mobile .passage > div { min-width: 0; }
+html.sg-mobile .verse, html.sg-mobile p, html.sg-mobile .passage { line-height: 1.4; }
+html.sg-mobile .vcols { column-count: 1; }
+html.sg-mobile .vcols p.prose { margin: 0 0 .5em; }
+html.sg-mobile p.ellipses { letter-spacing: 16px; font-size: 40px; padding-left: 0; }
+
+/* Poetry and indented lines: indents shrink and lines wrap rather than run off the screen */
+html.sg-mobile .indent { margin-left: 1.2em; }
+html.sg-mobile .indent.doubleindent { margin-left: 2.4em; white-space: normal; }
+html.sg-mobile .indent.tripleindent,
+html.sg-mobile .indent.quadindent { margin-left: 3.6em; white-space: normal; }
+html.sg-mobile .linebreak.indent { text-indent: 1.2em; margin-left: 0; white-space: normal; }
+html.sg-mobile .linebreak.indent.doubleindent { text-indent: 2.4em; white-space: normal; }
+html.sg-mobile .linebreak.indent.tripleindent,
+html.sg-mobile .linebreak.indent.quadindent { text-indent: 3.6em; white-space: normal; }
+html.sg-mobile blockquote { margin-left: 1em; margin-right: 0; }
+html.sg-mobile span.sense { white-space: normal; }
+
+/* The per-verse copy button needs hover; a phone has the long-press menu and the passage button */
+html.sg-mobile .copyprose { display: none; }
+
+/* Media and tables never exceed the column */
+html.sg-mobile img, html.sg-mobile video, html.sg-mobile iframe { max-width: 100%; }
+html.sg-mobile table { max-width: 100%; margin-top: 1em; margin-bottom: 1em; }
+
+/* ---- chapter navigation: two big tap targets ---- */
+html.sg-mobile .chapterNav {
+	display: flex;
+	justify-content: space-between;
+	gap: 12px;
+	padding-top: 14px;
+	font-size: 16px;
+}
+html.sg-mobile .chapterNav a {
+	float: none;
+	flex: 1 1 0;
+	min-width: 0;
+	max-width: none;
+	padding: 10px 6px;
+	text-indent: 0;
+	line-height: 1.15;
+	overflow-wrap: break-word;
+}
+html.sg-mobile .chapterNav a.prev { text-align: left; }
+html.sg-mobile .chapterNav a.next { text-align: right; }
+
+/* ---- home page ---- */
+html.sg-mobile #container h2 { margin-top: 14px; }
+html.sg-mobile #container input#searchbox { box-sizing: border-box; font-size: 16px; /* no iOS focus zoom */ }
+/* The Chrome extension promo is of no use on a phone: its browser installs no extensions */
+html.sg-mobile #container > div:nth-of-type(2) { display: none; }
+
+/* ---- search results: each hit stacks (reference, then text) instead of two table columns ---- */
+html.sg-mobile ul.tabs { margin: 0; flex-wrap: wrap; overflow: visible; row-gap: 4px; font-size: 15px; }
+html.sg-mobile ul.tabs > li { border-bottom: 1px solid rgba(90, 70, 54, .3); border-radius: 5px; padding: .5em .7em; }
+html.sg-mobile #searchresults,
+html.sg-mobile #searchresults tbody,
+html.sg-mobile #searchresults tr,
+html.sg-mobile #searchresults td { display: block; width: auto; max-width: 100%; box-sizing: border-box; }
+html.sg-mobile #searchresults { margin-top: 0; }
+html.sg-mobile #searchresults tr { border-top: 1px dotted #777; padding: 10px 0; }
+html.sg-mobile #searchresults td { white-space: normal !important; text-align: left; }
+html.sg-mobile .refblock { width: auto; text-align: left; font-size: 18px; }
+html.sg-mobile .refblock a img { display: none; }
+html.sg-mobile .searchtext { border-top: 0; padding: 4px 0 0; line-height: 1.4; display: block; }
+html.sg-mobile .searchtext .copybtn { display: none; }
+
+/* ---- parallel passages and facsimiles ---- */
+html.sg-mobile .parallel, html.sg-mobile .parallel tbody { max-width: 100%; }
+html.sg-mobile .parallel td { display: block; width: auto !important; }
+html.sg-mobile #floater { width: auto; max-width: calc(100vw - 16px); }
+
+/* ---- lightbox and panels ---- */
+html.sg-mobile .featherlight .featherlight-content {
+	width: auto;
+	min-height: 0;
+	margin-left: 6px;
+	margin-right: 6px;
+	max-width: calc(100vw - 12px);
+	box-sizing: border-box;
+}
+html.sg-mobile .versebox { width: 100%; height: auto; }
+html.sg-mobile .versebox .panel { height: auto; max-height: 65vh; }
+html.sg-mobile .versebox table { width: 100%; table-layout: fixed; }
+html.sg-mobile .versebox td { overflow-wrap: break-word; }
+html.sg-mobile .paneltabs ul li { width: auto; min-width: 0; padding: 0 .6em; }
+html.sg-mobile .versionsbox { width: auto; max-width: 100vw; left: 0; right: 0; }
+html.sg-mobile #pastebin {
+	width: auto;
+	height: 60vh;
+	left: 8px;
+	right: 8px;
+	margin: 0;
+	top: 20px;
+	box-sizing: border-box;
+}
+html.sg-mobile .tipsy-inner { max-width: 240px; }
+
+/* ---- the toolbar: full width, fixed to the bottom of the screen ---- */
+html.sg-mobile #toolbar {
+	left: 0;
+	right: 0;
+	bottom: 0;
+	width: 100%;
+	box-sizing: border-box;
+	padding-bottom: env(safe-area-inset-bottom, 0px);
+	background-color: #333;
+	border-top: 1px solid #000;
+	/* stays put while the page's address bar slides away */
+	transform: translateZ(0);
+}
+html.sg-mobile #innerToolbar { max-width: none; border: 0; }
+html.sg-mobile .nav {
+	display: flex;
+	align-items: stretch;
+	width: 100%;
+	height: var(--sg-bar);
+	padding-left: env(safe-area-inset-left, 0px);
+	padding-right: env(safe-area-inset-right, 0px);
+	box-sizing: border-box;
+}
+html.sg-mobile .nav li {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	flex: 0 0 56px;
+	width: auto;
+	min-width: 44px;
+	padding: 0;
+	font-size: 24px;
+	line-height: 1;
+	-webkit-tap-highlight-color: transparent;
+}
+html.sg-mobile .nav li:active { background-color: #888; }
+html.sg-mobile .nav li#status_msg {
+	display: block;
+	flex: 1 1 auto;
+	min-width: 0;
+	max-width: none;
+	width: auto;
+	padding: 0 12px;
+	font-size: 17px;
+	line-height: var(--sg-bar);
+	text-align: left;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+html.sg-mobile .nav li img { height: 24px; margin: 0; bottom: 0; }
+html.sg-mobile .nav li#status_msg img { height: 18px; margin: 0 6px 0 0; vertical-align: -3px; }
+html.sg-mobile .nav li #audio_verse { display: flex; align-items: center; }
+
+/* Preferences panel: a sheet standing on the toolbar, full width */
+html.sg-mobile .sgp {
+	left: 8px;
+	right: 8px;
+	width: auto;
+	max-width: none;
+	max-height: calc(100vh - var(--sg-bar) - 40px);
+	max-height: calc(100dvh - var(--sg-bar) - 40px);
+}
+
+/* "Copy passage" sits in the page flow under the paper */
+html.sg-mobile .passage-copy { margin: 16px auto 0; }
